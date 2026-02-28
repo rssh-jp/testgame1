@@ -129,27 +129,26 @@ stateDiagram-v2
     Result --> WorldMap: 次へ
 ```
 
-### 4.2 バトル画面ステートマシン
+### 4.2 バトル画面ステートマシン（CTベース）
 ```mermaid
 stateDiagram-v2
-    [*] --> PlayerPhase
-    PlayerPhase --> UnitSelected: ユニットタップ
-    UnitSelected --> MovementSelect: 移動範囲表示
-    UnitSelected --> PlayerPhase: キャンセル
-    MovementSelect --> ActionMenu: 移動先確定
-    ActionMenu --> AttackSelect: 攻撃選択
-    ActionMenu --> WaitConfirm: 待機選択
-    ActionMenu --> ItemSelect: アイテム選択
-    AttackSelect --> BattleAnimation: 攻撃対象確定
-    BattleAnimation --> UnitActionDone: 戦闘完了
-    WaitConfirm --> UnitActionDone: 待機確定
-    ItemSelect --> UnitActionDone: アイテム使用
-    UnitActionDone --> PlayerPhase: 行動済み
-    PlayerPhase --> EnemyPhase: 全員行動済み/ターン終了
-    EnemyPhase --> VictoryCheck: 敵全員行動済み
-    VictoryCheck --> PlayerPhase: 継続
-    VictoryCheck --> Result: 勝利/敗北
+    [*] --> CT_ADVANCING
+    CT_ADVANCING --> PLAYER_TURN : PLAYERユニットのCT≥10
+    CT_ADVANCING --> AI_TURN : ENEMY/ALLYユニットのCT≥100
+    PLAYER_TURN --> MovementSelect : 移動範囲自動表示
+    MovementSelect --> CT_ADVANCING : 移動実行/待機（CT-=100）
+    AI_TURN --> CT_ADVANCING : AI行動完了（CT-=100）
+    PLAYER_TURN --> RESULT : 勝敗確定
+    AI_TURN --> RESULT : 勝敗確定
+    CT_ADVANCING --> RESULT : 勝敗確定
+    RESULT --> [*]
 ```
+
+**CTシステム概要:**
+- 全ユニット毎ティック `CT += SPD`
+- CT ≥ 100 で行動権取得（陣営不問）
+- 行動後 `CT -= 100`（余剰繰り越し）
+- 優先度: CT値 > SPD値（タイブレーク）
 
 ## 5. データ形式
 
