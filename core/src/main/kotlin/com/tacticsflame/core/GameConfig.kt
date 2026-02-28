@@ -31,6 +31,9 @@ object GameConfig {
     /** 武器三すくみのダメージ補正 */
     const val WEAPON_TRIANGLE_DAMAGE_BONUS = 1
 
+    /** CT（チャージタイム）の行動閾値 */
+    const val CT_THRESHOLD = 100
+
     /** FPS */
     const val TARGET_FPS = 60
 }

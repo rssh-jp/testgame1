@@ -15,6 +15,7 @@
 | 守備 | DEF | 物理ダメージ軽減 | 物理ダメージ減算 |
 | 魔防 | RES | 魔法ダメージ軽減 | 魔法ダメージ減算 |
 | 移動 | MOV | 移動可能マス数 | 兵種の `baseMov` から取得 |
+| CT | CT | チャージタイム | SPDに基づいて蓄積、100で行動可能 |
 
 ## 陣営 (Faction)
 
@@ -68,6 +69,7 @@
 | `isLord` | Boolean | 主人公ユニットかどうか |
 | `currentHp` | Int | 現在HP |
 | `hasActed` | Boolean | 行動済みフラグ |
+| `ct` | Int | チャージタイム（初期値 0、SPDで蓄積） |
 | `isDefeated` | Boolean | 戦闘不能（currentHp ≤ 0） |
 | `maxHp` | Int | 最大HP（= stats.hp） |
 | `mov` | Int | 移動力（= unitClass.baseMov） |

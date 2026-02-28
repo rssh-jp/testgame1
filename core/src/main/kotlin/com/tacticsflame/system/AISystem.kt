@@ -94,7 +94,7 @@ class AISystem(
         }
 
         // 攻撃できない場合、最も近い敵に接近
-        val nearestEnemy = findNearestEnemy(unitPos, battleMap)
+        val nearestEnemy = findNearestEnemy(unitPos, unit.faction, battleMap)
         if (nearestEnemy != null) {
             val bestMovePos = movablePositions.minByOrNull { it.manhattanDistance(nearestEnemy) }
             if (bestMovePos != null) {
@@ -149,7 +149,7 @@ class AISystem(
             for (range in weapon.minRange..weapon.maxRange) {
                 for (neighbor in getPositionsAtRange(pos, range)) {
                     val target = battleMap.getUnitAt(neighbor)
-                    if (target != null && target.faction == Faction.PLAYER && !target.isDefeated) {
+                    if (target != null && isHostileFaction(unit.faction, target.faction) && !target.isDefeated) {
                         val tile = battleMap.getTile(pos)!!
                         val targetTile = battleMap.getTile(neighbor)!!
                         val forecast = com.tacticsflame.model.battle.DamageCalc.calculateForecast(
@@ -167,11 +167,26 @@ class AISystem(
     /**
      * 最も近い敵ユニットの座標を返す
      */
-    private fun findNearestEnemy(from: Position, battleMap: BattleMap): Position? {
+    private fun findNearestEnemy(from: Position, faction: Faction, battleMap: BattleMap): Position? {
         return battleMap.getAllUnits()
-            .filter { it.second.faction == Faction.PLAYER && !it.second.isDefeated }
+            .filter { isHostileFaction(faction, it.second.faction) && !it.second.isDefeated }
             .minByOrNull { it.first.manhattanDistance(from) }
             ?.first
+    }
+
+    /**
+     * 二つの陣営が敵対関係にあるかを判定する
+     *
+     * @param from 行動ユニットの陣営
+     * @param to 対象ユニットの陣営
+     * @return 敵対関係なら true
+     */
+    private fun isHostileFaction(from: Faction, to: Faction): Boolean {
+        return when (from) {
+            Faction.PLAYER -> to == Faction.ENEMY
+            Faction.ENEMY -> to == Faction.PLAYER || to == Faction.ALLY
+            Faction.ALLY -> to == Faction.ENEMY
+        }
     }
 
     /**
