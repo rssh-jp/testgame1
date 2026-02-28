@@ -1,0 +1,13 @@
+{
+    // Copilot 設定
+    "github.copilot.chat.codeGeneration.instructions": [
+        {
+            "file": ".github/copilot-instructions.md"
+        }
+    ],
+    // エディタ設定
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "files.encoding": "utf8",
+    "files.eol": "\n"
+}

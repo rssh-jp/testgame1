@@ -1,0 +1,86 @@
+[
+    {
+        "id": "ironSword",
+        "name": "鉄の剣",
+        "type": "SWORD",
+        "might": 5,
+        "hit": 90,
+        "critical": 0,
+        "weight": 3,
+        "minRange": 1,
+        "maxRange": 1,
+        "durability": 46
+    },
+    {
+        "id": "steelSword",
+        "name": "鋼の剣",
+        "type": "SWORD",
+        "might": 8,
+        "hit": 80,
+        "critical": 0,
+        "weight": 5,
+        "minRange": 1,
+        "maxRange": 1,
+        "durability": 35
+    },
+    {
+        "id": "ironLance",
+        "name": "鉄の槍",
+        "type": "LANCE",
+        "might": 7,
+        "hit": 80,
+        "critical": 0,
+        "weight": 5,
+        "minRange": 1,
+        "maxRange": 1,
+        "durability": 45
+    },
+    {
+        "id": "ironAxe",
+        "name": "鉄の斧",
+        "type": "AXE",
+        "might": 8,
+        "hit": 75,
+        "critical": 0,
+        "weight": 6,
+        "minRange": 1,
+        "maxRange": 1,
+        "durability": 40
+    },
+    {
+        "id": "ironBow",
+        "name": "鉄の弓",
+        "type": "BOW",
+        "might": 6,
+        "hit": 85,
+        "critical": 0,
+        "weight": 3,
+        "minRange": 2,
+        "maxRange": 2,
+        "durability": 45
+    },
+    {
+        "id": "fire",
+        "name": "ファイアー",
+        "type": "MAGIC",
+        "might": 5,
+        "hit": 90,
+        "critical": 0,
+        "weight": 2,
+        "minRange": 1,
+        "maxRange": 2,
+        "durability": 40
+    },
+    {
+        "id": "heal",
+        "name": "ライブ",
+        "type": "STAFF",
+        "might": 0,
+        "hit": 100,
+        "critical": 0,
+        "weight": 1,
+        "minRange": 1,
+        "maxRange": 1,
+        "durability": 30
+    }
+]

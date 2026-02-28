@@ -1,0 +1,38 @@
+# 依存関係
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 環境変数
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Gradle
+.gradle/
+local.properties
+
+# ビルド成果物
+dist/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+build_out.txt
+build_err.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ログ
+*.log
+logs/
