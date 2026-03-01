@@ -9,6 +9,9 @@ dependencies {
     // LibGDX コア
     api("com.badlogicgames.gdx:gdx:$gdxVersion")
 
+    // FreeType フォント拡張（日本語等の Unicode フォント対応）
+    api("com.badlogicgames.gdx:gdx-freetype:$gdxVersion")
+
     // テスト
     testImplementation(kotlin("test"))
     testImplementation("com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion")

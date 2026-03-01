@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.core.GameConfig
+import com.tacticsflame.util.FontManager
 
 /**
  * リザルト画面
@@ -19,7 +20,8 @@ class ResultScreen(
 ) : ScreenAdapter() {
 
     private lateinit var batch: SpriteBatch
-    private lateinit var font: BitmapFont
+    private lateinit var titleFont: BitmapFont
+    private lateinit var subFont: BitmapFont
     private val viewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT)
 
     /**
@@ -27,8 +29,8 @@ class ResultScreen(
      */
     override fun show() {
         batch = SpriteBatch()
-        font = BitmapFont()
-        font.data.setScale(3f)
+        titleFont = FontManager.getFont(size = 64)
+        subFont = FontManager.getFont(size = 32)
     }
 
     /**
@@ -43,19 +45,17 @@ class ResultScreen(
         batch.projectionMatrix = viewport.camera.combined
 
         batch.begin()
-        val text = if (isVictory) "VICTORY!" else "GAME OVER"
-        font.draw(
+        val text = if (isVictory) "勝利！" else "敗北..."
+        titleFont.draw(
             batch, text,
             GameConfig.VIRTUAL_WIDTH / 2f - 150f,
             GameConfig.VIRTUAL_HEIGHT / 2f + 50f
         )
-        font.data.setScale(1.5f)
-        font.draw(
-            batch, "Tap to continue",
+        subFont.draw(
+            batch, "タップして続ける",
             GameConfig.VIRTUAL_WIDTH / 2f - 100f,
             GameConfig.VIRTUAL_HEIGHT / 2f - 50f
         )
-        font.data.setScale(3f)
         batch.end()
 
         if (Gdx.input.justTouched()) {
@@ -75,6 +75,6 @@ class ResultScreen(
      */
     override fun dispose() {
         batch.dispose()
-        font.dispose()
+        // フォントは FontManager が管理するため、ここでは dispose しない
     }
 }

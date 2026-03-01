@@ -4,6 +4,7 @@ import com.badlogic.gdx.Game
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.assets.AssetManager
 import com.tacticsflame.screen.TitleScreen
+import com.tacticsflame.util.FontManager
 
 /**
  * メインゲームクラス
@@ -30,6 +31,7 @@ class TacticsFlameGame : Game() {
      */
     override fun dispose() {
         super.dispose()
+        FontManager.dispose()
         assetManager.dispose()
         Gdx.app.log(TAG, "リソース解放完了")
     }

@@ -525,7 +525,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      *
      * 陣営カラーの円でユニットを表示し、
      * アクティブユニットには金色のリングを描画する。
-     * 各ユニットの下にCTバーを表示してチャージ状態を可視化する。
+     * 各ユニットの下にHPバーを、周囲に円形CTバーを表示する。
      * 移動アニメーション中のユニットは補間位置で描画する。
      */
     private fun renderUnits() {
@@ -552,7 +552,17 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     }
 
     /**
-     * ユニットの図形（円・CTバー）を描画する
+     * ユニットの図形（円・HPバー・円形CTバー）を描画する
+     *
+     * 描画順序:
+     * 1. アクティブユニットの金色リング（最外周）
+     * 2. 円形CTバー背景（暗い円）
+     * 3. 円形CTバー本体（CT割合に応じた扇形、上から反時計回り）
+     * 4. ユニット本体の陣営カラー円（CTリング内側を覆いリング効果を作る）
+     * 5. HPバー（ユニット下部の小さな直線バー）
+     *
+     * 円形CTバーは360°で100（CT_THRESHOLD）を表し、
+     * ユニット円の外側にリング状に表示される。
      *
      * @param unit 描画対象ユニット
      * @param cx ユニット中心X座標（ピクセル）
@@ -561,39 +571,56 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      */
     private fun drawUnitShape(unit: GameUnit, cx: Float, cy: Float, isActive: Boolean) {
         val tileSize = GameConfig.TILE_SIZE
+        val unitRadius = tileSize / 3f
+        val ctRingRadius = tileSize * 0.42f
 
-        // アクティブユニットの金色リング
+        // 1. アクティブユニットの金色リング（最外周）
         if (isActive) {
             shapeRenderer.setColor(1f, 0.85f, 0.1f, 1f)
-            shapeRenderer.circle(cx, cy, tileSize / 2.5f)
+            shapeRenderer.circle(cx, cy, tileSize / 2.2f)
         }
 
-        // 陣営に応じた色
+        // 2. 円形CTバー背景（暗い円でリングのベースを描画）
+        shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1f)
+        shapeRenderer.circle(cx, cy, ctRingRadius)
+
+        // 3. 円形CTバー本体（CT割合に応じた扇形を上から反時計回りに描画）
+        val ctRatio = (unit.ct.toFloat() / GameConfig.CT_THRESHOLD).coerceIn(0f, 1f)
+        if (ctRatio > 0f) {
+            when {
+                ctRatio >= 0.8f -> shapeRenderer.setColor(1f, 0.9f, 0.2f, 1f)
+                ctRatio >= 0.5f -> shapeRenderer.setColor(0.3f, 0.8f, 1f, 1f)
+                else -> shapeRenderer.setColor(0.4f, 0.7f, 0.4f, 1f)
+            }
+            shapeRenderer.arc(cx, cy, ctRingRadius, 90f, 360f * ctRatio, 64)
+        }
+
+        // 4. ユニット本体（陣営カラーの円、CTリング内側を覆ってリング効果を作る）
         when (unit.faction) {
             Faction.PLAYER -> shapeRenderer.setColor(0.2f, 0.4f, 1f, 1f)
             Faction.ENEMY -> shapeRenderer.setColor(1f, 0.2f, 0.2f, 1f)
             Faction.ALLY -> shapeRenderer.setColor(0.2f, 1f, 0.4f, 1f)
         }
-        shapeRenderer.circle(cx, cy, tileSize / 3)
+        shapeRenderer.circle(cx, cy, unitRadius)
 
-        // CTバー（ユニット下部に小さなバーを描画）
+        // 5. HPバー（ユニット下部に小さなバーを描画）
         val barWidth = tileSize * 0.7f
         val barHeight = 4f
         val barX = cx - barWidth / 2
         val barY = cy - tileSize / 2 + 2f
-        val ctRatio = (unit.ct.toFloat() / GameConfig.CT_THRESHOLD).coerceIn(0f, 1f)
+        val hpRatio = (unit.currentHp.toFloat() / unit.maxHp.toFloat()).coerceIn(0f, 1f)
 
         // バー背景
         shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1f)
         shapeRenderer.rect(barX, barY, barWidth, barHeight)
 
-        // バー本体（CT割合に応じた色）
+        // バー本体（HP割合に応じた色: 緑→黄→赤）
         when {
-            ctRatio >= 0.8f -> shapeRenderer.setColor(1f, 0.9f, 0.2f, 1f)
-            ctRatio >= 0.5f -> shapeRenderer.setColor(0.3f, 0.8f, 1f, 1f)
-            else -> shapeRenderer.setColor(0.4f, 0.4f, 0.4f, 1f)
+            hpRatio > 0.5f -> shapeRenderer.setColor(0.2f, 0.9f, 0.2f, 1f)
+            hpRatio > 0.25f -> shapeRenderer.setColor(0.9f, 0.9f, 0.1f, 1f)
+            else -> shapeRenderer.setColor(0.9f, 0.2f, 0.2f, 1f)
         }
-        shapeRenderer.rect(barX, barY, barWidth * ctRatio, barHeight)
+        shapeRenderer.rect(barX, barY, barWidth * hpRatio, barHeight)
     }
 
     /**
