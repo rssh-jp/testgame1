@@ -8,7 +8,7 @@
 | ジャンル | シミュレーションRPG（SRPG） |
 | プラットフォーム | Android（API 26+） / Desktop（開発用） |
 | 画面向き | 横画面（Landscape） |
-| 解像度基準 | 1920×1080（FitViewport でスケーリング） |
+| 解像度基準 | バトル画面: ExtendViewport（マップサイズに動的適応）/ その他画面: 1920×1080（FitViewport） |
 | 言語 | Kotlin |
 | フレームワーク | LibGDX 1.12.1 |
 

@@ -9,12 +9,13 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.utils.viewport.FitViewport
+import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.core.GameConfig
 import com.tacticsflame.model.map.*
 import com.tacticsflame.model.unit.*
 import com.tacticsflame.system.*
+import com.tacticsflame.util.FontManager
 
 /**
  * バトル画面
@@ -30,7 +31,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private lateinit var font: BitmapFont
     private val glyphLayout = GlyphLayout()
     private val camera = OrthographicCamera()
-    private val viewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT, camera)
+    private lateinit var viewport: ExtendViewport
 
     // ゲームシステム
     private val turnManager = TurnManager()
@@ -80,13 +81,13 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     override fun show() {
         batch = SpriteBatch()
         shapeRenderer = ShapeRenderer()
-        font = BitmapFont().apply {
-            data.setScale(2f)
-            color = Color.WHITE
-        }
+        font = FontManager.getFont(size = 28)
 
         // テスト用マップ生成
         battleMap = createTestMap()
+
+        // マップサイズに基づいてビューポートを設定（マップが画面いっぱいに表示される）
+        initViewport()
 
         // CT初期化
         val allUnits = battleMap.getAllUnits().map { it.second }
@@ -107,7 +108,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         Gdx.gl.glClearColor(0.2f, 0.3f, 0.2f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
-        viewport.apply(true)
+        viewport.apply()
+        centerCameraOnMap()
         shapeRenderer.projectionMatrix = camera.combined
 
         // マップ・ユニット描画
@@ -324,6 +326,41 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         actionQueue = turnManager.predictActionOrder(allUnits, ACTION_QUEUE_SIZE)
     }
 
+    // ==================== ビューポート・カメラ ====================
+
+    /**
+     * マップサイズに合わせてビューポートを初期化する
+     *
+     * ExtendViewportを使用し、マップ全体が常に画面内に収まるようにする。
+     * 画面のアスペクト比に応じてビューポートが拡張されるため、
+     * レターボックス（黒帯）が発生せず画面いっぱいにマップが表示される。
+     */
+    private fun initViewport() {
+        val mapPixelW = battleMap.width * GameConfig.TILE_SIZE
+        val mapPixelH = battleMap.height * GameConfig.TILE_SIZE
+        val padding = GameConfig.TILE_SIZE * GameConfig.BATTLE_MAP_PADDING_TILES
+        viewport = ExtendViewport(
+            mapPixelW + padding * 2,
+            mapPixelH + padding * 2,
+            camera
+        )
+        // 現在のウィンドウサイズで更新
+        viewport.update(Gdx.graphics.width, Gdx.graphics.height)
+        centerCameraOnMap()
+    }
+
+    /**
+     * カメラをマップ中央に配置する
+     */
+    private fun centerCameraOnMap() {
+        camera.position.set(
+            battleMap.width * GameConfig.TILE_SIZE / 2f,
+            battleMap.height * GameConfig.TILE_SIZE / 2f,
+            0f
+        )
+        camera.update()
+    }
+
     // ==================== 描画メソッド ====================
 
     /**
@@ -439,8 +476,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun renderActionQueue() {
         if (actionQueue.isEmpty()) return
 
-        val panelX = 16f
-        val panelY = GameConfig.VIRTUAL_HEIGHT - 60f
+        val viewLeft = camera.position.x - viewport.worldWidth / 2f
+        val viewTop = camera.position.y + viewport.worldHeight / 2f
+        val panelX = viewLeft + 16f
+        val panelY = viewTop - 60f
         val entryHeight = 36f
         val panelWidth = 200f
         val panelHeight = entryHeight * actionQueue.size + 20f
@@ -486,8 +525,11 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val activeUnit = turnManager.activeUnit
         val roundText = "Round ${turnManager.roundNumber}"
 
+        val viewCenterX = camera.position.x
+        val viewTop = camera.position.y + viewport.worldHeight / 2f
+
         font.color = Color.WHITE
-        font.draw(batch, roundText, GameConfig.VIRTUAL_WIDTH / 2 - 80f, GameConfig.VIRTUAL_HEIGHT - 16f)
+        font.draw(batch, roundText, viewCenterX - 80f, viewTop - 16f)
 
         if (activeUnit != null) {
             font.color = when (activeUnit.faction) {
@@ -496,7 +538,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                 Faction.ALLY -> Color(0.4f, 1f, 0.6f, 1f)
             }
             val activeText = "${activeUnit.name} のターン"
-            font.draw(batch, activeText, GameConfig.VIRTUAL_WIDTH / 2 - 100f, GameConfig.VIRTUAL_HEIGHT - 52f)
+            font.draw(batch, activeText, viewCenterX - 100f, viewTop - 52f)
         }
 
         batch.end()
@@ -513,8 +555,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun renderStatusPanel(unit: GameUnit) {
         val panelWidth = 380f
         val panelHeight = 460f
-        val panelX = GameConfig.VIRTUAL_WIDTH - panelWidth - 16f
-        val panelY = GameConfig.VIRTUAL_HEIGHT - panelHeight - 16f
+        val viewRight = camera.position.x + viewport.worldWidth / 2f
+        val viewTop = camera.position.y + viewport.worldHeight / 2f
+        val panelX = viewRight - panelWidth - 16f
+        val panelY = viewTop - panelHeight - 16f
 
         // 半透明背景
         Gdx.gl.glEnable(GL20.GL_BLEND)
@@ -732,7 +776,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * ウィンドウリサイズ処理
      */
     override fun resize(width: Int, height: Int) {
-        viewport.update(width, height, true)
+        if (::viewport.isInitialized) {
+            viewport.update(width, height)
+            centerCameraOnMap()
+        }
     }
 
     /**
@@ -741,7 +788,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     override fun dispose() {
         batch.dispose()
         shapeRenderer.dispose()
-        font.dispose()
+        // フォントは FontManager が管理するため、ここでは dispose しない
     }
 
     companion object {

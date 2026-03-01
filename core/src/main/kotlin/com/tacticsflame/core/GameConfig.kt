@@ -34,6 +34,9 @@ object GameConfig {
     /** CT（チャージタイム）の行動閾値 */
     const val CT_THRESHOLD = 100
 
+    /** バトル画面のマップ外余白（タイル数） */
+    const val BATTLE_MAP_PADDING_TILES = 1.0f
+
     /** FPS */
     const val TARGET_FPS = 60
 }
