@@ -5,6 +5,7 @@ import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
@@ -31,6 +32,7 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private lateinit var titleFont: BitmapFont
     private lateinit var font: BitmapFont
     private lateinit var smallFont: BitmapFont
+    private val glyphLayout = GlyphLayout()
     private val viewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT)
 
     /** 現在のスクロール位置 */
@@ -52,13 +54,13 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         private const val SLOT_HEIGHT = 120f
 
         /** ユニットスロットの幅 */
-        private const val SLOT_WIDTH = 900f
+        private const val SLOT_WIDTH = 960f
 
         /** スロット表示開始Y座標 */
-        private const val SLOT_START_Y = 880f
+        private const val SLOT_START_Y = 1740f
 
         /** スロット左端X座標 */
-        private const val SLOT_X = 100f
+        private const val SLOT_X = 60f
 
         /** パーティ上限（現在の出撃上限とは別。編成画面における表示制約） */
         private const val MAX_DISPLAY = 12
@@ -146,9 +148,11 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         batch.begin()
 
         titleFont.color = Color.WHITE
+        val headerText = "— 部隊編成 —"
+        glyphLayout.setText(titleFont, headerText)
         titleFont.draw(
-            batch, "— 部隊編成 —",
-            GameConfig.VIRTUAL_WIDTH / 2f - 180f,
+            batch, headerText,
+            GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
             GameConfig.VIRTUAL_HEIGHT - 40f
         )
 
@@ -156,11 +160,13 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val maxDeploy = game.gameProgress.selectedChapter?.maxDeployCount ?: 4
         val currentDeploy = game.gameProgress.party.deployedIds.size
         font.color = if (currentDeploy > 0) Color.CYAN else Color.RED
+        val deployText = "出撃メンバー: $currentDeploy / $maxDeploy"
+        glyphLayout.setText(font, deployText)
         font.draw(
             batch,
-            "出撃メンバー: $currentDeploy / $maxDeploy",
-            GameConfig.VIRTUAL_WIDTH - 450f,
-            GameConfig.VIRTUAL_HEIGHT - 50f
+            deployText,
+            GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
+            GameConfig.VIRTUAL_HEIGHT - 100f
         )
 
         batch.end()
@@ -273,10 +279,10 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun renderDetailPanel() {
         val unit = selectedUnit ?: return
 
-        val panelW = 400f
-        val panelH = 460f
-        val panelX = GameConfig.VIRTUAL_WIDTH - panelW - 60f
-        val panelY = GameConfig.VIRTUAL_HEIGHT / 2f - panelH / 2f
+        val panelW = 960f
+        val panelH = 400f
+        val panelX = GameConfig.VIRTUAL_WIDTH / 2f - panelW / 2f
+        val panelY = 160f
 
         shapeRenderer.projectionMatrix = viewport.camera.combined
 
@@ -309,21 +315,21 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         textY -= lineH + 8f
 
         val stats = unit.stats
-        val statPairs = listOf(
-            "HP" to "${unit.currentHp}/${unit.maxHp}",
-            "STR" to "${stats.str}",
-            "MAG" to "${stats.mag}",
-            "SKL" to "${stats.skl}",
-            "SPD" to "${stats.spd}",
-            "LCK" to "${stats.lck}",
-            "DEF" to "${stats.def}",
-            "RES" to "${stats.res}",
-            "MOV" to "${unit.mov}"
+        // ステータスを3列で表示（縦画面の横長パネル向けレイアウト）
+        val col1X = textX
+        val col2X = textX + 300f
+        val col3X = textX + 600f
+        val statRows = listOf(
+            Triple("HP  ${unit.currentHp}/${unit.maxHp}", "SKL  ${stats.skl}", "DEF  ${stats.def}"),
+            Triple("STR  ${stats.str}", "SPD  ${stats.spd}", "RES  ${stats.res}"),
+            Triple("MAG  ${stats.mag}", "LCK  ${stats.lck}", "MOV  ${unit.mov}")
         )
 
         smallFont.color = Color.WHITE
-        for ((label, value) in statPairs) {
-            smallFont.draw(batch, "$label  $value", textX, textY)
+        for ((c1, c2, c3) in statRows) {
+            smallFont.draw(batch, c1, col1X, textY)
+            smallFont.draw(batch, c2, col2X, textY)
+            smallFont.draw(batch, c3, col3X, textY)
             textY -= 28f
         }
 

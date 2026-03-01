@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.tacticsflame.TacticsFlameGame
@@ -22,6 +23,7 @@ class ResultScreen(
     private lateinit var batch: SpriteBatch
     private lateinit var titleFont: BitmapFont
     private lateinit var subFont: BitmapFont
+    private val glyphLayout = GlyphLayout()
     private val viewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT)
 
     /**
@@ -46,14 +48,17 @@ class ResultScreen(
 
         batch.begin()
         val text = if (isVictory) "勝利！" else "敗北..."
+        glyphLayout.setText(titleFont, text)
         titleFont.draw(
             batch, text,
-            GameConfig.VIRTUAL_WIDTH / 2f - 150f,
+            GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
             GameConfig.VIRTUAL_HEIGHT / 2f + 50f
         )
+        val subText = "タップして続ける"
+        glyphLayout.setText(subFont, subText)
         subFont.draw(
-            batch, "タップして続ける",
-            GameConfig.VIRTUAL_WIDTH / 2f - 100f,
+            batch, subText,
+            GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
             GameConfig.VIRTUAL_HEIGHT / 2f - 50f
         )
         batch.end()

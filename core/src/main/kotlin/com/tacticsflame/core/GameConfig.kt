@@ -8,10 +8,10 @@ object GameConfig {
     const val TITLE = "Tactics Flame"
 
     /** 仮想解像度（横） */
-    const val VIRTUAL_WIDTH = 1920f
+    const val VIRTUAL_WIDTH = 1080f
 
     /** 仮想解像度（縦） */
-    const val VIRTUAL_HEIGHT = 1080f
+    const val VIRTUAL_HEIGHT = 1920f
 
     /** 1タイルのピクセルサイズ */
     const val TILE_SIZE = 64f

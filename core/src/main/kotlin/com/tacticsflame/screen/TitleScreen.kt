@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.tacticsflame.TacticsFlameGame
@@ -19,6 +20,7 @@ class TitleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private lateinit var batch: SpriteBatch
     private lateinit var titleFont: BitmapFont
     private lateinit var subFont: BitmapFont
+    private val glyphLayout = GlyphLayout()
     private val viewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT)
 
     /**
@@ -44,18 +46,20 @@ class TitleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         batch.projectionMatrix = viewport.camera.combined
 
         batch.begin()
-        // タイトル表示
+        // タイトル表示（GlyphLayoutで中央寄せ）
+        glyphLayout.setText(titleFont, GameConfig.TITLE)
         titleFont.draw(
             batch,
             GameConfig.TITLE,
-            GameConfig.VIRTUAL_WIDTH / 2f - 200f,
+            GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
             GameConfig.VIRTUAL_HEIGHT / 2f + 100f
         )
         // 操作案内
+        glyphLayout.setText(subFont, "Tap to Start")
         subFont.draw(
             batch,
             "Tap to Start",
-            GameConfig.VIRTUAL_WIDTH / 2f - 100f,
+            GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
             GameConfig.VIRTUAL_HEIGHT / 2f - 50f
         )
         batch.end()

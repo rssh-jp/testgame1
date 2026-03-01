@@ -22,6 +22,7 @@
 | Desktop ビルド | ✅ | 開発用 |
 | エミュレータへのデプロイ | ✅ | emulator-5554 |
 | ネイティブライブラリ (.so) 組み込み | ✅ | copyAndroidNatives タスク |
+| **画面向き: 縦画面 (Portrait)** | **✅** | **仮想解像度 1080×1920, AndroidManifest portrait固定** |
 
 ## 2. データモデル
 

@@ -5,6 +5,7 @@ import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
@@ -31,6 +32,7 @@ class BattleResultScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private lateinit var titleFont: BitmapFont
     private lateinit var font: BitmapFont
     private lateinit var smallFont: BitmapFont
+    private val glyphLayout = GlyphLayout()
     private val viewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT)
 
     /** バトル結果データ */
@@ -116,25 +118,30 @@ class BattleResultScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         if (resultData.isVictory) {
             titleFont.color = Color.GOLD
+            val victoryText = "勝 利 ！"
+            glyphLayout.setText(titleFont, victoryText)
             titleFont.draw(
-                batch, "勝 利 ！",
-                GameConfig.VIRTUAL_WIDTH / 2f - 200f,
+                batch, victoryText,
+                GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
                 GameConfig.VIRTUAL_HEIGHT - 120f
             )
         } else {
             titleFont.color = Color(1f, 0.4f, 0.4f, 1f)
+            val defeatText = "敗 北 ..."
+            glyphLayout.setText(titleFont, defeatText)
             titleFont.draw(
-                batch, "敗 北 ...",
-                GameConfig.VIRTUAL_WIDTH / 2f - 200f,
+                batch, defeatText,
+                GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
                 GameConfig.VIRTUAL_HEIGHT - 120f
             )
         }
 
         // チャプター名
         font.color = Color.WHITE
+        glyphLayout.setText(font, resultData.chapterInfo.name)
         font.draw(
             batch, resultData.chapterInfo.name,
-            GameConfig.VIRTUAL_WIDTH / 2f - 180f,
+            GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
             GameConfig.VIRTUAL_HEIGHT - 200f
         )
 
@@ -215,10 +222,12 @@ class BattleResultScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val alpha = ((Math.sin((animTimer * 3f).toDouble()) + 1f) / 2f).toFloat() * 0.7f + 0.3f
 
         batch.begin()
+        val promptText = "タップして続ける"
+        glyphLayout.setText(font, promptText)
         font.color = Color(1f, 1f, 1f, alpha)
         font.draw(
-            batch, "タップして続ける",
-            GameConfig.VIRTUAL_WIDTH / 2f - 140f,
+            batch, promptText,
+            GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
             140f
         )
         batch.end()

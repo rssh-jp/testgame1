@@ -11,7 +11,7 @@ import com.tacticsflame.core.GameConfig
 fun main() {
     val config = Lwjgl3ApplicationConfiguration().apply {
         setTitle(GameConfig.TITLE)
-        setWindowedMode(1280, 720)
+        setWindowedMode(720, 1280)
         setForegroundFPS(GameConfig.TARGET_FPS)
         useVsync(true)
     }

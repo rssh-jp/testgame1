@@ -5,6 +5,7 @@ import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.utils.viewport.FitViewport
@@ -30,6 +31,7 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private lateinit var titleFont: BitmapFont
     private lateinit var font: BitmapFont
     private lateinit var smallFont: BitmapFont
+    private val glyphLayout = GlyphLayout()
     private val viewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT)
 
     /** 選択中のチャプター（ホバー表示用） */
@@ -151,9 +153,11 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         batch.projectionMatrix = viewport.camera.combined
         batch.begin()
         titleFont.color = Color.WHITE
+        val headerText = "— ワールドマップ —"
+        glyphLayout.setText(titleFont, headerText)
         titleFont.draw(
-            batch, "— ワールドマップ —",
-            GameConfig.VIRTUAL_WIDTH / 2f - 250f,
+            batch, headerText,
+            GameConfig.VIRTUAL_WIDTH / 2f - glyphLayout.width / 2f,
             GameConfig.VIRTUAL_HEIGHT - 40f
         )
         batch.end()
@@ -274,8 +278,8 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         val panelW = 500f
         val panelH = 200f
-        val panelX = GameConfig.VIRTUAL_WIDTH - panelW - 60f
-        val panelY = 60f
+        val panelX = GameConfig.VIRTUAL_WIDTH / 2f - panelW / 2f
+        val panelY = 160f
 
         shapeRenderer.projectionMatrix = viewport.camera.combined
 
