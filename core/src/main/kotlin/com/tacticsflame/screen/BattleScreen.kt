@@ -554,7 +554,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      */
     private fun renderStatusPanel(unit: GameUnit) {
         val panelWidth = 380f
-        val panelHeight = 460f
+        val panelHeight = 520f
         val viewRight = camera.position.x + viewport.worldWidth / 2f
         val viewTop = camera.position.y + viewport.worldHeight / 2f
         val panelX = viewRight - panelWidth - 16f
@@ -597,55 +597,59 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         font.draw(batch, "Lv.${unit.level}  ${unit.unitClass.name}", textX, textY)
         textY -= lineHeight
 
-        // HPバー
-        textY -= 8f
+        // HPテキスト
+        textY -= 12f
         font.color = Color.WHITE
         font.draw(batch, "HP  ${unit.currentHp} / ${unit.maxHp}", textX, textY)
-        textY -= 8f
         batch.end()
 
-        // HPバー描画（シェイプ）
+        // HPバー描画（テキストの下に十分な間隔を空ける）
         val barX = textX
-        val barY = textY - 14f
         val barWidth = panelWidth - 32f
-        val barHeight = 10f
+        val barHeight = 12f
+        textY -= lineHeight  // テキスト分の行送り
+        val hpBarY = textY
         val hpRatio = unit.currentHp.toFloat() / unit.maxHp.toFloat()
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f)
-        shapeRenderer.rect(barX, barY, barWidth, barHeight)
+        shapeRenderer.rect(barX, hpBarY, barWidth, barHeight)
         val hpColor = when {
             hpRatio > 0.5f -> Color(0.2f, 0.9f, 0.2f, 1f)
             hpRatio > 0.25f -> Color(0.9f, 0.9f, 0.1f, 1f)
             else -> Color(0.9f, 0.2f, 0.2f, 1f)
         }
         shapeRenderer.color = hpColor
-        shapeRenderer.rect(barX, barY, barWidth * hpRatio, barHeight)
+        shapeRenderer.rect(barX, hpBarY, barWidth * hpRatio, barHeight)
         shapeRenderer.end()
 
-        // CTバー描画
-        val ctBarY = barY - 24f
+        // CTテキスト
+        textY -= (barHeight + 16f)  // バー高さ + 余白
         batch.begin()
         font.color = Color.WHITE
-        font.draw(batch, "CT  ${unit.ct} / ${GameConfig.CT_THRESHOLD}", textX, ctBarY + 16f)
+        font.draw(batch, "CT  ${unit.ct} / ${GameConfig.CT_THRESHOLD}", textX, textY)
         batch.end()
+
+        // CTバー描画（テキストの下に十分な間隔を空ける）
+        textY -= lineHeight  // テキスト分の行送り
+        val ctBarY = textY
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f)
-        shapeRenderer.rect(barX, ctBarY - 4f, barWidth, barHeight)
+        shapeRenderer.rect(barX, ctBarY, barWidth, barHeight)
         val ctRatio = (unit.ct.toFloat() / GameConfig.CT_THRESHOLD).coerceIn(0f, 1f)
         when {
             ctRatio >= 0.8f -> shapeRenderer.setColor(1f, 0.9f, 0.2f, 1f)
             ctRatio >= 0.5f -> shapeRenderer.setColor(0.3f, 0.8f, 1f, 1f)
             else -> shapeRenderer.setColor(0.4f, 0.4f, 0.4f, 1f)
         }
-        shapeRenderer.rect(barX, ctBarY - 4f, barWidth * ctRatio, barHeight)
+        shapeRenderer.rect(barX, ctBarY, barWidth * ctRatio, barHeight)
         shapeRenderer.end()
         Gdx.gl.glDisable(GL20.GL_BLEND)
 
         // ステータス値
-        textY = ctBarY - 28f
+        textY -= (barHeight + 16f)  // バー高さ + 余白
         batch.begin()
         font.color = Color.WHITE
 
