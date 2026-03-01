@@ -1,0 +1,199 @@
+package com.tacticsflame.system
+
+import com.tacticsflame.core.GameConfig
+import com.tacticsflame.model.unit.*
+import kotlin.test.*
+
+/**
+ * TurnManager（CTベース行動順管理）のテスト
+ */
+class TurnManagerTest {
+
+    private lateinit var turnManager: TurnManager
+
+    /** テスト用ユニットを生成する */
+    private fun createUnit(id: String, name: String, spd: Int, faction: Faction = Faction.PLAYER): GameUnit {
+        return GameUnit(
+            id = id, name = name,
+            unitClass = UnitClass.LORD, faction = faction,
+            stats = Stats(hp = 20, str = 5, mag = 0, skl = 5, spd = spd, lck = 5, def = 5, res = 5),
+            growthRate = GrowthRate()
+        )
+    }
+
+    @BeforeTest
+    fun setUp() {
+        turnManager = TurnManager()
+    }
+
+    @Test
+    fun `初期状態はラウンド1で累計行動0`() {
+        val units = listOf(createUnit("u1", "ユニットA", 5))
+        turnManager.reset(units)
+
+        assertEquals(1, turnManager.roundNumber)
+        assertEquals(0, turnManager.totalActions)
+        assertNull(turnManager.activeUnit)
+    }
+
+    @Test
+    fun `リセットで全ユニットのCTが0になる`() {
+        val units = listOf(
+            createUnit("u1", "ユニットA", 5),
+            createUnit("u2", "ユニットB", 8)
+        )
+        units[0].ct = 50
+        units[1].ct = 80
+
+        turnManager.reset(units)
+
+        assertEquals(0, units[0].ct)
+        assertEquals(0, units[1].ct)
+    }
+
+    @Test
+    fun `SPDが最も高いユニットが最初に行動する`() {
+        val slow = createUnit("u1", "遅いユニット", 3)
+        val fast = createUnit("u2", "速いユニット", 9)
+        val medium = createUnit("u3", "普通のユニット", 5)
+        val units = listOf(slow, fast, medium)
+
+        turnManager.reset(units)
+        val firstActor = turnManager.advanceToNextUnit(units)
+
+        assertEquals(fast, firstActor)
+        assertEquals(fast, turnManager.activeUnit)
+    }
+
+    @Test
+    fun `CT超過分は持ち越される`() {
+        val unit = createUnit("u1", "テスト", 8)
+        val units = listOf(unit)
+
+        turnManager.reset(units)
+        turnManager.advanceToNextUnit(units)
+
+        // SPD=8 なので 13ティック後に CT=104 で行動権取得
+        val ctBeforeAction = unit.ct
+        assertTrue(ctBeforeAction >= GameConfig.CT_THRESHOLD)
+
+        turnManager.completeAction(unit, units)
+
+        // CT -= 100 なので超過分が持ち越される
+        assertEquals(ctBeforeAction - GameConfig.CT_THRESHOLD, unit.ct)
+    }
+
+    @Test
+    fun `速いユニットは遅いユニットより頻繁に行動する`() {
+        val fast = createUnit("u1", "速い", 9, Faction.PLAYER)
+        val slow = createUnit("u2", "遅い", 3, Faction.ENEMY)
+        val units = listOf(fast, slow)
+
+        turnManager.reset(units)
+
+        var fastActCount = 0
+        var slowActCount = 0
+
+        // 10回の行動を追跡
+        repeat(10) {
+            val actor = turnManager.advanceToNextUnit(units)!!
+            if (actor == fast) fastActCount++
+            else slowActCount++
+            turnManager.completeAction(actor, units)
+        }
+
+        // SPD 9 vs 3 なので速いユニットが約3倍行動するはず
+        assertTrue(fastActCount > slowActCount, "fast=$fastActCount, slow=$slowActCount")
+    }
+
+    @Test
+    fun `全ユニット行動でラウンドが進む`() {
+        val u1 = createUnit("u1", "A", 5, Faction.PLAYER)
+        val u2 = createUnit("u2", "B", 5, Faction.ENEMY)
+        val units = listOf(u1, u2)
+
+        turnManager.reset(units)
+        assertEquals(1, turnManager.roundNumber)
+
+        // 1人目行動
+        val first = turnManager.advanceToNextUnit(units)!!
+        turnManager.completeAction(first, units)
+        assertEquals(1, turnManager.roundNumber)  // まだ全員行動していない
+
+        // 2人目行動
+        val second = turnManager.advanceToNextUnit(units)!!
+        assertNotEquals(first, second)  // 別のユニットが行動
+        turnManager.completeAction(second, units)
+        assertEquals(2, turnManager.roundNumber)  // 全員行動したのでラウンド+1
+    }
+
+    @Test
+    fun `戦闘不能ユニットは行動しない`() {
+        val alive = createUnit("u1", "生存", 5)
+        val dead = createUnit("u2", "戦闘不能", 9)
+        dead.takeDamage(100)  // HPを0にする
+        assertTrue(dead.isDefeated)
+
+        val units = listOf(alive, dead)
+        turnManager.reset(units)
+
+        val actor = turnManager.advanceToNextUnit(units)
+        assertEquals(alive, actor)
+    }
+
+    @Test
+    fun `行動順予測が正しく動作する`() {
+        val fast = createUnit("u1", "速い", 9)
+        val slow = createUnit("u2", "遅い", 3, Faction.ENEMY)
+        val units = listOf(fast, slow)
+
+        turnManager.reset(units)
+
+        val predicted = turnManager.predictActionOrder(units, 5)
+
+        assertEquals(5, predicted.size)
+        // 最初は速いユニットが行動するはず
+        assertEquals(fast, predicted[0])
+    }
+
+    @Test
+    fun `同じSPDの場合はCTが高い方が優先`() {
+        val u1 = createUnit("u1", "ユニットA", 5, Faction.PLAYER)
+        val u2 = createUnit("u2", "ユニットB", 5, Faction.ENEMY)
+        val units = listOf(u1, u2)
+
+        turnManager.reset(units)
+
+        // 手動でCTを設定して同時に閾値到達させる
+        u1.ct = 105
+        u2.ct = 102
+
+        val actor = turnManager.advanceToNextUnit(units)
+        // CT値が高いu1が優先
+        assertEquals(u1, actor)
+    }
+
+    @Test
+    fun `ユニットが1体のみでも正常に動作する`() {
+        val unit = createUnit("u1", "ソロ", 5)
+        val units = listOf(unit)
+
+        turnManager.reset(units)
+
+        val actor = turnManager.advanceToNextUnit(units)
+        assertEquals(unit, actor)
+
+        turnManager.completeAction(unit, units)
+        assertEquals(2, turnManager.roundNumber)  // 1体なので即ラウンド更新
+        assertEquals(1, turnManager.totalActions)
+    }
+
+    @Test
+    fun `空リストではnullを返す`() {
+        val units = emptyList<GameUnit>()
+        turnManager.reset(units)
+
+        val actor = turnManager.advanceToNextUnit(units)
+        assertNull(actor)
+    }
+}

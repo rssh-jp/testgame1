@@ -10,8 +10,7 @@ object AssetPaths {
     const val UI_ATLAS = "textures/ui.atlas"
 
     // フォント
-    const val FONT_DEFAULT = "fonts/default.fnt"
-    const val FONT_SMALL = "fonts/small.fnt"
+    const val FONT_TTF = "fonts/NotoSansJP.ttf"
 
     // マップデータ
     const val MAP_DIR = "maps/"

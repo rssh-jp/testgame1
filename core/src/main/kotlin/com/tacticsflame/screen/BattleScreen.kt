@@ -1,7 +1,6 @@
-﻿package com.tacticsflame.screen
+package com.tacticsflame.screen
 
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
@@ -10,16 +9,24 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.utils.viewport.FitViewport
+import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.core.GameConfig
+import com.tacticsflame.model.battle.BattleResult
+import com.tacticsflame.model.campaign.BattleConfig
+import com.tacticsflame.model.campaign.BattleResultData
 import com.tacticsflame.model.map.*
 import com.tacticsflame.model.unit.*
 import com.tacticsflame.system.*
+import com.tacticsflame.util.FontManager
 
 /**
  * バトル画面
- * メインのゲームプレイが行われる画面
+ *
+ * CTベースの個別ユニットターン制で戦闘を行う画面。
+ * 各ユニットのSPDに応じてCTが蓄積され、閾値に達したユニットから順に行動する。
+ * 全ユニット（味方・敵・同盟）がAIにより自動行動する。
+ * ユニットの移動はタイルごとにアニメーションで表示される。
  */
 class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
@@ -28,7 +35,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private lateinit var font: BitmapFont
     private val glyphLayout = GlyphLayout()
     private val camera = OrthographicCamera()
-    private val viewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT, camera)
+    private lateinit var viewport: ExtendViewport
 
     // ゲームシステム
     private val turnManager = TurnManager()
@@ -38,28 +45,32 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private val victoryChecker = VictoryChecker()
     private val levelUpSystem = LevelUpSystem()
 
+    // バトル設定（BattlePrepScreen から渡されるデータ）
+    private var battleConfig: BattleConfig? = null
+
     // マップとユニット
     private lateinit var battleMap: BattleMap
 
+    /** 初期敵ユニット数（リザルト表示用） */
+    private var initialEnemyCount: Int = 0
+
     // バトル画面の状態
-    private var battleState: BattleState = BattleState.IDLE
+    private var battleState: BattleState = BattleState.CT_ADVANCING
 
     /**
      * バトル画面の状態
      */
     enum class BattleState {
-        /** 待機中（ユニット選択待ち） */
-        IDLE,
-        /** ユニット選択済み（移動先選択待ち） */
-        UNIT_SELECTED,
-        /** 移動完了（アクション選択待ち） */
-        ACTION_SELECT,
-        /** 攻撃対象選択 */
-        ATTACK_SELECT,
-        /** 戦闘アニメーション中 */
-        BATTLE_ANIMATION,
-        /** 敵フェイズ */
-        ENEMY_PHASE,
+        /** CTを進行中（次の行動ユニットを決定中） */
+        CT_ADVANCING,
+        /** AI思考ウェイト中 */
+        AI_THINKING,
+        /** ユニット移動アニメーション中 */
+        UNIT_MOVING,
+        /** 戦闘結果表示中 */
+        COMBAT_RESULT,
+        /** 行動後ウェイト中 */
+        POST_ACTION,
         /** 勝利/敗北 */
         RESULT
     }
@@ -72,57 +83,484 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     /** 情報表示中のユニット（敵味方問わずタップで表示） */
     private var inspectedUnit: GameUnit? = null
 
+    /** 行動順予測キュー */
+    private var actionQueue: List<GameUnit> = emptyList()
+
+    /** 勝利フラグ（RESULT状態で使用） */
+    private var isVictory: Boolean = false
+
+    // アニメーション・タイマー関連
+    /** 汎用状態タイマー（秒） */
+    private var stateTimer: Float = 0f
+
+    /** AI決定結果の保持 */
+    private var pendingAction: AISystem.AIAction? = null
+
+    /** 移動アニメーション中のユニット */
+    private var animatingUnit: GameUnit? = null
+
+    /** 移動アニメーションの経路 */
+    private var animationPath: List<Position> = emptyList()
+
+    /** 移動アニメーションの進行度（0〜セグメント数） */
+    private var animationProgress: Float = 0f
+
+    /** 戦闘結果の一時保持 */
+    private var pendingBattleResult: BattleResult? = null
+
     /**
      * 画面表示時の初期化処理
      */
     override fun show() {
         batch = SpriteBatch()
         shapeRenderer = ShapeRenderer()
-        font = BitmapFont().apply {
-            data.setScale(2f)
-            color = Color.WHITE
+        font = FontManager.getFont(size = 28)
+
+        // BattleConfig からマップを構築、なければテスト用マップにフォールバック
+        battleConfig = game.currentBattleConfig
+        battleMap = setupBattleMap()
+
+        // 初期敵数を記録
+        initialEnemyCount = battleMap.getAllUnits()
+            .count { it.second.faction == Faction.ENEMY }
+
+        // マップサイズに基づいてビューポートを設定（マップが画面いっぱいに表示される）
+        initViewport()
+
+        // CT初期化
+        val allUnits = battleMap.getAllUnits().map { it.second }
+        turnManager.reset(allUnits)
+
+        // 行動順予測を更新
+        updateActionQueue()
+
+        battleState = BattleState.CT_ADVANCING
+        Gdx.app.log(TAG, "バトル画面初期化完了（CTベースターン制）")
+    }
+
+    /**
+     * BattleConfig に基づいてマップとユニットを配置する
+     *
+     * BattleConfig がある場合はそのデータを使用し、
+     * ない場合（レガシー互換）はテスト用マップを生成する。
+     *
+     * @return 構築された BattleMap
+     */
+    private fun setupBattleMap(): BattleMap {
+        val config = battleConfig ?: return createTestMap()
+
+        val map = config.battleMap
+
+        // プレイヤーユニット配置
+        for (unit in config.playerUnits) {
+            val pos = config.playerPositions[unit.id] ?: continue
+            map.placeUnit(unit, pos)
         }
 
-        // テスト用マップ生成
-        battleMap = createTestMap()
+        // 敵ユニット配置
+        for (unit in config.enemyUnits) {
+            val pos = config.enemyPositions[unit.id] ?: continue
+            map.placeUnit(unit, pos)
+        }
 
-        // ターン開始
-        val allUnits = battleMap.getAllUnits().map { it.second }
-        turnManager.reset()
-        turnManager.startPhase(allUnits)
-
-        Gdx.app.log(TAG, "バトル画面初期化完了")
+        Gdx.app.log(TAG, "BattleConfig からマップ構築: ${config.chapterInfo.name}")
+        return map
     }
 
     /**
      * フレーム描画処理
      */
     override fun render(delta: Float) {
+        // 状態に応じたロジック更新（描画前に実行）
+        when (battleState) {
+            BattleState.CT_ADVANCING -> advanceCT()
+            BattleState.AI_THINKING -> processAIThinking(delta)
+            BattleState.UNIT_MOVING -> processUnitMoving(delta)
+            BattleState.COMBAT_RESULT -> processCombatResult(delta)
+            BattleState.POST_ACTION -> processPostAction(delta)
+            BattleState.RESULT -> handleResultInput()
+        }
+
         // 画面クリア
         Gdx.gl.glClearColor(0.2f, 0.3f, 0.2f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
-        viewport.apply(true)
-
-        // マップ描画（シェイプレンダラーで仮表示）
+        viewport.apply()
+        centerCameraOnMap()
         shapeRenderer.projectionMatrix = camera.combined
+
+        // マップ・ユニット描画
         renderMap()
         renderUnits()
 
-        // 移動範囲表示
-        if (battleState == BattleState.UNIT_SELECTED) {
-            renderMovableRange()
-        }
-
         // ステータスパネル描画
-        val displayUnit = selectedUnit ?: inspectedUnit
+        val displayUnit = inspectedUnit ?: selectedUnit ?: turnManager.activeUnit
         if (displayUnit != null) {
             renderStatusPanel(displayUnit)
         }
 
-        // 入力処理
-        handleInput()
+        // 行動順キュー描画
+        renderActionQueue()
+
+        // ターン情報描画
+        renderTurnInfo()
     }
+
+    // ==================== ゲームロジック ====================
+
+    /**
+     * CTを進行させて次の行動ユニットを決定する
+     *
+     * 全ユニットのCTにSPDを加算し、閾値に達したユニットのターンに遷移する。
+     * 全陣営のユニットがAI自動行動する。
+     */
+    private fun advanceCT() {
+        val allUnits = battleMap.getAllUnits().map { it.second }
+        val nextUnit = turnManager.advanceToNextUnit(allUnits) ?: return
+
+        // 行動順予測を更新
+        updateActionQueue()
+
+        // 全陣営AI自動行動：思考ウェイトに遷移
+        selectedUnit = nextUnit
+        stateTimer = 0f
+        battleState = BattleState.AI_THINKING
+        Gdx.app.log(TAG, "${nextUnit.name} のターン（CT: ${nextUnit.ct}）")
+    }
+
+    /**
+     * AI思考ウェイトを処理する
+     *
+     * 思考時間経過後、AIの行動を決定し適切な次状態に遷移する。
+     *
+     * @param delta フレームデルタタイム（秒）
+     */
+    private fun processAIThinking(delta: Float) {
+        stateTimer += delta
+        if (stateTimer < GameConfig.AI_THINK_DELAY) return
+
+        val activeUnit = turnManager.activeUnit ?: run {
+            battleState = BattleState.CT_ADVANCING
+            return
+        }
+
+        // AIパターン決定: 同盟はDEFENSIVE、その他はAGGRESSIVE
+        val pattern = when (activeUnit.faction) {
+            Faction.ALLY -> AISystem.AIPattern.DEFENSIVE
+            else -> AISystem.AIPattern.AGGRESSIVE
+        }
+
+        // 行動決定
+        val action = aiSystem.decideAction(activeUnit, battleMap, pattern)
+        pendingAction = action
+
+        when (val act = action.action) {
+            is AISystem.Action.MoveAndAttack -> {
+                val unitPos = battleMap.getUnitPosition(activeUnit)!!
+                if (act.moveTo != unitPos) {
+                    startMovementAnimation(activeUnit, unitPos, act.moveTo)
+                } else {
+                    // 移動なしで攻撃
+                    startCombat(activeUnit, act.target)
+                }
+            }
+            is AISystem.Action.Move -> {
+                val unitPos = battleMap.getUnitPosition(activeUnit)!!
+                if (act.moveTo != unitPos) {
+                    startMovementAnimation(activeUnit, unitPos, act.moveTo)
+                } else {
+                    enterPostAction()
+                }
+            }
+            is AISystem.Action.Wait -> {
+                Gdx.app.log(TAG, "AI待機: ${activeUnit.name}")
+                enterPostAction()
+            }
+        }
+    }
+
+    /**
+     * 移動アニメーションを開始する
+     *
+     * @param unit 移動ユニット
+     * @param from 移動元座標
+     * @param to 移動先座標
+     */
+    private fun startMovementAnimation(unit: GameUnit, from: Position, to: Position) {
+        val path = pathFinder.findPath(unit, from, to, battleMap)
+        if (path.size >= 2) {
+            animatingUnit = unit
+            animationPath = path
+            animationProgress = 0f
+            battleState = BattleState.UNIT_MOVING
+        } else {
+            // 経路が見つからない場合は直接移動（フォールバック）
+            battleMap.moveUnit(from, to)
+            Gdx.app.log(TAG, "AI移動完了（直接）: ${unit.name}")
+            val action = pendingAction?.action
+            if (action is AISystem.Action.MoveAndAttack) {
+                startCombat(unit, action.target)
+            } else {
+                enterPostAction()
+            }
+        }
+    }
+
+    /**
+     * ユニット移動アニメーションを進行させる
+     *
+     * @param delta フレームデルタタイム（秒）
+     */
+    private fun processUnitMoving(delta: Float) {
+        val totalSegments = (animationPath.size - 1).toFloat()
+        if (totalSegments <= 0f) {
+            finishMovement()
+            return
+        }
+
+        animationProgress += delta / GameConfig.MOVE_TIME_PER_TILE
+        if (animationProgress >= totalSegments) {
+            animationProgress = totalSegments
+            finishMovement()
+        }
+    }
+
+    /**
+     * 移動アニメーション完了処理
+     *
+     * マップ上の位置を更新し、攻撃があれば戦闘に遷移する。
+     */
+    private fun finishMovement() {
+        val activeUnit = animatingUnit ?: turnManager.activeUnit ?: run {
+            enterPostAction()
+            return
+        }
+
+        // マップ上の位置を更新
+        val unitPos = battleMap.getUnitPosition(activeUnit)
+        val destination = animationPath.lastOrNull()
+        if (unitPos != null && destination != null && unitPos != destination) {
+            battleMap.moveUnit(unitPos, destination)
+        }
+
+        animatingUnit = null
+        animationPath = emptyList()
+        animationProgress = 0f
+
+        Gdx.app.log(TAG, "AI移動完了: ${activeUnit.name}")
+
+        // 攻撃がある場合は戦闘へ
+        val action = pendingAction?.action
+        if (action is AISystem.Action.MoveAndAttack) {
+            startCombat(activeUnit, action.target)
+        } else {
+            enterPostAction()
+        }
+    }
+
+    /**
+     * 戦闘を開始する
+     *
+     * @param attacker 攻撃ユニット
+     * @param target 攻撃対象ユニット
+     */
+    private fun startCombat(attacker: GameUnit, target: GameUnit) {
+        val result = battleSystem.executeBattle(attacker, target, battleMap)
+        pendingBattleResult = result
+        Gdx.app.log(
+            TAG,
+            "AI攻撃: ${attacker.name} → ${target.name} " +
+                "(ダメージ: ${result.attacks.sumOf { it.damage }})"
+        )
+        stateTimer = 0f
+        battleState = BattleState.COMBAT_RESULT
+    }
+
+    /**
+     * 戦闘結果表示を処理する
+     *
+     * 表示時間経過後、撃破ユニットを除去して行動後ウェイトに遷移する。
+     *
+     * @param delta フレームデルタタイム（秒）
+     */
+    private fun processCombatResult(delta: Float) {
+        stateTimer += delta
+        if (stateTimer < GameConfig.COMBAT_RESULT_DELAY) return
+
+        // 撃破ユニットを除去
+        val result = pendingBattleResult
+        if (result != null) {
+            if (result.defenderDefeated) {
+                val targetPos = battleMap.getUnitPosition(result.defender)
+                if (targetPos != null) battleMap.removeUnit(targetPos)
+            }
+            if (result.attackerDefeated) {
+                val attackerPos = battleMap.getUnitPosition(result.attacker)
+                if (attackerPos != null) battleMap.removeUnit(attackerPos)
+            }
+        }
+
+        pendingBattleResult = null
+        enterPostAction()
+    }
+
+    /**
+     * 行動後ウェイトを処理する
+     *
+     * ウェイト時間経過後、行動完了処理に進む。
+     *
+     * @param delta フレームデルタタイム（秒）
+     */
+    private fun processPostAction(delta: Float) {
+        stateTimer += delta
+        if (stateTimer < GameConfig.POST_ACTION_DELAY) return
+
+        val activeUnit = turnManager.activeUnit ?: run {
+            battleState = BattleState.CT_ADVANCING
+            return
+        }
+
+        completeUnitAction(activeUnit)
+    }
+
+    /**
+     * 行動後ウェイト状態に遷移する
+     */
+    private fun enterPostAction() {
+        stateTimer = 0f
+        battleState = BattleState.POST_ACTION
+    }
+
+    /**
+     * ユニットの行動完了処理（共通）
+     *
+     * CT消費・勝敗判定・状態遷移を行う。
+     *
+     * @param unit 行動を完了したユニット
+     */
+    private fun completeUnitAction(unit: GameUnit) {
+        // 選択状態をクリア
+        selectedUnit = null
+        movablePositions = emptySet()
+        attackablePositions = emptySet()
+        inspectedUnit = null
+
+        // アニメーション状態をクリア
+        pendingAction = null
+        pendingBattleResult = null
+        animatingUnit = null
+        animationPath = emptyList()
+        animationProgress = 0f
+        stateTimer = 0f
+
+        // TurnManagerの行動完了処理
+        val allUnits = battleMap.getAllUnits().map { it.second }
+        turnManager.completeAction(unit, allUnits)
+
+        // 勝敗判定
+        val outcome = victoryChecker.checkOutcome(
+            battleMap, VictoryChecker.VictoryConditionType.DEFEAT_ALL
+        )
+        when (outcome) {
+            VictoryChecker.BattleOutcome.VICTORY -> {
+                Gdx.app.log(TAG, "勝利！")
+                isVictory = true
+                battleState = BattleState.RESULT
+            }
+            VictoryChecker.BattleOutcome.DEFEAT -> {
+                Gdx.app.log(TAG, "敗北...")
+                isVictory = false
+                battleState = BattleState.RESULT
+            }
+            VictoryChecker.BattleOutcome.ONGOING -> {
+                // 行動順予測を更新して次のCT進行へ
+                updateActionQueue()
+                battleState = BattleState.CT_ADVANCING
+            }
+        }
+    }
+
+    /**
+     * リザルト画面への遷移入力処理
+     */
+    private fun handleResultInput() {
+        if (Gdx.input.justTouched()) {
+            navigateToResult()
+        }
+    }
+
+    /**
+     * バトル結果をまとめてリザルト画面へ遷移する
+     */
+    private fun navigateToResult() {
+        val config = battleConfig
+        if (config != null) {
+            // BattleConfig 経由の場合: BattleResultScreen へ
+            val survivingPlayers = battleMap.getAllUnits()
+                .filter { it.second.faction == Faction.PLAYER && !it.second.isDefeated }
+                .map { it.second }
+            val defeatedEnemies = initialEnemyCount - battleMap.getAllUnits()
+                .count { it.second.faction == Faction.ENEMY && !it.second.isDefeated }
+
+            val resultData = BattleResultData(
+                chapterInfo = config.chapterInfo,
+                isVictory = isVictory,
+                roundCount = turnManager.roundNumber,
+                defeatedEnemies = defeatedEnemies,
+                totalEnemies = initialEnemyCount,
+                survivingUnits = survivingPlayers
+            )
+            game.screenManager.navigateToBattleResult(resultData)
+        } else {
+            // レガシーフォールバック: 旧 ResultScreen へ
+            game.screen = ResultScreen(game, isVictory)
+        }
+    }
+
+    /**
+     * 行動順予測キューを更新する
+     */
+    private fun updateActionQueue() {
+        val allUnits = battleMap.getAllUnits().map { it.second }
+        actionQueue = turnManager.predictActionOrder(allUnits, ACTION_QUEUE_SIZE)
+    }
+
+    // ==================== ビューポート・カメラ ====================
+
+    /**
+     * マップサイズに合わせてビューポートを初期化する
+     *
+     * ExtendViewportを使用し、マップ全体が常に画面内に収まるようにする。
+     * 画面のアスペクト比に応じてビューポートが拡張されるため、
+     * レターボックス（黒帯）が発生せず画面いっぱいにマップが表示される。
+     */
+    private fun initViewport() {
+        val mapPixelW = battleMap.width * GameConfig.TILE_SIZE
+        val mapPixelH = battleMap.height * GameConfig.TILE_SIZE
+        val padding = GameConfig.TILE_SIZE * GameConfig.BATTLE_MAP_PADDING_TILES
+        viewport = ExtendViewport(
+            mapPixelW + padding * 2,
+            mapPixelH + padding * 2,
+            camera
+        )
+        // 現在のウィンドウサイズで更新
+        viewport.update(Gdx.graphics.width, Gdx.graphics.height)
+        centerCameraOnMap()
+    }
+
+    /**
+     * カメラをマップ中央に配置する
+     */
+    private fun centerCameraOnMap() {
+        camera.position.set(
+            battleMap.width * GameConfig.TILE_SIZE / 2f,
+            battleMap.height * GameConfig.TILE_SIZE / 2f,
+            0f
+        )
+        camera.update()
+    }
+
+    // ==================== 描画メソッド ====================
 
     /**
      * マップを描画する（プロトタイプ：ShapeRendererで色分け）
@@ -132,7 +570,6 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         for (y in 0 until battleMap.height) {
             for (x in 0 until battleMap.width) {
                 val tile = battleMap.getTile(x, y) ?: continue
-                // 地形に応じた色設定
                 when (tile.terrainType) {
                     TerrainType.PLAIN -> shapeRenderer.setColor(0.5f, 0.8f, 0.3f, 1f)
                     TerrainType.FOREST -> shapeRenderer.setColor(0.2f, 0.5f, 0.1f, 1f)
@@ -154,35 +591,123 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     }
 
     /**
-     * ユニットを描画する（プロトタイプ：色付き丸で仮表示）
+     * ユニットを描画する
+     *
+     * 陣営カラーの円でユニットを表示し、
+     * アクティブユニットには金色のリングを描画する。
+     * 各ユニットの下にHPバーを、周囲に円形CTバーを表示する。
+     * 移動アニメーション中のユニットは補間位置で描画する。
      */
     private fun renderUnits() {
+        val activeUnit = turnManager.activeUnit
+        val tileSize = GameConfig.TILE_SIZE
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         for ((pos, unit) in battleMap.getAllUnits()) {
             if (unit.isDefeated) continue
-            // 陣営に応じた色
-            when (unit.faction) {
-                Faction.PLAYER -> shapeRenderer.setColor(0.2f, 0.4f, 1f, 1f)
-                Faction.ENEMY -> shapeRenderer.setColor(1f, 0.2f, 0.2f, 1f)
-                Faction.ALLY -> shapeRenderer.setColor(0.2f, 1f, 0.4f, 1f)
-            }
-            // 行動済みは暗くする
-            if (unit.hasActed) {
-                shapeRenderer.setColor(
-                    shapeRenderer.color.r * 0.5f,
-                    shapeRenderer.color.g * 0.5f,
-                    shapeRenderer.color.b * 0.5f,
-                    1f
-                )
-            }
-            val tileSize = GameConfig.TILE_SIZE
-            shapeRenderer.circle(
-                pos.x * tileSize + tileSize / 2,
-                pos.y * tileSize + tileSize / 2,
-                tileSize / 3
-            )
+            // 移動アニメーション中のユニットはスキップ（別途描画）
+            if (unit == animatingUnit && battleState == BattleState.UNIT_MOVING) continue
+
+            val cx = pos.x * tileSize + tileSize / 2
+            val cy = pos.y * tileSize + tileSize / 2
+            drawUnitShape(unit, cx, cy, unit == activeUnit)
+        }
+
+        // 移動アニメーション中のユニットを補間位置で描画
+        if (battleState == BattleState.UNIT_MOVING && animatingUnit != null && animationPath.size >= 2) {
+            val (cx, cy) = getAnimatedUnitPosition()
+            drawUnitShape(animatingUnit!!, cx, cy, true)
         }
         shapeRenderer.end()
+    }
+
+    /**
+     * ユニットの図形（円・HPバー・円形CTバー）を描画する
+     *
+     * 描画順序:
+     * 1. アクティブユニットの金色リング（最外周）
+     * 2. 円形CTバー背景（暗い円）
+     * 3. 円形CTバー本体（CT割合に応じた扇形、上から反時計回り）
+     * 4. ユニット本体の陣営カラー円（CTリング内側を覆いリング効果を作る）
+     * 5. HPバー（ユニット下部の小さな直線バー）
+     *
+     * 円形CTバーは360°で100（CT_THRESHOLD）を表し、
+     * ユニット円の外側にリング状に表示される。
+     *
+     * @param unit 描画対象ユニット
+     * @param cx ユニット中心X座標（ピクセル）
+     * @param cy ユニット中心Y座標（ピクセル）
+     * @param isActive アクティブユニットかどうか
+     */
+    private fun drawUnitShape(unit: GameUnit, cx: Float, cy: Float, isActive: Boolean) {
+        val tileSize = GameConfig.TILE_SIZE
+        val unitRadius = tileSize / 3f
+        val ctRingRadius = tileSize * 0.42f
+
+        // 1. アクティブユニットの金色リング（最外周）
+        if (isActive) {
+            shapeRenderer.setColor(1f, 0.85f, 0.1f, 1f)
+            shapeRenderer.circle(cx, cy, tileSize / 2.2f)
+        }
+
+        // 2. 円形CTバー背景（暗い円でリングのベースを描画）
+        shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1f)
+        shapeRenderer.circle(cx, cy, ctRingRadius)
+
+        // 3. 円形CTバー本体（CT割合に応じた扇形を上から反時計回りに描画）
+        val ctRatio = (unit.ct.toFloat() / GameConfig.CT_THRESHOLD).coerceIn(0f, 1f)
+        if (ctRatio > 0f) {
+            when {
+                ctRatio >= 0.8f -> shapeRenderer.setColor(1f, 0.9f, 0.2f, 1f)
+                ctRatio >= 0.5f -> shapeRenderer.setColor(0.3f, 0.8f, 1f, 1f)
+                else -> shapeRenderer.setColor(0.4f, 0.7f, 0.4f, 1f)
+            }
+            shapeRenderer.arc(cx, cy, ctRingRadius, 90f, 360f * ctRatio, 64)
+        }
+
+        // 4. ユニット本体（陣営カラーの円、CTリング内側を覆ってリング効果を作る）
+        when (unit.faction) {
+            Faction.PLAYER -> shapeRenderer.setColor(0.2f, 0.4f, 1f, 1f)
+            Faction.ENEMY -> shapeRenderer.setColor(1f, 0.2f, 0.2f, 1f)
+            Faction.ALLY -> shapeRenderer.setColor(0.2f, 1f, 0.4f, 1f)
+        }
+        shapeRenderer.circle(cx, cy, unitRadius)
+
+        // 5. HPバー（ユニット下部に小さなバーを描画）
+        val barWidth = tileSize * 0.7f
+        val barHeight = 4f
+        val barX = cx - barWidth / 2
+        val barY = cy - tileSize / 2 + 2f
+        val hpRatio = (unit.currentHp.toFloat() / unit.maxHp.toFloat()).coerceIn(0f, 1f)
+
+        // バー背景
+        shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1f)
+        shapeRenderer.rect(barX, barY, barWidth, barHeight)
+
+        // バー本体（HP割合に応じた色: 緑→黄→赤）
+        when {
+            hpRatio > 0.5f -> shapeRenderer.setColor(0.2f, 0.9f, 0.2f, 1f)
+            hpRatio > 0.25f -> shapeRenderer.setColor(0.9f, 0.9f, 0.1f, 1f)
+            else -> shapeRenderer.setColor(0.9f, 0.2f, 0.2f, 1f)
+        }
+        shapeRenderer.rect(barX, barY, barWidth * hpRatio, barHeight)
+    }
+
+    /**
+     * 移動アニメーション中のユニットの補間位置を計算する
+     *
+     * @return (中心X座標, 中心Y座標) のペア
+     */
+    private fun getAnimatedUnitPosition(): Pair<Float, Float> {
+        val tileSize = GameConfig.TILE_SIZE
+        val maxSegment = (animationPath.size - 2).coerceAtLeast(0)
+        val segmentIndex = animationProgress.toInt().coerceIn(0, maxSegment)
+        val t = (animationProgress - segmentIndex).coerceIn(0f, 1f)
+        val from = animationPath[segmentIndex]
+        val to = animationPath[(segmentIndex + 1).coerceAtMost(animationPath.size - 1)]
+        val cx = (from.x + (to.x - from.x) * t) * tileSize + tileSize / 2
+        val cy = (from.y + (to.y - from.y) * t) * tileSize + tileSize / 2
+        return cx to cy
     }
 
     /**
@@ -208,198 +733,96 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     }
 
     /**
-     * 入力処理
+     * 行動順キューを画面左側に描画する
+     *
+     * 今後行動するユニットの順番を陣営カラーで一覧表示する。
      */
-    private fun handleInput() {
-        if (!Gdx.input.justTouched()) return
+    private fun renderActionQueue() {
+        if (actionQueue.isEmpty()) return
 
-        // スクリーン座標をワールド座標に変換
-        val screenX = Gdx.input.x.toFloat()
-        val screenY = Gdx.input.y.toFloat()
-        val worldCoords = viewport.unproject(
-            com.badlogic.gdx.math.Vector2(screenX, screenY)
-        )
+        val viewLeft = camera.position.x - viewport.worldWidth / 2f
+        val viewTop = camera.position.y + viewport.worldHeight / 2f
+        val panelX = viewLeft + 16f
+        val panelY = viewTop - 60f
+        val entryHeight = 36f
+        val panelWidth = 200f
+        val panelHeight = entryHeight * actionQueue.size + 20f
 
-        val tileX = (worldCoords.x / GameConfig.TILE_SIZE).toInt()
-        val tileY = (worldCoords.y / GameConfig.TILE_SIZE).toInt()
-        val tappedPos = Position(tileX, tileY)
+        // 半透明背景
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0f, 0f, 0f, 0.6f)
+        shapeRenderer.rect(panelX, panelY - panelHeight, panelWidth, panelHeight)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
 
-        when (battleState) {
-            BattleState.IDLE -> {
-                val unit = battleMap.getUnitAt(tappedPos)
-                if (unit != null && unit.faction == Faction.PLAYER && !unit.hasActed) {
-                    // 自軍ユニット選択 → 移動モードへ
-                    selectedUnit = unit
-                    inspectedUnit = null
-                    movablePositions = pathFinder.getMovablePositions(unit, tappedPos, battleMap)
-                    attackablePositions = pathFinder.getAttackablePositions(unit, movablePositions, battleMap)
-                    battleState = BattleState.UNIT_SELECTED
-                    Gdx.app.log(TAG, "ユニット選択: ${unit.name}")
-                } else if (unit != null) {
-                    // 敵・同盟・行動済みユニットの情報表示
-                    inspectedUnit = unit
-                    Gdx.app.log(TAG, "ユニット情報表示: ${unit.name}")
-                } else {
-                    // 何もないマスをタップ → 情報パネルを閉じる
-                    inspectedUnit = null
-                }
+        // 各エントリーの描画
+        batch.projectionMatrix = camera.combined
+        batch.begin()
+
+        var y = panelY - 10f
+        font.color = Color.GOLD
+        font.draw(batch, "ACTION", panelX + 8f, y)
+        y -= entryHeight
+
+        for ((index, unit) in actionQueue.withIndex()) {
+            font.color = when (unit.faction) {
+                Faction.PLAYER -> Color(0.4f, 0.6f, 1f, 1f)
+                Faction.ENEMY -> Color(1f, 0.4f, 0.4f, 1f)
+                Faction.ALLY -> Color(0.4f, 1f, 0.6f, 1f)
             }
-
-            BattleState.UNIT_SELECTED -> {
-                if (tappedPos in movablePositions) {
-                    // 移動実行
-                    val unitPos = battleMap.getUnitPosition(selectedUnit!!)!!
-                    battleMap.moveUnit(unitPos, tappedPos)
-                    selectedUnit!!.hasActed = true
-                    battleState = BattleState.IDLE
-                    movablePositions = emptySet()
-                    attackablePositions = emptySet()
-                    selectedUnit = null
-                    inspectedUnit = null
-
-                    // 全員行動済みチェック
-                    val allUnits = battleMap.getAllUnits().map { it.second }
-                    if (turnManager.allUnitsActed(allUnits)) {
-                        endPlayerPhase()
-                    }
-                    Gdx.app.log(TAG, "移動完了")
-                } else {
-                    // 選択解除
-                    selectedUnit = null
-                    inspectedUnit = null
-                    movablePositions = emptySet()
-                    attackablePositions = emptySet()
-                    battleState = BattleState.IDLE
-                }
-            }
-
-            else -> { /* 他の状態は後続フェーズで実装 */ }
+            val marker = if (index == 0) ">> " else "${index + 1}. "
+            font.draw(batch, "$marker${unit.name}", panelX + 8f, y)
+            y -= entryHeight
         }
+
+        batch.end()
     }
 
     /**
-     * プレイヤーフェイズ終了処理
+     * ターン情報を画面上部中央に描画する
      */
-    private fun endPlayerPhase() {
-        Gdx.app.log(TAG, "プレイヤーフェイズ終了 → エネミーフェイズ開始")
-        turnManager.advancePhase() // PLAYER → ENEMY
-        val allUnits = battleMap.getAllUnits().map { it.second }
-        turnManager.startPhase(allUnits) // 敵ユニットの hasActed をリセット
-        battleState = BattleState.ENEMY_PHASE
-        executeEnemyPhase()
-    }
+    private fun renderTurnInfo() {
+        batch.projectionMatrix = camera.combined
+        batch.begin()
 
-    /**
-     * エネミーフェイズを実行する
-     */
-    private fun executeEnemyPhase() {
-        val enemyUnits = battleMap.getAllUnits()
-            .filter { it.second.faction == Faction.ENEMY && !it.second.isDefeated }
+        val activeUnit = turnManager.activeUnit
+        val roundText = "Round ${turnManager.roundNumber}"
 
-        for ((_, enemy) in enemyUnits) {
-            val action = aiSystem.decideAction(enemy, battleMap)
-            when (val act = action.action) {
-                is AISystem.Action.MoveAndAttack -> {
-                    val enemyPos = battleMap.getUnitPosition(enemy)!!
-                    battleMap.moveUnit(enemyPos, act.moveTo)
-                    val result = battleSystem.executeBattle(enemy, act.target, battleMap)
-                    Gdx.app.log(TAG, "敵攻撃: ${enemy.name} → ${act.target.name} (ダメージ: ${result.attacks.sumOf { it.damage }})")
-                    // 撃破されたユニットを除去
-                    if (result.defenderDefeated) {
-                        battleMap.removeUnit(battleMap.getUnitPosition(act.target) ?: continue)
-                    }
-                    if (result.attackerDefeated) {
-                        battleMap.removeUnit(act.moveTo)
-                    }
-                }
-                is AISystem.Action.Move -> {
-                    val enemyPos = battleMap.getUnitPosition(enemy)!!
-                    battleMap.moveUnit(enemyPos, act.moveTo)
-                }
-                is AISystem.Action.Wait -> { /* 何もしない */ }
+        val viewCenterX = camera.position.x
+        val viewTop = camera.position.y + viewport.worldHeight / 2f
+
+        font.color = Color.WHITE
+        font.draw(batch, roundText, viewCenterX - 80f, viewTop - 16f)
+
+        if (activeUnit != null) {
+            font.color = when (activeUnit.faction) {
+                Faction.PLAYER -> Color(0.4f, 0.6f, 1f, 1f)
+                Faction.ENEMY -> Color(1f, 0.4f, 0.4f, 1f)
+                Faction.ALLY -> Color(0.4f, 1f, 0.6f, 1f)
             }
-            enemy.hasActed = true
+            val activeText = "${activeUnit.name} のターン"
+            font.draw(batch, activeText, viewCenterX - 100f, viewTop - 52f)
         }
 
-        // 勝敗判定
-        val outcome = victoryChecker.checkOutcome(
-            battleMap, VictoryChecker.VictoryConditionType.DEFEAT_ALL
-        )
-        when (outcome) {
-            VictoryChecker.BattleOutcome.VICTORY -> {
-                Gdx.app.log(TAG, "勝利！")
-                battleState = BattleState.RESULT
-            }
-            VictoryChecker.BattleOutcome.DEFEAT -> {
-                Gdx.app.log(TAG, "敗北...")
-                battleState = BattleState.RESULT
-            }
-            VictoryChecker.BattleOutcome.ONGOING -> {
-                // ENEMY → ALLYフェイズ
-                turnManager.advancePhase()
-                val allUnits = battleMap.getAllUnits().map { it.second }
-
-                // 同盟ユニットがいる場合はALLYフェイズを実行
-                val allyUnits = allUnits.filter { it.faction == Faction.ALLY && !it.isDefeated }
-                if (allyUnits.isNotEmpty()) {
-                    turnManager.startPhase(allUnits) // 同盟ユニットの hasActed をリセット
-                    executeAllyPhase()
-                }
-
-                // ALLY → PLAYER（ターン+1）
-                turnManager.advancePhase()
-                turnManager.startPhase(allUnits) // プレイヤーユニットの hasActed をリセット
-                battleState = BattleState.IDLE
-                Gdx.app.log(TAG, "ターン${turnManager.turnNumber} プレイヤーフェイズ開始")
-            }
-        }
-    }
-
-    /**
-     * アライ（同盟軍）フェイズを実行する
-     * 同盟ユニットはAIで自動行動する
-     */
-    private fun executeAllyPhase() {
-        val allyUnits = battleMap.getAllUnits()
-            .filter { it.second.faction == Faction.ALLY && !it.second.isDefeated }
-
-        for ((_, ally) in allyUnits) {
-            val action = aiSystem.decideAction(ally, battleMap, AISystem.AIPattern.DEFENSIVE)
-            when (val act = action.action) {
-                is AISystem.Action.MoveAndAttack -> {
-                    val allyPos = battleMap.getUnitPosition(ally)!!
-                    battleMap.moveUnit(allyPos, act.moveTo)
-                    val result = battleSystem.executeBattle(ally, act.target, battleMap)
-                    Gdx.app.log(TAG, "同盟攻撃: ${ally.name} → ${act.target.name}")
-                    if (result.defenderDefeated) {
-                        battleMap.removeUnit(battleMap.getUnitPosition(act.target) ?: continue)
-                    }
-                    if (result.attackerDefeated) {
-                        battleMap.removeUnit(act.moveTo)
-                    }
-                }
-                is AISystem.Action.Move -> {
-                    val allyPos = battleMap.getUnitPosition(ally)!!
-                    battleMap.moveUnit(allyPos, act.moveTo)
-                }
-                is AISystem.Action.Wait -> { /* 何もしない */ }
-            }
-            ally.hasActed = true
-        }
-        Gdx.app.log(TAG, "同盟フェイズ完了")
+        batch.end()
     }
 
     /**
      * ユニットのステータスパネルを描画する
-     * 画面右上に半透明の背景付きでユニット情報を表示
+     *
+     * 画面右上に半透明の背景付きでユニット情報を表示。
+     * HP・CT・各ステータス・装備武器を一覧表示する。
      *
      * @param unit 表示対象のユニット
      */
     private fun renderStatusPanel(unit: GameUnit) {
         val panelWidth = 380f
-        val panelHeight = 420f
-        val panelX = GameConfig.VIRTUAL_WIDTH - panelWidth - 16f
-        val panelY = GameConfig.VIRTUAL_HEIGHT - panelHeight - 16f
+        val panelHeight = 520f
+        val viewRight = camera.position.x + viewport.worldWidth / 2f
+        val viewTop = camera.position.y + viewport.worldHeight / 2f
+        val panelX = viewRight - panelWidth - 16f
+        val panelY = viewTop - panelHeight - 16f
 
         // 半透明背景
         Gdx.gl.glEnable(GL20.GL_BLEND)
@@ -438,36 +861,59 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         font.draw(batch, "Lv.${unit.level}  ${unit.unitClass.name}", textX, textY)
         textY -= lineHeight
 
-        // HPバー
-        textY -= 8f
+        // HPテキスト
+        textY -= 12f
         font.color = Color.WHITE
         font.draw(batch, "HP  ${unit.currentHp} / ${unit.maxHp}", textX, textY)
-        textY -= 8f
         batch.end()
 
-        // HPバー描画（シェイプ）
+        // HPバー描画（テキストの下に十分な間隔を空ける）
         val barX = textX
-        val barY = textY - 14f
         val barWidth = panelWidth - 32f
-        val barHeight = 10f
+        val barHeight = 12f
+        textY -= (lineHeight + 8f)  // テキスト分の行送り + 追加余白
+        val hpBarY = textY
         val hpRatio = unit.currentHp.toFloat() / unit.maxHp.toFloat()
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f)
-        shapeRenderer.rect(barX, barY, barWidth, barHeight)
+        shapeRenderer.rect(barX, hpBarY, barWidth, barHeight)
         val hpColor = when {
             hpRatio > 0.5f -> Color(0.2f, 0.9f, 0.2f, 1f)
             hpRatio > 0.25f -> Color(0.9f, 0.9f, 0.1f, 1f)
             else -> Color(0.9f, 0.2f, 0.2f, 1f)
         }
         shapeRenderer.color = hpColor
-        shapeRenderer.rect(barX, barY, barWidth * hpRatio, barHeight)
+        shapeRenderer.rect(barX, hpBarY, barWidth * hpRatio, barHeight)
+        shapeRenderer.end()
+
+        // CTテキスト
+        textY -= (barHeight + 16f)  // バー高さ + 余白
+        batch.begin()
+        font.color = Color.WHITE
+        font.draw(batch, "CT  ${unit.ct} / ${GameConfig.CT_THRESHOLD}", textX, textY)
+        batch.end()
+
+        // CTバー描画（テキストの下に十分な間隔を空ける）
+        textY -= (lineHeight + 8f)  // テキスト分の行送り + 追加余白
+        val ctBarY = textY
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f)
+        shapeRenderer.rect(barX, ctBarY, barWidth, barHeight)
+        val ctRatio = (unit.ct.toFloat() / GameConfig.CT_THRESHOLD).coerceIn(0f, 1f)
+        when {
+            ctRatio >= 0.8f -> shapeRenderer.setColor(1f, 0.9f, 0.2f, 1f)
+            ctRatio >= 0.5f -> shapeRenderer.setColor(0.3f, 0.8f, 1f, 1f)
+            else -> shapeRenderer.setColor(0.4f, 0.4f, 0.4f, 1f)
+        }
+        shapeRenderer.rect(barX, ctBarY, barWidth * ctRatio, barHeight)
         shapeRenderer.end()
         Gdx.gl.glDisable(GL20.GL_BLEND)
 
         // ステータス値
-        textY = barY - 20f
+        textY -= (barHeight + 16f)  // バー高さ + 余白
         batch.begin()
         font.color = Color.WHITE
 
@@ -508,6 +954,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         batch.end()
     }
+
+    // ==================== テストデータ・ユーティリティ ====================
 
     /**
      * テスト用マップを生成する
@@ -596,7 +1044,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * ウィンドウリサイズ処理
      */
     override fun resize(width: Int, height: Int) {
-        viewport.update(width, height, true)
+        if (::viewport.isInitialized) {
+            viewport.update(width, height)
+            centerCameraOnMap()
+        }
     }
 
     /**
@@ -605,10 +1056,13 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     override fun dispose() {
         batch.dispose()
         shapeRenderer.dispose()
-        font.dispose()
+        // フォントは FontManager が管理するため、ここでは dispose しない
     }
 
     companion object {
         private const val TAG = "BattleScreen"
+
+        /** 行動順キューの表示数 */
+        private const val ACTION_QUEUE_SIZE = 8
     }
 }

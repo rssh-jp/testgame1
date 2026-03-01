@@ -54,11 +54,16 @@ Step 3: 🔨 実装
 Step 4: 🧪 テスト
   └─ #generate-tests → ユニットテストを生成
   └─ テスト実行: ./gradlew :core:test
-  └─ テスト失敗時: 原因を分析して修正 → 再テスト
+  └─ テスト失敗時: 原因を分析 → Step 3 に戻って実装を修正 → 再ビルド → 再テスト
 
 Step 5: 🔍 レビュー
   └─ #code-review → 実装コードをレビュー
-  └─ 重大な問題がある場合: Step 3 に戻って修正
+  └─ 重大な問題がある場合: Step 3 に戻って実装からやり直し（再ビルド → 再テスト → 再レビュー）
+
+Step 5b: 📱 実機確認（AVD）
+  └─ エミュレータへ installDebug → アプリ起動
+  └─ クラッシュ・表示崩れがないことを確認
+  └─ 問題がある場合: adb logcat でログを取得 → Step 3 に戻って修正
 
 Step 6: 📝 ドキュメント更新
   └─ #generate-docs → 実装状況（09-implementation-status.md）を更新
@@ -205,8 +210,8 @@ Step 5: 📦 Git コミット
 | エラー種別 | 対応 |
 |-----------|------|
 | ビルドエラー | エラーメッセージを分析 → `#debug-gameplay` で修正 → 再ビルド |
-| テスト失敗 | 失敗テストを分析 → 実装 or テストを修正 → 再テスト |
-| レビュー指摘（重大） | `#implement-feature` or `#refactor` で修正 → 再レビュー |
+| テスト失敗 | 失敗テストを分析 → Step 3（実装）に戻って修正 → 再ビルド → 再テスト |
+| レビュー指摘（重大） | Step 3（実装）に戻って修正 → 再ビルド → 再テスト → 再レビュー |
 | レビュー指摘（軽微） | 修正して次のステップに進む |
 | Git コンフリクト | `#git-ops` でコンフリクト解消 |
 
@@ -263,5 +268,53 @@ Step 5: 📦 Git コミット
 - Gradle ビルド: `./gradlew assembleDebug`
 - テスト実行: `./gradlew :core:test`
 - Git: WSL 上で実行（`/mnt/c/Users/tarau/home/prj/github/testgame1`）
+
+---
+
+## 実機確認（Android Virtual Device）
+
+実装やバグ修正の後、ビルドが通ったら **必ず AVD（Android エミュレータ）上で動作確認** を行う。
+各パイプラインのビルド確認ステップの直後に、以下の手順を実行すること。
+
+### 起動手順
+
+```powershell
+# 環境変数の設定
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+
+# 1. AVD 一覧を確認
+& "$env:ANDROID_HOME\emulator\emulator.exe" -list-avds
+
+# 2. エミュレータをバックグラウンドで起動（AVD名は上の一覧から選択）
+Start-Process -FilePath "$env:ANDROID_HOME\emulator\emulator.exe" -ArgumentList "-avd", "<AVD名>" -WindowStyle Normal
+
+# 3. デバイスの起動完了を待機
+$adb = "$env:ANDROID_HOME\platform-tools\adb.exe"
+while ((& $adb shell getprop sys.boot_completed 2>$null) -ne "1") { Start-Sleep -Seconds 5 }
+
+# 4. APK をインストール
+.\gradlew.bat installDebug
+
+# 5. アプリを起動
+& "$env:ANDROID_HOME\platform-tools\adb.exe" shell am start -n com.tacticsflame/com.tacticsflame.AndroidLauncher
+```
+
+### 確認タイミング
+
+| パイプライン | 確認タイミング |
+|------------|--------------|
+| A: 新機能実装 | Step 3（実装）のビルド成功後 |
+| B: バグ修正 | Step 2（修正）のビルド成功後 |
+| C: バランス調整 | Step 2（パラメータ調整）のビルド成功後 |
+| D: UI 改善 | Step 2（UI実装）のビルド成功後 |
+| E: リファクタリング | Step 2（リファクタリング）のビルド成功後 |
+| F: マップ追加 | Step 2（統合実装）のビルド成功後 |
+
+### 注意事項
+
+- エミュレータが既に起動している場合は、手順 1〜3 をスキップして `installDebug` から実行する
+- `adb devices` で接続中のデバイスを確認できる
+- クラッシュ等の問題が発生した場合は `adb logcat -s "TacticsFlameGame" "BattleScreen" "FontManager"` でログを確認する
 
 ````

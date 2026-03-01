@@ -42,8 +42,11 @@ class GameUnit(
     var currentHp: Int = stats.hp
         private set
 
-    /** 行動済みフラグ */
+    /** 行動済みフラグ（レガシー: CTベースシステムでは未使用。将来の拡張用に保持） */
     var hasActed: Boolean = false
+
+    /** チャージタイム（CT）: SPDに基づいて蓄積、閾値到達で行動可能 */
+    var ct: Int = 0
 
     /** 戦闘不能フラグ */
     val isDefeated: Boolean

@@ -65,25 +65,27 @@ data class AIAction(
 
 ## AI行動の実行フロー（BattleScreen側）
 
-### エネミーフェイズ
+CTベースの個別ターン制では、各ユニットは陣営を問わず個別にCTが貯まり、行動順が回ってくる。
+ENEMY・ ALLY ユニットのCTが閾値（100）に達したら、64行動が実行される。
+
+### CTベースAI行動フロー
 
 ```
-for (enemy in 生存している敵ユニット):
-    1. AISystem.decideAction(enemy, ...) → AIAction取得
-    2. enemy を moveX, moveY に移動
-    3. target != null → BattleSystem.executeBattle(enemy, target, map)
-    4. enemy.hasActed = true
+// CTが100以上に達したENEMYまたはALLYユニット 1体に対して:
+1. AISystem.decideAction(unit, battleMap, allUnits) → AIAction取得
+2. unit を moveX, moveY に移動
+3. target != null → BattleSystem.executeBattle(unit, target, map)
+4. unit.ct -= 100  // 余剰CTは次回に繰り越し
+5. 勝敗判定 → 継続なら次のCT進行へ
 ```
 
-### アライフェイズ
+### 敵味方判定（isHostileFaction）
 
-```
-for (ally in 生存している同盟ユニット):
-    1. AISystem.decideAction(ally, ...) → AIAction取得
-    2. ally を moveX, moveY に移動
-    3. target != null → BattleSystem.executeBattle(ally, target, map)
-    4. ally.hasActed = true
-```
+| 行動ユニットの陣営 | 敵対陣営 |
+|---------------------|------------|
+| ENEMY | PLAYER, ALLY |
+| ALLY | ENEMY |
+| PLAYER | ENEMY |
 
 ## ターゲット選択の優先度
 
