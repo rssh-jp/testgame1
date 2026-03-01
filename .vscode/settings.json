@@ -5,6 +5,9 @@
             "file": ".github/copilot-instructions.md"
         }
     ],
+    // Git 設定
+    "git.enabled": true,
+    "git.path": "C:\\Program Files\\Git\\cmd\\git.exe",
     // エディタ設定
     "editor.formatOnSave": true,
     "editor.tabSize": 4,
