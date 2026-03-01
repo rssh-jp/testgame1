@@ -60,6 +60,11 @@ Step 5: 🔍 レビュー
   └─ #code-review → 実装コードをレビュー
   └─ 重大な問題がある場合: Step 3 に戻って実装からやり直し（再ビルド → 再テスト → 再レビュー）
 
+Step 5b: 📱 実機確認（AVD）
+  └─ エミュレータへ installDebug → アプリ起動
+  └─ クラッシュ・表示崩れがないことを確認
+  └─ 問題がある場合: adb logcat でログを取得 → Step 3 に戻って修正
+
 Step 6: 📝 ドキュメント更新
   └─ #generate-docs → 実装状況（09-implementation-status.md）を更新
   └─ 必要に応じて仕様書も更新

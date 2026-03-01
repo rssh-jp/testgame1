@@ -36,6 +36,8 @@ object FontManager : Disposable {
             for (c in '\u3000'..'\u303F') append(c)
             // 半角カタカナ・全角英数
             for (c in '\uFF00'..'\uFFEF') append(c)
+            // 画面UIで使用する特殊記号
+            append("\u2014\u2015\u2190\u2191\u2192\u2193\u25B6\u25B7\u25C0\u25C1\u25CF\u25CB\u25A0\u25A1\u25B2\u25B3\u25BC\u25BD\u2713\u2717\u2605\u2606")
             // ゲーム内で使用する漢字
             append(GAME_KANJI)
         }
@@ -74,7 +76,9 @@ object FontManager : Disposable {
         "日月火水木金土年時分秒間" +
         "確認取消保存読込新続再設定音量画質言語" +
         // ターン表示
-        "現相手味側自分対象範囲全体単"
+        "現相手味側自分対象範囲全体単" +
+        // 画面UI・チャプターテキスト用
+        "部編戻数人過第制圧国境防衛線侵黒抜要"
 
     private var generator: FreeTypeFontGenerator? = null
     private val fontCache = mutableMapOf<Int, BitmapFont>()
