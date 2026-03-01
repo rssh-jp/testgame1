@@ -1,0 +1,386 @@
+package com.tacticsflame.screen
+
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.ScreenAdapter
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.utils.viewport.FitViewport
+import com.tacticsflame.TacticsFlameGame
+import com.tacticsflame.core.GameConfig
+import com.tacticsflame.model.unit.GameUnit
+import com.tacticsflame.util.FontManager
+
+/**
+ * 部隊編成画面
+ *
+ * プレイヤーの所持ユニット一覧を表示し、出撃メンバーを選択する。
+ * ユニットをタップして出撃/非出撃を切り替える。
+ *
+ * 画面フロー:
+ * - ユニットをタップ → 出撃/非出撃のトグル
+ * - 「戻る」ボタン → ワールドマップ画面へ
+ */
+class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
+
+    private lateinit var batch: SpriteBatch
+    private lateinit var shapeRenderer: ShapeRenderer
+    private lateinit var titleFont: BitmapFont
+    private lateinit var font: BitmapFont
+    private lateinit var smallFont: BitmapFont
+    private val viewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT)
+
+    /** 現在のスクロール位置 */
+    private var scrollOffset = 0f
+
+    /** 選択中のユニット（詳細表示用） */
+    private var selectedUnit: GameUnit? = null
+
+    /** 戻るボタンの領域 */
+    private val backButtonX = 80f
+    private val backButtonY = 80f
+    private val backButtonW = 200f
+    private val backButtonH = 70f
+
+    companion object {
+        private const val TAG = "FormationScreen"
+
+        /** ユニットスロット1つの高さ */
+        private const val SLOT_HEIGHT = 120f
+
+        /** ユニットスロットの幅 */
+        private const val SLOT_WIDTH = 900f
+
+        /** スロット表示開始Y座標 */
+        private const val SLOT_START_Y = 880f
+
+        /** スロット左端X座標 */
+        private const val SLOT_X = 100f
+
+        /** パーティ上限（現在の出撃上限とは別。編成画面における表示制約） */
+        private const val MAX_DISPLAY = 12
+    }
+
+    /**
+     * 画面表示時の初期化処理
+     */
+    override fun show() {
+        batch = SpriteBatch()
+        shapeRenderer = ShapeRenderer()
+        titleFont = FontManager.getFont(size = 48)
+        font = FontManager.getFont(size = 32)
+        smallFont = FontManager.getFont(size = 24)
+        Gdx.app.log(TAG, "部隊編成画面を表示")
+    }
+
+    /**
+     * フレーム描画処理
+     *
+     * @param delta 前フレームからの経過時間（秒）
+     */
+    override fun render(delta: Float) {
+        handleInput()
+
+        Gdx.gl.glClearColor(0.08f, 0.1f, 0.15f, 1f)
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
+
+        viewport.apply()
+
+        renderHeader()
+        renderUnitSlots()
+        renderDetailPanel()
+        renderBackButton()
+    }
+
+    // ==================== 入力処理 ====================
+
+    /**
+     * タッチ入力を処理する
+     */
+    private fun handleInput() {
+        if (!Gdx.input.justTouched()) return
+
+        val screenX = Gdx.input.x.toFloat()
+        val screenY = Gdx.input.y.toFloat()
+        val worldCoord = viewport.unproject(Vector2(screenX, screenY))
+        val touchX = worldCoord.x
+        val touchY = worldCoord.y
+
+        // 戻るボタン判定
+        if (touchX in backButtonX..(backButtonX + backButtonW) &&
+            touchY in backButtonY..(backButtonY + backButtonH)
+        ) {
+            Gdx.app.log(TAG, "ワールドマップへ戻る")
+            game.screenManager.navigateToWorldMap()
+            return
+        }
+
+        // ユニットスロットのタップ判定
+        val roster = game.gameProgress.party.roster
+        val maxDeploy = game.gameProgress.selectedChapter?.maxDeployCount ?: 4
+        for (i in roster.indices) {
+            val slotY = SLOT_START_Y - i * (SLOT_HEIGHT + 10f) + scrollOffset
+            if (touchX in SLOT_X..(SLOT_X + SLOT_WIDTH) &&
+                touchY in slotY - SLOT_HEIGHT..slotY
+            ) {
+                val unit = roster[i]
+                // 出撃トグル
+                val deployed = game.gameProgress.party.toggleDeploy(unit.id, maxDeploy)
+                selectedUnit = unit
+                Gdx.app.log(TAG, "${unit.name}: 出撃=${deployed}")
+                return
+            }
+        }
+    }
+
+    // ==================== 描画メソッド ====================
+
+    /**
+     * ヘッダーを描画する
+     */
+    private fun renderHeader() {
+        batch.projectionMatrix = viewport.camera.combined
+        batch.begin()
+
+        titleFont.color = Color.WHITE
+        titleFont.draw(
+            batch, "— 部隊編成 —",
+            GameConfig.VIRTUAL_WIDTH / 2f - 180f,
+            GameConfig.VIRTUAL_HEIGHT - 40f
+        )
+
+        // 出撃人数表示
+        val maxDeploy = game.gameProgress.selectedChapter?.maxDeployCount ?: 4
+        val currentDeploy = game.gameProgress.party.deployedIds.size
+        font.color = if (currentDeploy > 0) Color.CYAN else Color.RED
+        font.draw(
+            batch,
+            "出撃メンバー: $currentDeploy / $maxDeploy",
+            GameConfig.VIRTUAL_WIDTH - 450f,
+            GameConfig.VIRTUAL_HEIGHT - 50f
+        )
+
+        batch.end()
+    }
+
+    /**
+     * ユニットスロット一覧を描画する
+     */
+    private fun renderUnitSlots() {
+        val roster = game.gameProgress.party.roster
+        val deployedIds = game.gameProgress.party.deployedIds
+
+        for (i in roster.indices) {
+            val unit = roster[i]
+            val isDeployed = deployedIds.contains(unit.id)
+            val isSelected = unit == selectedUnit
+            val slotY = SLOT_START_Y - i * (SLOT_HEIGHT + 10f) + scrollOffset
+
+            renderUnitSlot(unit, SLOT_X, slotY, isDeployed, isSelected)
+        }
+    }
+
+    /**
+     * 1つのユニットスロットを描画する
+     *
+     * @param unit ユニット
+     * @param x スロット左端X
+     * @param y スロット上端Y
+     * @param isDeployed 出撃選択されているか
+     * @param isSelected 詳細表示対象か
+     */
+    private fun renderUnitSlot(unit: GameUnit, x: Float, y: Float, isDeployed: Boolean, isSelected: Boolean) {
+        shapeRenderer.projectionMatrix = viewport.camera.combined
+
+        // スロット背景
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        if (isDeployed) {
+            shapeRenderer.setColor(0.15f, 0.25f, 0.45f, 0.9f)
+        } else {
+            shapeRenderer.setColor(0.1f, 0.1f, 0.15f, 0.8f)
+        }
+        shapeRenderer.rect(x, y - SLOT_HEIGHT, SLOT_WIDTH, SLOT_HEIGHT)
+        shapeRenderer.end()
+
+        // 選択枠
+        if (isSelected) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+            shapeRenderer.color = Color.GOLD
+            shapeRenderer.rect(x, y - SLOT_HEIGHT, SLOT_WIDTH, SLOT_HEIGHT)
+            shapeRenderer.end()
+        }
+
+        // 出撃インジケータ
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        if (isDeployed) {
+            shapeRenderer.setColor(0.2f, 0.9f, 0.3f, 1f)
+        } else {
+            shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1f)
+        }
+        shapeRenderer.circle(x + 40f, y - SLOT_HEIGHT / 2f, 16f)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // ユニット情報テキスト
+        batch.projectionMatrix = viewport.camera.combined
+        batch.begin()
+
+        val textX = x + 80f
+        var textY = y - 20f
+
+        // 名前
+        font.color = if (isDeployed) Color.WHITE else Color.GRAY
+        font.draw(batch, unit.name, textX, textY)
+        textY -= 34f
+
+        // 兵種・レベル
+        smallFont.color = Color.LIGHT_GRAY
+        smallFont.draw(batch, "Lv.${unit.level}  ${unit.unitClass.name}", textX, textY)
+        textY -= 28f
+
+        // ステータス簡易表示
+        smallFont.color = Color(0.7f, 0.7f, 0.7f, 1f)
+        val stats = unit.stats
+        smallFont.draw(
+            batch,
+            "HP:${unit.currentHp}/${unit.maxHp}  STR:${stats.str}  SPD:${stats.spd}  DEF:${stats.def}",
+            textX, textY
+        )
+
+        // 武器名
+        val weapon = unit.equippedWeapon()
+        if (weapon != null) {
+            smallFont.color = Color.GOLD
+            smallFont.draw(batch, weapon.name, textX + 550f, y - 24f)
+        }
+
+        // 出撃状態ラベル
+        if (isDeployed) {
+            font.color = Color.CYAN
+            font.draw(batch, "出撃", x + SLOT_WIDTH - 120f, y - SLOT_HEIGHT / 2f + 14f)
+        }
+
+        batch.end()
+    }
+
+    /**
+     * 選択ユニットの詳細パネルを描画する
+     */
+    private fun renderDetailPanel() {
+        val unit = selectedUnit ?: return
+
+        val panelW = 400f
+        val panelH = 460f
+        val panelX = GameConfig.VIRTUAL_WIDTH - panelW - 60f
+        val panelY = GameConfig.VIRTUAL_HEIGHT / 2f - panelH / 2f
+
+        shapeRenderer.projectionMatrix = viewport.camera.combined
+
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0f, 0f, 0f, 0.8f)
+        shapeRenderer.rect(panelX, panelY, panelW, panelH)
+        shapeRenderer.end()
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.color = Color(0.4f, 0.6f, 1f, 1f)
+        shapeRenderer.rect(panelX, panelY, panelW, panelH)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // 詳細テキスト
+        batch.projectionMatrix = viewport.camera.combined
+        batch.begin()
+
+        var textY = panelY + panelH - 24f
+        val textX = panelX + 20f
+        val lineH = 34f
+
+        font.color = Color(0.4f, 0.6f, 1f, 1f)
+        font.draw(batch, unit.name, textX, textY)
+        textY -= lineH
+
+        smallFont.color = Color.LIGHT_GRAY
+        smallFont.draw(batch, "Lv.${unit.level}  ${unit.unitClass.name}", textX, textY)
+        textY -= lineH + 8f
+
+        val stats = unit.stats
+        val statPairs = listOf(
+            "HP" to "${unit.currentHp}/${unit.maxHp}",
+            "STR" to "${stats.str}",
+            "MAG" to "${stats.mag}",
+            "SKL" to "${stats.skl}",
+            "SPD" to "${stats.spd}",
+            "LCK" to "${stats.lck}",
+            "DEF" to "${stats.def}",
+            "RES" to "${stats.res}",
+            "MOV" to "${unit.mov}"
+        )
+
+        smallFont.color = Color.WHITE
+        for ((label, value) in statPairs) {
+            smallFont.draw(batch, "$label  $value", textX, textY)
+            textY -= 28f
+        }
+
+        textY -= 8f
+        val weapon = unit.equippedWeapon()
+        if (weapon != null) {
+            font.color = Color.GOLD
+            font.draw(batch, weapon.name, textX, textY)
+            textY -= lineH
+            smallFont.color = Color.LIGHT_GRAY
+            smallFont.draw(
+                batch,
+                "威力:${weapon.might}  命中:${weapon.hit}  重さ:${weapon.weight}",
+                textX, textY
+            )
+        }
+
+        batch.end()
+    }
+
+    /**
+     * 戻るボタンを描画する
+     */
+    private fun renderBackButton() {
+        shapeRenderer.projectionMatrix = viewport.camera.combined
+
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0.4f, 0.2f, 0.2f, 0.9f)
+        shapeRenderer.rect(backButtonX, backButtonY, backButtonW, backButtonH)
+        shapeRenderer.end()
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.color = Color(1f, 0.5f, 0.5f, 1f)
+        shapeRenderer.rect(backButtonX, backButtonY, backButtonW, backButtonH)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        batch.projectionMatrix = viewport.camera.combined
+        batch.begin()
+        font.color = Color.WHITE
+        font.draw(batch, "← 戻る", backButtonX + 40f, backButtonY + backButtonH / 2f + 12f)
+        batch.end()
+    }
+
+    /**
+     * ウィンドウリサイズ処理
+     */
+    override fun resize(width: Int, height: Int) {
+        viewport.update(width, height, true)
+    }
+
+    /**
+     * リソース解放
+     */
+    override fun dispose() {
+        batch.dispose()
+        shapeRenderer.dispose()
+    }
+}

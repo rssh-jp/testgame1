@@ -60,9 +60,9 @@ class TitleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         )
         batch.end()
 
-        // タッチでバトル画面へ遷移（仮）
+        // タッチでワールドマップ画面へ遷移
         if (Gdx.input.justTouched()) {
-            game.screen = BattleScreen(game)
+            game.screenManager.navigateToWorldMap()
         }
     }
 

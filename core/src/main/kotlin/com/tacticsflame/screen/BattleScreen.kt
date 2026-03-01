@@ -13,6 +13,8 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.core.GameConfig
 import com.tacticsflame.model.battle.BattleResult
+import com.tacticsflame.model.campaign.BattleConfig
+import com.tacticsflame.model.campaign.BattleResultData
 import com.tacticsflame.model.map.*
 import com.tacticsflame.model.unit.*
 import com.tacticsflame.system.*
@@ -43,8 +45,14 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private val victoryChecker = VictoryChecker()
     private val levelUpSystem = LevelUpSystem()
 
+    // バトル設定（BattlePrepScreen から渡されるデータ）
+    private var battleConfig: BattleConfig? = null
+
     // マップとユニット
     private lateinit var battleMap: BattleMap
+
+    /** 初期敵ユニット数（リザルト表示用） */
+    private var initialEnemyCount: Int = 0
 
     // バトル画面の状態
     private var battleState: BattleState = BattleState.CT_ADVANCING
@@ -108,8 +116,13 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         shapeRenderer = ShapeRenderer()
         font = FontManager.getFont(size = 28)
 
-        // テスト用マップ生成
-        battleMap = createTestMap()
+        // BattleConfig からマップを構築、なければテスト用マップにフォールバック
+        battleConfig = game.currentBattleConfig
+        battleMap = setupBattleMap()
+
+        // 初期敵数を記録
+        initialEnemyCount = battleMap.getAllUnits()
+            .count { it.second.faction == Faction.ENEMY }
 
         // マップサイズに基づいてビューポートを設定（マップが画面いっぱいに表示される）
         initViewport()
@@ -123,6 +136,35 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         battleState = BattleState.CT_ADVANCING
         Gdx.app.log(TAG, "バトル画面初期化完了（CTベースターン制）")
+    }
+
+    /**
+     * BattleConfig に基づいてマップとユニットを配置する
+     *
+     * BattleConfig がある場合はそのデータを使用し、
+     * ない場合（レガシー互換）はテスト用マップを生成する。
+     *
+     * @return 構築された BattleMap
+     */
+    private fun setupBattleMap(): BattleMap {
+        val config = battleConfig ?: return createTestMap()
+
+        val map = config.battleMap
+
+        // プレイヤーユニット配置
+        for (unit in config.playerUnits) {
+            val pos = config.playerPositions[unit.id] ?: continue
+            map.placeUnit(unit, pos)
+        }
+
+        // 敵ユニット配置
+        for (unit in config.enemyUnits) {
+            val pos = config.enemyPositions[unit.id] ?: continue
+            map.placeUnit(unit, pos)
+        }
+
+        Gdx.app.log(TAG, "BattleConfig からマップ構築: ${config.chapterInfo.name}")
+        return map
     }
 
     /**
@@ -443,6 +485,34 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      */
     private fun handleResultInput() {
         if (Gdx.input.justTouched()) {
+            navigateToResult()
+        }
+    }
+
+    /**
+     * バトル結果をまとめてリザルト画面へ遷移する
+     */
+    private fun navigateToResult() {
+        val config = battleConfig
+        if (config != null) {
+            // BattleConfig 経由の場合: BattleResultScreen へ
+            val survivingPlayers = battleMap.getAllUnits()
+                .filter { it.second.faction == Faction.PLAYER && !it.second.isDefeated }
+                .map { it.second }
+            val defeatedEnemies = initialEnemyCount - battleMap.getAllUnits()
+                .count { it.second.faction == Faction.ENEMY && !it.second.isDefeated }
+
+            val resultData = BattleResultData(
+                chapterInfo = config.chapterInfo,
+                isVictory = isVictory,
+                roundCount = turnManager.roundNumber,
+                defeatedEnemies = defeatedEnemies,
+                totalEnemies = initialEnemyCount,
+                survivingUnits = survivingPlayers
+            )
+            game.screenManager.navigateToBattleResult(resultData)
+        } else {
+            // レガシーフォールバック: 旧 ResultScreen へ
             game.screen = ResultScreen(game, isVictory)
         }
     }

@@ -37,6 +37,11 @@
 | CT プロパティ (GameUnit.ct) | ✅ | **新規追加** |
 | マップデータ JSON 読み込み | ✅ | chapter1.json |
 | ユニットデータ JSON 読み込み | ✅ | units.json 内のテストデータ |
+| **ChapterInfo データクラス** | **✅** | **新規追加: チャプター情報（ID・名前・マップファイル・ワールドマップ座標）** |
+| **PartyState クラス** | **✅** | **新規追加: パーティ管理（ロスター・出撃メンバー選択）** |
+| **GameProgress クラス** | **✅** | **新規追加: キャンペーン進行状態（チャプター開放・クリア管理）** |
+| **BattleConfig データクラス** | **✅** | **新規追加: バトル設定（マップ・ユニット配置・勝利条件）** |
+| **BattleResultData データクラス** | **✅** | **新規追加: 戦闘結果（勝敗・ラウンド数・撃破数・生存ユニット）** |
 
 ## 3. バトルシステム
 
@@ -128,21 +133,34 @@
 | 戦闘アニメーション | ❌ | |
 | マップスクロール / ズーム | ❗ | マップ全体俯瞰表示（ExtendViewport）で画面いっぱいに表示。スクロール/ズームは未実装 |
 | 経験値 / レベルアップ演出 | ❌ | |
-| リザルト画面（勝利/敗北） | ✅ | タップでTitleScreenへ |
+| リザルト画面（勝利/敗北） | ✅ | タップでWorldMapScreenへ |
 | スプライト・テクスチャ | ❌ | ShapeRenderer のみ |
 
 ## 9. 画面遷移
 
 | 項目 | 状況 | 備考 |
 |------|------|------|
-| TacticsFlameGame メインクラス | ✅ | |
-| タイトル画面 (TitleScreen) | ⚠️ | クラスのみ・最低限 |
-| バトル画面 (BattleScreen) | ✅ | CTベースターン制 |
-| リザルト画面 (ResultScreen) | ✅ | 勝利/敗北判定対応 |
-| マップ選択画面 | ❌ | |
-| 編成画面 | ❌ | |
+| TacticsFlameGame メインクラス | ✅ | GameProgress・ScreenManager 統合 |
+| **ScreenManager（画面遷移管理）** | **✅** | **新規追加: 画面間の疎結合遷移を一元管理** |
+| タイトル画面 (TitleScreen) | ✅ | タップでWorldMapScreenへ遷移 |
+| **ワールドマップ画面 (WorldMapScreen)** | **✅** | **新規追加: チャプターノード選択・編成ボタン** |
+| **部隊編成画面 (FormationScreen)** | **✅** | **新規追加: ユニット一覧・出撃メンバートグル・詳細パネル** |
+| **戦闘準備画面 (BattlePrepScreen)** | **✅** | **新規追加: マッププレビュー・ユニット配置・出撃開始** |
+| バトル画面 (BattleScreen) | ✅ | BattleConfig対応・CTベースターン制 |
+| **バトルリザルト画面 (BattleResultScreen)** | **✅** | **新規追加: 勝敗表示・生存ユニット・撃破数・チャプタークリア処理** |
+| リザルト画面 (ResultScreen) | ⚠️ | レガシー互換用に残存 |
 | ショップ画面 | ❌ | |
 | 会話・ストーリー画面 | ❌ | |
+
+### 画面フロー
+
+```
+TitleScreen →(タップ)→ WorldMapScreen
+                          ├── 部隊編成ボタン → FormationScreen → WorldMapScreen
+                          └── チャプター選択 → BattlePrepScreen →(出撃)→ BattleScreen
+                                                                               ↓
+                              WorldMapScreen ←── BattleResultScreen ←── BattleScreen(勝敗)
+```
 
 ## 10. テスト
 
@@ -177,8 +195,8 @@
 3. **戦闘アニメーション**
    - 攻撃時のエフェクトやダメージ数値を視覚的に演出
 
-4. **日本語フォント対応**
-   - BitmapFont を日本語対応フォント（.fnt）に差し替え
+4. **JSONデータ読み込みの統合**
+   - BattlePrepScreen でハードコードのマップ→JSONデータローダーに切り替え
 
 5. **マップスクロール**
    - カメラ移動でマップ全体を見渡せるように
