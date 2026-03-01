@@ -34,6 +34,18 @@ object GameConfig {
     /** CT（チャージタイム）の行動閾値 */
     const val CT_THRESHOLD = 100
 
+    /** AI思考ウェイト時間（秒） */
+    const val AI_THINK_DELAY = 0.4f
+
+    /** 移動アニメーション1タイルあたりの時間（秒） */
+    const val MOVE_TIME_PER_TILE = 0.15f
+
+    /** 戦闘結果表示時間（秒） */
+    const val COMBAT_RESULT_DELAY = 0.6f
+
+    /** 行動後ウェイト時間（秒） */
+    const val POST_ACTION_DELAY = 0.3f
+
     /** バトル画面のマップ外余白（タイル数） */
     const val BATTLE_MAP_PADDING_TILES = 1.0f
 
