@@ -144,14 +144,18 @@ class BattleSystem {
     /**
      * 戦闘で得られる経験値を計算する
      *
+     * 計算式: 基本経験値(30) + (相手Lv - 自分Lv) × 3 + 撃破ボーナス(20)
+     * 範囲: 1〜100
+     *
      * @param attacker 攻撃ユニット
      * @param defender 防御ユニット
      * @return 獲得経験値
      */
-    private fun calculateExp(attacker: GameUnit, defender: GameUnit): Int {
-        val baseExp = 30
+    fun calculateExp(attacker: GameUnit, defender: GameUnit): Int {
+        val baseExp = GameConfig.EXP_BASE
         val levelDiff = defender.level - attacker.level
-        val bonus = if (defender.isDefeated) 20 else 0
-        return (baseExp + levelDiff * 3 + bonus).coerceIn(1, 100)
+        val bonus = if (defender.isDefeated) GameConfig.EXP_DEFEAT_BONUS else 0
+        return (baseExp + levelDiff * GameConfig.EXP_LEVEL_DIFF_MULTIPLIER + bonus)
+            .coerceIn(GameConfig.EXP_MIN, GameConfig.EXP_MAX)
     }
 }

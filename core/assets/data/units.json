@@ -4,6 +4,7 @@
         "name": "アレス",
         "classId": "lord",
         "level": 1,
+        "exp": 0,
         "isLord": true,
         "stats": {
             "hp": 20,
@@ -34,6 +35,7 @@
         "name": "リーナ",
         "classId": "lancer",
         "level": 1,
+        "exp": 0,
         "isLord": false,
         "stats": {
             "hp": 18,
@@ -64,6 +66,7 @@
         "name": "マリア",
         "classId": "archer",
         "level": 1,
+        "exp": 0,
         "isLord": false,
         "stats": {
             "hp": 16,
@@ -94,6 +97,7 @@
         "name": "エリック",
         "classId": "mage",
         "level": 1,
+        "exp": 0,
         "isLord": false,
         "stats": {
             "hp": 15,

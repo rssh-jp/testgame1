@@ -22,6 +22,24 @@ object GameConfig {
     /** レベルアップに必要な経験値 */
     const val EXP_TO_LEVEL_UP = 100
 
+    /** レベル上限 */
+    const val MAX_LEVEL = 20
+
+    /** 経験値計算: 基本経験値 */
+    const val EXP_BASE = 30
+
+    /** 経験値計算: レベル差補正の係数 */
+    const val EXP_LEVEL_DIFF_MULTIPLIER = 3
+
+    /** 経験値計算: 敵撃破ボーナス */
+    const val EXP_DEFEAT_BONUS = 20
+
+    /** 経験値の最小値 */
+    const val EXP_MIN = 1
+
+    /** 経験値の最大値 */
+    const val EXP_MAX = 100
+
     /** 必殺ダメージ倍率 */
     const val CRITICAL_MULTIPLIER = 3
 

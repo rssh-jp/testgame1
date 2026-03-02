@@ -379,7 +379,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     /**
      * 戦闘結果表示を処理する
      *
-     * 表示時間経過後、撃破ユニットを除去して行動後ウェイトに遷移する。
+     * 表示時間経過後、経験値を付与し、撃破ユニットを除去して行動後ウェイトに遷移する。
+     * プレイヤーユニットが攻撃した場合のみ経験値を獲得する。
      *
      * @param delta フレームデルタタイム（秒）
      */
@@ -387,9 +388,23 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         stateTimer += delta
         if (stateTimer < GameConfig.COMBAT_RESULT_DELAY) return
 
-        // 撃破ユニットを除去
+        // 撃破ユニットを除去 & 経験値付与
         val result = pendingBattleResult
         if (result != null) {
+            // 経験値付与: 攻撃側がプレイヤーで撃破されていない場合
+            if (result.attacker.faction == Faction.PLAYER && !result.attackerDefeated) {
+                awardExpToUnit(result.attacker, result.expGained)
+            }
+            // 経験値付与: 防御側がプレイヤーで撃破されていない場合（反撃で命中した場合のみ）
+            if (result.defender.faction == Faction.PLAYER && !result.defenderDefeated) {
+                // 防御側は反撃が命中した場合のみ経験値を得る
+                val defenderHit = result.attacks.any { !it.attackerIsInitiator && it.hit }
+                if (defenderHit) {
+                    val defenderExp = battleSystem.calculateExp(result.defender, result.attacker)
+                    awardExpToUnit(result.defender, defenderExp)
+                }
+            }
+
             if (result.defenderDefeated) {
                 val targetPos = battleMap.getUnitPosition(result.defender)
                 if (targetPos != null) battleMap.removeUnit(targetPos)
@@ -402,6 +417,26 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         pendingBattleResult = null
         enterPostAction()
+    }
+
+    /**
+     * ユニットに経験値を付与し、レベルアップ処理を行う
+     *
+     * @param unit 対象ユニット
+     * @param expGained 獲得経験値
+     */
+    private fun awardExpToUnit(unit: GameUnit, expGained: Int) {
+        val levelUpResult = levelUpSystem.awardExp(unit, expGained)
+        Gdx.app.log(TAG, "${unit.name} が経験値 $expGained を獲得（EXP: ${unit.exp}/${GameConfig.EXP_TO_LEVEL_UP}）")
+        if (levelUpResult != null) {
+            val g = levelUpResult.growthResult
+            Gdx.app.log(
+                TAG,
+                "${unit.name} がレベル ${levelUpResult.newLevel} にアップ！ " +
+                    "成長: HP+${g.hp} STR+${g.str} MAG+${g.mag} SKL+${g.skl} " +
+                    "SPD+${g.spd} LCK+${g.lck} DEF+${g.def} RES+${g.res}"
+            )
+        }
     }
 
     /**
@@ -818,7 +853,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      */
     private fun renderStatusPanel(unit: GameUnit) {
         val panelWidth = 380f
-        val panelHeight = 520f
+        val panelHeight = 560f
         val viewRight = camera.position.x + viewport.worldWidth / 2f
         val viewTop = camera.position.y + viewport.worldHeight / 2f
         val panelX = viewRight - panelWidth - 16f
@@ -860,6 +895,13 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         font.color = Color.LIGHT_GRAY
         font.draw(batch, "Lv.${unit.level}  ${unit.unitClass.name}", textX, textY)
         textY -= lineHeight
+
+        // 経験値テキスト（プレイヤーユニットのみ表示）
+        if (unit.faction == Faction.PLAYER) {
+            font.color = Color(0.8f, 0.7f, 0.3f, 1f)
+            font.draw(batch, "EXP  ${unit.exp} / ${GameConfig.EXP_TO_LEVEL_UP}", textX, textY)
+            textY -= lineHeight
+        }
 
         // HPテキスト
         textY -= 12f
