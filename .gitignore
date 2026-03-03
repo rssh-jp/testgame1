@@ -19,6 +19,11 @@ venv/
 .gradle/
 local.properties
 
+# 署名キーストア（機密情報 - 絶対にコミットしないこと）
+keystore.properties
+*.jks
+*.keystore
+
 # ビルド成果物
 dist/
 build/
@@ -28,6 +33,7 @@ build/
 *.dylib
 build_out.txt
 build_err.txt
+build_release.log
 
 # OS
 .DS_Store
@@ -36,3 +42,5 @@ Thumbs.db
 # ログ
 *.log
 logs/
+build_apk_out.txt
+build_result.txt

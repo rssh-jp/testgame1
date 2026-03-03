@@ -1,10 +1,20 @@
 // android モジュール - Android ビルド用
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     kotlin("android")
 }
 
 val gdxVersion = "1.12.1"
+
+// リリース署名設定をプロジェクトルートの keystore.properties から読み込む
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
 
 android {
     namespace = "com.tacticsflame"
@@ -18,10 +28,26 @@ android {
         versionName = "0.1.0"
     }
 
+    // 署名設定
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // keystore.properties が存在する場合のみリリース署名を適用
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
