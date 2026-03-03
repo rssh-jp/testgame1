@@ -147,7 +147,7 @@ class GameProgress {
             growthRate = GrowthRate(hp = 70, str = 50, mag = 10, skl = 55, spd = 60, lck = 40, def = 35, res = 25),
             isLord = true
         )
-        ares.weapons.add(Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3, durability = 46))
+        ares.weapons.add(Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3))
 
         val leena = GameUnit(
             id = "hero_02", name = "リーナ",
@@ -155,7 +155,7 @@ class GameProgress {
             stats = Stats(hp = 18, str = 7, mag = 0, skl = 5, spd = 5, lck = 3, def = 7, res = 1),
             growthRate = GrowthRate(hp = 60, str = 55, mag = 5, skl = 45, spd = 40, lck = 30, def = 50, res = 20)
         )
-        leena.weapons.add(Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5, durability = 45))
+        leena.weapons.add(Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5))
 
         val maria = GameUnit(
             id = "hero_03", name = "マリア",
@@ -163,7 +163,7 @@ class GameProgress {
             stats = Stats(hp = 16, str = 5, mag = 0, skl = 8, spd = 7, lck = 4, def = 3, res = 3),
             growthRate = GrowthRate(hp = 55, str = 45, mag = 5, skl = 60, spd = 55, lck = 40, def = 25, res = 30)
         )
-        maria.weapons.add(Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2, durability = 45))
+        maria.weapons.add(Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2))
 
         val eric = GameUnit(
             id = "hero_04", name = "エリック",
@@ -171,7 +171,7 @@ class GameProgress {
             stats = Stats(hp = 15, str = 1, mag = 7, skl = 6, spd = 6, lck = 4, def = 2, res = 6),
             growthRate = GrowthRate(hp = 45, str = 10, mag = 60, skl = 50, spd = 45, lck = 35, def = 15, res = 50)
         )
-        eric.weapons.add(Weapon("fire", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2, durability = 40))
+        eric.weapons.add(Weapon("fire", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2))
 
         party.addUnits(listOf(ares, leena, maria, eric))
 

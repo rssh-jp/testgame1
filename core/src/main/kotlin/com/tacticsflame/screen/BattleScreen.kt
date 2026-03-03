@@ -1031,7 +1031,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             growthRate = GrowthRate(hp = 70, str = 50, mag = 10, skl = 55, spd = 60, lck = 40, def = 35, res = 25),
             isLord = true
         )
-        playerUnit1.weapons.add(Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3, durability = 46))
+        playerUnit1.weapons.add(Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3))
 
         val playerUnit2 = GameUnit(
             id = "hero_02", name = "リーナ",
@@ -1039,7 +1039,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             stats = Stats(hp = 18, str = 7, mag = 0, skl = 5, spd = 5, lck = 3, def = 7, res = 1),
             growthRate = GrowthRate(hp = 60, str = 55, mag = 5, skl = 45, spd = 40, lck = 30, def = 50, res = 20)
         )
-        playerUnit2.weapons.add(Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5, durability = 45))
+        playerUnit2.weapons.add(Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5))
 
         val playerUnit3 = GameUnit(
             id = "hero_03", name = "マリア",
@@ -1047,7 +1047,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             stats = Stats(hp = 16, str = 5, mag = 0, skl = 8, spd = 7, lck = 4, def = 3, res = 3),
             growthRate = GrowthRate(hp = 55, str = 45, mag = 5, skl = 60, spd = 55, lck = 40, def = 25, res = 30)
         )
-        playerUnit3.weapons.add(Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2, durability = 45))
+        playerUnit3.weapons.add(Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2))
 
         map.placeUnit(playerUnit1, Position(2, 2))
         map.placeUnit(playerUnit2, Position(2, 4))
@@ -1060,7 +1060,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             stats = Stats(hp = 18, str = 6, mag = 0, skl = 3, spd = 4, lck = 1, def = 3, res = 0),
             growthRate = GrowthRate()
         )
-        enemy1.weapons.add(Weapon("ironAxe", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6, durability = 40))
+        enemy1.weapons.add(Weapon("ironAxe", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6))
 
         val enemy2 = GameUnit(
             id = "enemy_02", name = "山賊B",
@@ -1068,7 +1068,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             stats = Stats(hp = 18, str = 5, mag = 0, skl = 2, spd = 3, lck = 0, def = 3, res = 0),
             growthRate = GrowthRate()
         )
-        enemy2.weapons.add(Weapon("ironAxe2", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6, durability = 40))
+        enemy2.weapons.add(Weapon("ironAxe2", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6))
 
         val enemy3 = GameUnit(
             id = "enemy_03", name = "盗賊",
@@ -1076,7 +1076,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             stats = Stats(hp = 16, str = 4, mag = 0, skl = 6, spd = 9, lck = 2, def = 2, res = 1),
             growthRate = GrowthRate()
         )
-        enemy3.weapons.add(Weapon("ironSword2", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3, durability = 46))
+        enemy3.weapons.add(Weapon("ironSword2", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3))
 
         map.placeUnit(enemy1, Position(11, 3))
         map.placeUnit(enemy2, Position(12, 6))

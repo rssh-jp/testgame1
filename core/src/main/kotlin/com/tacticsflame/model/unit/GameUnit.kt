@@ -44,6 +44,15 @@ class GameUnit(
     var currentHp: Int = stats.hp
         private set
 
+    /**
+     * 現在HPを直接設定する（セーブデータ復元用）
+     *
+     * @param hp 設定するHP値（0 ～ maxHp にクランプされる）
+     */
+    fun setCurrentHp(hp: Int) {
+        currentHp = hp.coerceIn(0, maxHp)
+    }
+
     /** 行動済みフラグ（レガシー: CTベースシステムでは未使用。将来の拡張用に保持） */
     var hasActed: Boolean = false
 
@@ -68,7 +77,21 @@ class GameUnit(
      * @return 装備中の武器（なければnull）
      */
     fun equippedWeapon(): Weapon? {
-        return weapons.firstOrNull { it.isUsable() }
+        return weapons.firstOrNull()
+    }
+
+    /**
+     * 指定した武器を装備する（リストの先頭に移動）
+     *
+     * 既に先頭（装備中）の武器を指定した場合は何もしない。
+     *
+     * @param weapon 装備する武器（所持武器リストに含まれていること）
+     */
+    fun equipWeapon(weapon: Weapon) {
+        val idx = weapons.indexOf(weapon)
+        if (idx <= 0) return
+        weapons.removeAt(idx)
+        weapons.add(0, weapon)
     }
 
     /**

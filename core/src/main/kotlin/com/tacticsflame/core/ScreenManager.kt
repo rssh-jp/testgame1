@@ -5,6 +5,7 @@ import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.model.campaign.BattleConfig
 import com.tacticsflame.model.campaign.BattleResultData
 import com.tacticsflame.model.campaign.ChapterInfo
+import com.tacticsflame.model.unit.GameUnit
 
 /**
  * 画面遷移を一元管理するマネージャー
@@ -79,6 +80,17 @@ class ScreenManager(private val game: TacticsFlameGame) {
     }
 
     /**
+     * 武器装備変更画面へ遷移する
+     *
+     * @param unit 装備変更対象のユニット
+     */
+    fun navigateToWeaponEquip(unit: GameUnit) {
+        Gdx.app.log(TAG, "画面遷移: → WeaponEquip (${unit.name})")
+        game.weaponEquipTarget = unit
+        game.setScreen(createScreen(ScreenType.WEAPON_EQUIP))
+    }
+
+    /**
      * Screen インスタンスを生成する
      *
      * コンパニオンで Screen クラスを直接参照せず、
@@ -92,6 +104,10 @@ class ScreenManager(private val game: TacticsFlameGame) {
             ScreenType.BATTLE_PREP -> com.tacticsflame.screen.BattlePrepScreen(game)
             ScreenType.BATTLE -> com.tacticsflame.screen.BattleScreen(game)
             ScreenType.BATTLE_RESULT -> com.tacticsflame.screen.BattleResultScreen(game)
+            ScreenType.WEAPON_EQUIP -> com.tacticsflame.screen.WeaponEquipScreen(
+                game,
+                requireNotNull(game.weaponEquipTarget) { "weaponEquipTarget が null です" }
+            )
         }
     }
 
@@ -104,7 +120,8 @@ class ScreenManager(private val game: TacticsFlameGame) {
         FORMATION,
         BATTLE_PREP,
         BATTLE,
-        BATTLE_RESULT
+        BATTLE_RESULT,
+        WEAPON_EQUIP
     }
 
     companion object {

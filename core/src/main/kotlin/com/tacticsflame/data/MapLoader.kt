@@ -54,8 +54,7 @@ class MapLoader {
         val critical: Int = 0,
         val weight: Int = 0,
         val minRange: Int = 1,
-        val maxRange: Int = 1,
-        val durability: Int = -1
+        val maxRange: Int = 1
     ) {
         /**
          * Weapon インスタンスを生成する
@@ -69,8 +68,7 @@ class MapLoader {
             critical = critical,
             weight = weight,
             minRange = minRange,
-            maxRange = maxRange,
-            durability = durability
+            maxRange = maxRange
         )
     }
 
@@ -157,8 +155,7 @@ class MapLoader {
                     critical = w.getInt("critical", 0),
                     weight = w.getInt("weight", 0),
                     minRange = w.getInt("minRange", 1),
-                    maxRange = w.getInt("maxRange", 1),
-                    durability = w.getInt("durability", -1)
+                    maxRange = w.getInt("maxRange", 1)
                 )
             }
 
@@ -364,8 +361,7 @@ class MapLoader {
             hit = hit,
             weight = weight,
             minRange = minRange,
-            maxRange = maxRange,
-            durability = 40
+            maxRange = maxRange
         )
     }
 

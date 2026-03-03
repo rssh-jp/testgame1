@@ -30,8 +30,6 @@ enum class WeaponType {
  * @property weight 重さ（攻速に影響）
  * @property minRange 最小射程
  * @property maxRange 最大射程
- * @property durability 耐久値（-1は無限）
- * @property currentDurability 現在の耐久値
  */
 data class Weapon(
     val id: String,
@@ -42,25 +40,5 @@ data class Weapon(
     val critical: Int = 0,
     val weight: Int = 0,
     val minRange: Int = 1,
-    val maxRange: Int = 1,
-    val durability: Int = -1,
-    var currentDurability: Int = durability
-) {
-    /**
-     * 武器が使用可能かどうかを判定する
-     *
-     * @return 耐久が残っている、または無限なら true
-     */
-    fun isUsable(): Boolean {
-        return durability == -1 || currentDurability > 0
-    }
-
-    /**
-     * 武器を1回使用する（耐久消費）
-     */
-    fun use() {
-        if (durability != -1) {
-            currentDurability = maxOf(0, currentDurability - 1)
-        }
-    }
-}
+    val maxRange: Int = 1
+)

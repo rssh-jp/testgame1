@@ -123,7 +123,6 @@ class BattleSystem {
     private fun applyAttackResult(result: AttackResult, attacker: GameUnit, defender: GameUnit) {
         if (result.hit) {
             defender.takeDamage(result.damage)
-            attacker.equippedWeapon()?.use()
         }
     }
 
