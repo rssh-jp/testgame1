@@ -492,9 +492,12 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val allUnits = battleMap.getAllUnits().map { it.second }
         turnManager.completeAction(unit, allUnits)
 
-        // 勝敗判定
+        // 勝敗判定（BattleConfig の勝利条件を使用）
+        val conditionType = battleConfig?.victoryCondition ?: VictoryChecker.VictoryConditionType.DEFEAT_ALL
         val outcome = victoryChecker.checkOutcome(
-            battleMap, VictoryChecker.VictoryConditionType.DEFEAT_ALL
+            battleMap, conditionType,
+            turnNumber = turnManager.roundNumber,
+            bossId = battleConfig?.enemyUnits?.find { it.isLord }?.id
         )
         when (outcome) {
             VictoryChecker.BattleOutcome.VICTORY -> {

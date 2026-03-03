@@ -14,6 +14,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.core.GameConfig
+import com.tacticsflame.data.MapLoader
 import com.tacticsflame.model.campaign.BattleConfig
 import com.tacticsflame.model.campaign.ChapterInfo
 import com.tacticsflame.model.map.*
@@ -63,6 +64,12 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     /** 敵ユニットリスト（表示用） */
     private var enemyUnits: List<Pair<GameUnit, Position>> = emptyList()
 
+    /** 勝利条件（JSONから読み込み） */
+    private var victoryConditionType: VictoryChecker.VictoryConditionType = VictoryChecker.VictoryConditionType.DEFEAT_ALL
+
+    /** マップローダー */
+    private val mapLoader = MapLoader()
+
     // ボタン領域（縦画面レイアウト: 下部に配置）
     private val startButtonX = GameConfig.VIRTUAL_WIDTH - 360f
     private val startButtonY = 60f
@@ -107,65 +114,26 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     /**
      * マップのプレビューを構築する
      *
-     * 現状は chapter_1 のみハードコード。
-     * TODO: JSON読み込みに切り替え
+     * チャプターの mapFileName に対応するJSONファイルから
+     * マップ・敵ユニット・スポーン位置・勝利条件を読み込む。
      */
     private fun setupBattlePreview() {
-        val width = 15
-        val height = 10
-        val tiles = Array(height) { y ->
-            Array(width) { x ->
-                val terrain = when {
-                    x == 7 && y in 2..7 -> TerrainType.FOREST
-                    x in 4..5 && y == 5 -> TerrainType.MOUNTAIN
-                    x == 10 && y == 5 -> TerrainType.FORT
-                    x in 12..13 && y in 3..6 -> TerrainType.FOREST
-                    else -> TerrainType.PLAIN
-                }
-                Tile(Position(x, y), terrain)
-            }
+        val result = mapLoader.loadMap(chapter.mapFileName)
+
+        if (result == null) {
+            Gdx.app.error(TAG, "マップ読み込み失敗: ${chapter.mapFileName}、ワールドマップに戻る")
+            game.screenManager.navigateToWorldMap()
+            return
         }
 
-        previewMap = BattleMap(chapter.id, chapter.name, width, height, tiles)
+        previewMap = result.battleMap
+        spawnPositions = result.playerSpawns
+        enemyUnits = result.enemies
+        victoryConditionType = result.victoryConditionType
 
-        // スポーン位置
-        spawnPositions = listOf(
-            Position(2, 2),
-            Position(2, 4),
-            Position(3, 3),
-            Position(1, 3)
-        )
-
-        // 敵ユニット準備
-        val enemy1 = GameUnit(
-            id = "enemy_01", name = "山賊A",
-            unitClass = UnitClass.AXE_FIGHTER, faction = Faction.ENEMY,
-            stats = Stats(hp = 18, str = 6, mag = 0, skl = 3, spd = 4, lck = 1, def = 3, res = 0),
-            growthRate = GrowthRate()
-        )
-        enemy1.weapons.add(Weapon("ironAxe", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6, durability = 40))
-
-        val enemy2 = GameUnit(
-            id = "enemy_02", name = "山賊B",
-            unitClass = UnitClass.AXE_FIGHTER, faction = Faction.ENEMY,
-            stats = Stats(hp = 18, str = 5, mag = 0, skl = 2, spd = 3, lck = 0, def = 3, res = 0),
-            growthRate = GrowthRate()
-        )
-        enemy2.weapons.add(Weapon("ironAxe2", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6, durability = 40))
-
-        val enemy3 = GameUnit(
-            id = "enemy_03", name = "盗賊",
-            unitClass = UnitClass.SWORD_FIGHTER, faction = Faction.ENEMY,
-            stats = Stats(hp = 16, str = 4, mag = 0, skl = 6, spd = 9, lck = 2, def = 2, res = 1),
-            growthRate = GrowthRate()
-        )
-        enemy3.weapons.add(Weapon("ironSword2", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3, durability = 46))
-
-        enemyUnits = listOf(
-            enemy1 to Position(11, 3),
-            enemy2 to Position(12, 6),
-            enemy3 to Position(10, 5)
-        )
+        Gdx.app.log(TAG, "マップ読み込み完了: ${chapter.mapFileName} " +
+            "(${previewMap.width}x${previewMap.height}, スポーン: ${spawnPositions.size}, " +
+            "敵: ${enemyUnits.size}, 勝利条件: $victoryConditionType)")
 
         // マップビューポート初期化
         val mapPixelW = previewMap.width * GameConfig.TILE_SIZE
@@ -294,7 +262,7 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             playerPositions = playerPositions,
             enemyUnits = enemies,
             enemyPositions = enemyPositionMap,
-            victoryCondition = VictoryChecker.VictoryConditionType.DEFEAT_ALL
+            victoryCondition = victoryConditionType
         )
 
         Gdx.app.log(TAG, "バトル開始: ${chapter.name} (出撃: ${playerUnits.size}人)")

@@ -64,7 +64,7 @@
 }
 ```
 
-> **注記**: 現在はハードコードの `createTestMap()` でマップを生成している。JSONローダーは未実装。
+> **注記**: `MapLoader` クラス（`com.tacticsflame.data.MapLoader`）で JSON ファイルからマップを読み込む。武器マスターデータ（`weapons.json`）も自動的に参照される。
 
 ## チャプターマップ一覧
 
