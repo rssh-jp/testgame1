@@ -1,0 +1,113 @@
+{
+    "id": "chapter_3",
+    "name": "第3章 - 暗黒の森",
+    "width": 15,
+    "height": 12,
+    "terrain": [
+        [1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1],
+        [1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1],
+        [0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1],
+        [0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0],
+        [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0],
+        [1, 1, 0, 0, 1, 1, 3, 0, 0, 1, 1, 0, 0, 1, 1],
+        [0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0],
+        [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0],
+        [1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1],
+        [1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1],
+        [0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1],
+        [0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1]
+    ],
+    "terrainKey": {
+        "0": "PLAIN",
+        "1": "FOREST",
+        "2": "MOUNTAIN",
+        "3": "FORT",
+        "4": "WATER",
+        "5": "WALL"
+    },
+    "playerSpawns": [
+        {"x": 1, "y": 1},
+        {"x": 2, "y": 2},
+        {"x": 1, "y": 3},
+        {"x": 0, "y": 2}
+    ],
+    "enemies": [
+        {
+            "id": "enemy_ch3_01",
+            "classId": "swordFighter",
+            "name": "森の盗賊A",
+            "level": 3,
+            "x": 8,
+            "y": 3,
+            "ai": "aggressive",
+            "weaponId": "ironSword",
+            "stats": {"hp": 22, "str": 8, "mag": 0, "skl": 7, "spd": 9, "lck": 4, "def": 4, "res": 2}
+        },
+        {
+            "id": "enemy_ch3_02",
+            "classId": "swordFighter",
+            "name": "森の盗賊B",
+            "level": 3,
+            "x": 11,
+            "y": 6,
+            "ai": "aggressive",
+            "weaponId": "ironSword",
+            "stats": {"hp": 21, "str": 7, "mag": 0, "skl": 8, "spd": 10, "lck": 3, "def": 3, "res": 2}
+        },
+        {
+            "id": "enemy_ch3_03",
+            "classId": "axeFighter",
+            "name": "山賊",
+            "level": 3,
+            "x": 6,
+            "y": 7,
+            "ai": "aggressive",
+            "weaponId": "ironAxe",
+            "stats": {"hp": 24, "str": 10, "mag": 0, "skl": 4, "spd": 5, "lck": 2, "def": 5, "res": 0}
+        },
+        {
+            "id": "enemy_ch3_04",
+            "classId": "mage",
+            "name": "闇魔道士",
+            "level": 4,
+            "x": 12,
+            "y": 9,
+            "ai": "defensive",
+            "weaponId": "fire",
+            "stats": {"hp": 19, "str": 1, "mag": 10, "skl": 8, "spd": 7, "lck": 5, "def": 3, "res": 8}
+        },
+        {
+            "id": "enemy_ch3_05",
+            "classId": "archer",
+            "name": "狙撃手",
+            "level": 4,
+            "x": 13,
+            "y": 5,
+            "ai": "guard",
+            "weaponId": "ironBow",
+            "stats": {"hp": 20, "str": 9, "mag": 0, "skl": 11, "spd": 8, "lck": 4, "def": 4, "res": 3}
+        }
+    ],
+    "victoryCondition": {
+        "type": "DEFEAT_ALL"
+    },
+    "defeatCondition": {
+        "type": "LORD_DEFEATED"
+    },
+    "dialogue": {
+        "opening": [
+            {
+                "speaker": "マリア",
+                "text": "この森、視界が悪いわ…伏兵に注意して。"
+            },
+            {
+                "speaker": "アレス",
+                "text": "森に潜む敵を一掃する。慎重に進もう。"
+            },
+            {
+                "speaker": "エリック",
+                "text": "魔力の反応を感じます。魔道士がいるようです。"
+            }
+        ]
+    }
+}

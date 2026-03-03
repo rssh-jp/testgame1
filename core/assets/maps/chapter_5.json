@@ -1,0 +1,137 @@
+{
+    "id": "chapter_5",
+    "name": "第5章 - 水辺の決戦",
+    "width": 16,
+    "height": 12,
+    "terrain": [
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 4, 4, 4, 7, 4, 4, 4, 4, 0, 0, 0, 0],
+        [0, 0, 0, 0, 4, 4, 4, 0, 4, 4, 4, 4, 0, 0, 1, 0],
+        [0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0],
+        [0, 0, 0, 0, 4, 4, 4, 0, 4, 4, 4, 4, 0, 0, 0, 0],
+        [0, 0, 1, 0, 4, 4, 4, 7, 4, 4, 4, 4, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0],
+        [0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ],
+    "terrainKey": {
+        "0": "PLAIN",
+        "1": "FOREST",
+        "2": "MOUNTAIN",
+        "3": "FORT",
+        "4": "WATER",
+        "5": "WALL",
+        "6": "VILLAGE",
+        "7": "BRIDGE"
+    },
+    "playerSpawns": [
+        {"x": 1, "y": 4},
+        {"x": 1, "y": 6},
+        {"x": 0, "y": 5},
+        {"x": 2, "y": 5}
+    ],
+    "enemies": [
+        {
+            "id": "enemy_ch5_01",
+            "classId": "pegasusKnight",
+            "name": "天馬騎士A",
+            "level": 5,
+            "x": 8,
+            "y": 2,
+            "ai": "aggressive",
+            "weaponId": "ironLance",
+            "stats": {"hp": 22, "str": 9, "mag": 0, "skl": 10, "spd": 12, "lck": 7, "def": 5, "res": 8}
+        },
+        {
+            "id": "enemy_ch5_02",
+            "classId": "pegasusKnight",
+            "name": "天馬騎士B",
+            "level": 5,
+            "x": 8,
+            "y": 8,
+            "ai": "aggressive",
+            "weaponId": "ironLance",
+            "stats": {"hp": 21, "str": 8, "mag": 0, "skl": 9, "spd": 13, "lck": 6, "def": 4, "res": 9}
+        },
+        {
+            "id": "enemy_ch5_03",
+            "classId": "mage",
+            "name": "水の魔道士",
+            "level": 6,
+            "x": 12,
+            "y": 5,
+            "ai": "defensive",
+            "weaponId": "fire",
+            "stats": {"hp": 22, "str": 1, "mag": 13, "skl": 10, "spd": 9, "lck": 5, "def": 4, "res": 11}
+        },
+        {
+            "id": "enemy_ch5_04",
+            "classId": "archer",
+            "name": "橋守りA",
+            "level": 5,
+            "x": 7,
+            "y": 3,
+            "ai": "guard",
+            "weaponId": "ironBow",
+            "stats": {"hp": 21, "str": 9, "mag": 0, "skl": 12, "spd": 8, "lck": 4, "def": 5, "res": 3}
+        },
+        {
+            "id": "enemy_ch5_05",
+            "classId": "archer",
+            "name": "橋守りB",
+            "level": 5,
+            "x": 7,
+            "y": 7,
+            "ai": "guard",
+            "weaponId": "ironBow",
+            "stats": {"hp": 21, "str": 9, "mag": 0, "skl": 12, "spd": 8, "lck": 4, "def": 5, "res": 3}
+        },
+        {
+            "id": "enemy_ch5_06",
+            "classId": "swordFighter",
+            "name": "渡河兵",
+            "level": 6,
+            "x": 13,
+            "y": 3,
+            "ai": "aggressive",
+            "weaponId": "steelSword",
+            "stats": {"hp": 25, "str": 11, "mag": 0, "skl": 10, "spd": 10, "lck": 5, "def": 6, "res": 2}
+        },
+        {
+            "id": "enemy_ch5_07",
+            "classId": "lancer",
+            "name": "水辺の将",
+            "level": 7,
+            "x": 14,
+            "y": 5,
+            "ai": "defensive",
+            "weaponId": "ironLance",
+            "stats": {"hp": 28, "str": 12, "mag": 0, "skl": 10, "spd": 8, "lck": 6, "def": 9, "res": 4}
+        }
+    ],
+    "victoryCondition": {
+        "type": "DEFEAT_ALL"
+    },
+    "defeatCondition": {
+        "type": "LORD_DEFEATED"
+    },
+    "dialogue": {
+        "opening": [
+            {
+                "speaker": "アレス",
+                "text": "川を渡らなければ…橋が数箇所あるようだ。"
+            },
+            {
+                "speaker": "マリア",
+                "text": "空に天馬騎士が！水域を飛び越えてくるわ！"
+            },
+            {
+                "speaker": "エリック",
+                "text": "橋を確保しつつ進軍しましょう。水辺は通れません。"
+            }
+        ]
+    }
+}

@@ -98,6 +98,39 @@ class GameProgress {
                     unlocked = false,
                     maxDeployCount = 4,
                     requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "chapter_4",
+                    name = "第4章 - 騎士団の砦",
+                    description = "砦を守る騎士団を撃破せよ。",
+                    mapFileName = "chapter_4.json",
+                    worldMapX = 0.4f,
+                    worldMapY = 0.3f,
+                    unlocked = false,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "chapter_5",
+                    name = "第5章 - 水辺の決戦",
+                    description = "川を渡り敵陣を突破せよ。",
+                    mapFileName = "chapter_5.json",
+                    worldMapX = 0.6f,
+                    worldMapY = 0.25f,
+                    unlocked = false,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "chapter_6",
+                    name = "第6章 - 王城攻略戦",
+                    description = "暗黒将軍ヴォルクを倒し、王城を奪還せよ。",
+                    mapFileName = "chapter_6.json",
+                    worldMapX = 0.8f,
+                    worldMapY = 0.15f,
+                    unlocked = false,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
                 )
             )
         )

@@ -1,0 +1,96 @@
+{
+    "id": "chapter_2",
+    "name": "第2章 - 国境の防衛線",
+    "width": 15,
+    "height": 10,
+    "terrain": [
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 5, 5, 3, 5, 5, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 5, 5, 3, 5, 5, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ],
+    "terrainKey": {
+        "0": "PLAIN",
+        "1": "FOREST",
+        "2": "MOUNTAIN",
+        "3": "FORT",
+        "4": "WATER",
+        "5": "WALL"
+    },
+    "playerSpawns": [
+        {"x": 1, "y": 3},
+        {"x": 1, "y": 5},
+        {"x": 2, "y": 4},
+        {"x": 2, "y": 6}
+    ],
+    "enemies": [
+        {
+            "id": "enemy_ch2_01",
+            "classId": "swordFighter",
+            "name": "国境兵A",
+            "level": 2,
+            "x": 10,
+            "y": 3,
+            "ai": "defensive",
+            "weaponId": "ironSword",
+            "stats": {"hp": 20, "str": 7, "mag": 0, "skl": 6, "spd": 6, "lck": 3, "def": 5, "res": 1}
+        },
+        {
+            "id": "enemy_ch2_02",
+            "classId": "lancer",
+            "name": "国境兵B",
+            "level": 2,
+            "x": 10,
+            "y": 6,
+            "ai": "defensive",
+            "weaponId": "ironLance",
+            "stats": {"hp": 21, "str": 8, "mag": 0, "skl": 5, "spd": 5, "lck": 2, "def": 6, "res": 1}
+        },
+        {
+            "id": "enemy_ch2_03",
+            "classId": "archer",
+            "name": "弓兵",
+            "level": 3,
+            "x": 7,
+            "y": 2,
+            "ai": "guard",
+            "weaponId": "ironBow",
+            "stats": {"hp": 18, "str": 7, "mag": 0, "skl": 9, "spd": 7, "lck": 3, "def": 3, "res": 2}
+        },
+        {
+            "id": "enemy_ch2_04",
+            "classId": "axeFighter",
+            "name": "傭兵隊長",
+            "level": 3,
+            "x": 12,
+            "y": 4,
+            "ai": "aggressive",
+            "weaponId": "ironAxe",
+            "stats": {"hp": 24, "str": 9, "mag": 0, "skl": 5, "spd": 5, "lck": 4, "def": 5, "res": 1}
+        }
+    ],
+    "victoryCondition": {
+        "type": "DEFEAT_ALL"
+    },
+    "defeatCondition": {
+        "type": "LORD_DEFEATED"
+    },
+    "dialogue": {
+        "opening": [
+            {
+                "speaker": "アレス",
+                "text": "国境に敵の防衛線が…。突破するぞ！"
+            },
+            {
+                "speaker": "リーナ",
+                "text": "壁の向こうに弓兵がいるわ。迂回しましょう。"
+            }
+        ]
+    }
+}

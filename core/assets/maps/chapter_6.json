@@ -1,0 +1,154 @@
+{
+    "id": "chapter_6",
+    "name": "第6章 - 王城攻略戦",
+    "width": 20,
+    "height": 15,
+    "terrain": [
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 5, 0, 5, 3, 5, 0, 5, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0, 5, 0, 5, 0, 5, 0, 5, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 5, 0, 5, 0, 5, 0, 5, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 5, 0, 5, 3, 5, 0, 5, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
+    ],
+    "terrainKey": {
+        "0": "PLAIN",
+        "1": "FOREST",
+        "2": "MOUNTAIN",
+        "3": "FORT",
+        "4": "WATER",
+        "5": "WALL"
+    },
+    "playerSpawns": [
+        {"x": 1, "y": 6},
+        {"x": 1, "y": 8},
+        {"x": 2, "y": 7},
+        {"x": 0, "y": 7}
+    ],
+    "enemies": [
+        {
+            "id": "enemy_ch6_01",
+            "classId": "armorKnight",
+            "name": "城門守備兵A",
+            "level": 6,
+            "x": 7,
+            "y": 5,
+            "ai": "guard",
+            "weaponId": "ironLance",
+            "stats": {"hp": 32, "str": 12, "mag": 0, "skl": 6, "spd": 3, "lck": 2, "def": 14, "res": 1}
+        },
+        {
+            "id": "enemy_ch6_02",
+            "classId": "armorKnight",
+            "name": "城門守備兵B",
+            "level": 6,
+            "x": 7,
+            "y": 9,
+            "ai": "guard",
+            "weaponId": "ironLance",
+            "stats": {"hp": 32, "str": 12, "mag": 0, "skl": 6, "spd": 3, "lck": 2, "def": 14, "res": 1}
+        },
+        {
+            "id": "enemy_ch6_03",
+            "classId": "knight",
+            "name": "近衛騎士A",
+            "level": 7,
+            "x": 5,
+            "y": 4,
+            "ai": "aggressive",
+            "weaponId": "steelSword",
+            "stats": {"hp": 27, "str": 11, "mag": 0, "skl": 10, "spd": 10, "lck": 5, "def": 8, "res": 3}
+        },
+        {
+            "id": "enemy_ch6_04",
+            "classId": "knight",
+            "name": "近衛騎士B",
+            "level": 7,
+            "x": 5,
+            "y": 10,
+            "ai": "aggressive",
+            "weaponId": "ironLance",
+            "stats": {"hp": 26, "str": 10, "mag": 0, "skl": 9, "spd": 11, "lck": 4, "def": 7, "res": 3}
+        },
+        {
+            "id": "enemy_ch6_05",
+            "classId": "mage",
+            "name": "宮廷魔道士A",
+            "level": 7,
+            "x": 10,
+            "y": 4,
+            "ai": "defensive",
+            "weaponId": "fire",
+            "stats": {"hp": 24, "str": 1, "mag": 14, "skl": 11, "spd": 10, "lck": 6, "def": 4, "res": 12}
+        },
+        {
+            "id": "enemy_ch6_06",
+            "classId": "mage",
+            "name": "宮廷魔道士B",
+            "level": 7,
+            "x": 10,
+            "y": 10,
+            "ai": "defensive",
+            "weaponId": "fire",
+            "stats": {"hp": 24, "str": 1, "mag": 14, "skl": 11, "spd": 10, "lck": 6, "def": 4, "res": 12}
+        },
+        {
+            "id": "enemy_ch6_07",
+            "classId": "archer",
+            "name": "城壁射手",
+            "level": 7,
+            "x": 10,
+            "y": 7,
+            "ai": "guard",
+            "weaponId": "ironBow",
+            "stats": {"hp": 23, "str": 11, "mag": 0, "skl": 14, "spd": 9, "lck": 5, "def": 6, "res": 4}
+        },
+        {
+            "id": "enemy_ch6_08",
+            "classId": "swordFighter",
+            "name": "暗黒将軍ヴォルク",
+            "level": 8,
+            "x": 10,
+            "y": 7,
+            "ai": "guard",
+            "weaponId": "steelSword",
+            "isLord": true,
+            "stats": {"hp": 35, "str": 14, "mag": 2, "skl": 13, "spd": 11, "lck": 8, "def": 10, "res": 5}
+        }
+    ],
+    "victoryCondition": {
+        "type": "DEFEAT_BOSS"
+    },
+    "defeatCondition": {
+        "type": "LORD_DEFEATED"
+    },
+    "dialogue": {
+        "opening": [
+            {
+                "speaker": "アレス",
+                "text": "ついに王城まで来た…最後の戦いだ！"
+            },
+            {
+                "speaker": "リーナ",
+                "text": "城壁が厚いわ。正面突破は危険よ。"
+            },
+            {
+                "speaker": "エリック",
+                "text": "城内に強力な魔道士の気配…。油断できません。"
+            },
+            {
+                "speaker": "マリア",
+                "text": "左右から回り込めば城門を突破できるかも。"
+            }
+        ]
+    }
+}
