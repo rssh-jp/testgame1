@@ -67,10 +67,14 @@ class BattleResultScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         if (resultData.isVictory) {
             game.gameProgress.completeChapter(resultData.chapterInfo.id)
             game.gameProgress.healAllUnits()
+            // チャプタークリア時に自動セーブ
+            game.saveGame()
             Gdx.app.log(TAG, "勝利! チャプタークリア: ${resultData.chapterInfo.name}")
         } else {
             // 敗北時もHP回復（リトライ可能にするため）
             game.gameProgress.healAllUnits()
+            // 敗北時もユニットのHP回復状態を保存
+            game.saveGame()
             Gdx.app.log(TAG, "敗北... ${resultData.chapterInfo.name}")
         }
 

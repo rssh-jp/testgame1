@@ -4,9 +4,11 @@ import com.badlogic.gdx.Game
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.assets.AssetManager
 import com.tacticsflame.core.ScreenManager
+import com.tacticsflame.data.SaveManager
 import com.tacticsflame.model.campaign.BattleConfig
 import com.tacticsflame.model.campaign.BattleResultData
 import com.tacticsflame.model.campaign.GameProgress
+import com.tacticsflame.model.unit.GameUnit
 import com.tacticsflame.screen.TitleScreen
 import com.tacticsflame.util.FontManager
 
@@ -36,6 +38,9 @@ class TacticsFlameGame : Game() {
     /** バトル結果（BattleScreen → BattleResultScreen 間の受け渡し） */
     var currentBattleResult: BattleResultData? = null
 
+    /** 武器装備変更対象ユニット（FormationScreen → WeaponEquipScreen 間の受け渡し） */
+    var weaponEquipTarget: GameUnit? = null
+
     /**
      * ゲーム初期化処理
      */
@@ -45,8 +50,26 @@ class TacticsFlameGame : Game() {
         screenManager = ScreenManager(this)
         gameProgress = GameProgress()
         gameProgress.initialize()
+
+        // セーブデータがあればロード
+        if (SaveManager.hasSaveData()) {
+            val loaded = SaveManager.load(gameProgress)
+            Gdx.app.log(TAG, "セーブデータロード: ${if (loaded) "成功" else "失敗（新規データで開始）"}")
+        }
+
         // タイトル画面を表示
         setScreen(TitleScreen(this))
+    }
+
+    /**
+     * ゲーム進行状態をセーブする
+     *
+     * チャプタークリア時や重要なタイミングで呼び出すこと。
+     *
+     * @return セーブに成功した場合 true
+     */
+    fun saveGame(): Boolean {
+        return SaveManager.save(gameProgress)
     }
 
     /**

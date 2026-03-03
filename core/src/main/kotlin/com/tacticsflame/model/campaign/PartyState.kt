@@ -19,6 +19,14 @@ class PartyState {
     val deployedIds: List<String> get() = _deployedIds
 
     /**
+     * ロスターを全クリアする（セーブデータ復元用）
+     */
+    fun clearRoster() {
+        _roster.clear()
+        _deployedIds.clear()
+    }
+
+    /**
      * ユニットをパーティに追加する
      *
      * @param unit 追加するユニット

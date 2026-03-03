@@ -45,6 +45,7 @@
 | **BattleConfig データクラス** | **✅** | **新規追加: バトル設定（マップ・ユニット配置・勝利条件）** |
 | **MapLoader（JSONマップローダー）** | **✅** | **新規追加: JSON→BattleMap/敵/スポーン/勝利条件の一括読み込み** |
 | **BattleResultData データクラス** | **✅** | **新規追加: 戦闘結果（勝敗・ラウンド数・撃破数・生存ユニット）** |
+| **SaveManager（セーブ/ロード）** | **✅** | **新規追加: JSON形式でローカルストレージに保存・復元（アトミックセーブ対応）** |
 
 ## 3. バトルシステム
 
@@ -104,7 +105,7 @@
 | **陣営ベース敵対判定** | **✅** | **ENEMY→PLAYER+ALLY、ALLY→ENEMY** |
 | **全ユニットAI自動行動** | **✅** | **新規追加: PLAYERもAGGRESSIVEパターンで自動行動** |
 | 回復アイテム使用 AI | ❌ | |
-| 複数武器切り替え | ❌ | |
+| **複数武器切り替え（手動）** | **✅** | **新規追加: WeaponEquipScreen で装備変更可能** |
 
 ## 7. 経路探索
 
@@ -156,6 +157,7 @@
 | バトル画面 (BattleScreen) | ✅ | BattleConfig対応・CTベースターン制 |
 | **バトルリザルト画面 (BattleResultScreen)** | **✅** | **新規追加: 勝敗表示・生存ユニット・撃破数・チャプタークリア処理** |
 | リザルト画面 (ResultScreen) | ⚠️ | レガシー互換用に残存 |
+| **武器装備変更画面 (WeaponEquipScreen)** | **✅** | **新規追加: 所持武器一覧・装備変更・ステータス比較パネル** |
 | ショップ画面 | ❌ | |
 | 会話・ストーリー画面 | ❌ | |
 
@@ -164,6 +166,7 @@
 ```
 TitleScreen →(タップ)→ WorldMapScreen
                           ├── 部隊編成ボタン → FormationScreen → WorldMapScreen
+                          │                        └── 装備変更ボタン → WeaponEquipScreen → FormationScreen
                           └── チャプター選択 → BattlePrepScreen →(出撃)→ BattleScreen
                                                                                ↓
                               WorldMapScreen ←── BattleResultScreen ←── BattleScreen(勝敗)
@@ -181,6 +184,7 @@ TitleScreen →(タップ)→ WorldMapScreen
 | **BattleSystemExpTest** | **✅** | **新規追加: 経験値計算・クランプ・撃破ボーナステスト** |
 | **LevelUpSystemTest** | **✅** | **新規追加: 経験値付与・レベルアップフローテスト** |
 | **MapLoaderTest** | **✅** | **新規追加: 15テストケース — 全チャプター読み込み・地形・敵・武器・勝利条件** |
+| **SaveManagerTest** | **✅** | **新規追加: 16テストケース — シリアライズ/デシリアライズ・ファイルi/O・エッジケース** |
 
 ## 11. サウンド / アセット
 
