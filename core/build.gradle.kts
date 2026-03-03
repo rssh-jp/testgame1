@@ -15,6 +15,13 @@ dependencies {
     // テスト
     testImplementation(kotlin("test"))
     testImplementation("com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion")
+    testImplementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
+}
+
+// テスト実行時の作業ディレクトリをアセットフォルダに設定
+// Gdx.files.internal() がマップ JSON などを解決できるようにする
+tasks.test {
+    workingDir = file("assets")
 }
 
 java {
