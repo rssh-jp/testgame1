@@ -59,6 +59,9 @@ class GameUnit(
     /** チャージタイム（CT）: SPDに基づいて蓄積、閾値到達で行動可能 */
     var ct: Int = 0
 
+    /** 作戦（AIの行動方針）: 部隊編成画面でユニットごとに設定可能 */
+    var tactic: UnitTactic = UnitTactic.CHARGE
+
     /** 戦闘不能フラグ */
     val isDefeated: Boolean
         get() = currentHp <= 0

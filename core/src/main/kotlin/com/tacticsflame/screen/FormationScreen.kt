@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport
 import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.core.GameConfig
 import com.tacticsflame.model.unit.GameUnit
+import com.tacticsflame.model.unit.UnitTactic
 import com.tacticsflame.util.FontManager
 
 /**
@@ -52,6 +53,12 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private val equipButtonH = 65f
     private val equipButtonX = GameConfig.VIRTUAL_WIDTH / 2f + 480f - equipButtonW - 20f
     private val equipButtonY = 170f
+
+    /** 作戦変更ボタンの領域（詳細パネル内・左下） */
+    private val tacticButtonW = 380f
+    private val tacticButtonH = 65f
+    private val tacticButtonX = GameConfig.VIRTUAL_WIDTH / 2f - 480f + 20f
+    private val tacticButtonY = 170f
 
     companion object {
         private const val TAG = "FormationScreen"
@@ -139,7 +146,27 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             }
         }
 
+        // 作戦変更ボタン判定（ユニット選択中のみ有効）
+        if (selectedUnit != null &&
+            touchX in tacticButtonX..(tacticButtonX + tacticButtonW) &&
+            touchY in tacticButtonY..(tacticButtonY + tacticButtonH)
+        ) {
+            val unit = selectedUnit!!
+            unit.tactic = unit.tactic.next()
+            Gdx.app.log(TAG, "${unit.name}: 作戦変更 → ${unit.tactic.displayName}")
+            return
+        }
+
         // ユニットスロットのタップ判定
+        // 詳細パネルが表示中の場合、パネル領域内のタップはスロットに伝播させない
+        if (selectedUnit != null) {
+            val panelX = GameConfig.VIRTUAL_WIDTH / 2f - 480f
+            val panelY = 160f
+            if (touchX in panelX..(panelX + 960f) && touchY in panelY..(panelY + 400f)) {
+                return
+            }
+        }
+
         val roster = game.gameProgress.party.roster
         val maxDeploy = game.gameProgress.selectedChapter?.maxDeployCount ?: 4
         for (i in roster.indices) {
@@ -283,6 +310,10 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             smallFont.draw(batch, weapon.name, textX + 550f, y - 24f)
         }
 
+        // 作戦表示（スロット右側にコンパクト表示）
+        smallFont.color = getTacticColor(unit.tactic)
+        smallFont.draw(batch, unit.tactic.displayName, textX + 550f, y - 54f)
+
         // 出撃状態ラベル
         if (isDeployed) {
             font.color = Color.CYAN
@@ -369,6 +400,18 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         batch.end()
 
         // 装備変更ボタン
+        renderEquipButton(unit)
+
+        // 作戦変更ボタン
+        renderTacticButton(unit)
+    }
+
+    /**
+     * 装備変更ボタンを描画する
+     *
+     * @param unit 選択中のユニット
+     */
+    private fun renderEquipButton(unit: GameUnit) {
         shapeRenderer.projectionMatrix = viewport.camera.combined
         Gdx.gl.glEnable(GL20.GL_BLEND)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
@@ -396,6 +439,54 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             equipButtonY + equipButtonH / 2f + 12f
         )
         batch.end()
+    }
+
+    /**
+     * 作戦変更ボタンを描画する
+     *
+     * @param unit 選択中のユニット
+     */
+    private fun renderTacticButton(unit: GameUnit) {
+        val tacticColor = getTacticColor(unit.tactic)
+
+        shapeRenderer.projectionMatrix = viewport.camera.combined
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0.15f, 0.2f, 0.3f, 0.9f)
+        shapeRenderer.rect(tacticButtonX, tacticButtonY, tacticButtonW, tacticButtonH)
+        shapeRenderer.end()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.color = tacticColor
+        shapeRenderer.rect(tacticButtonX, tacticButtonY, tacticButtonW, tacticButtonH)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        batch.projectionMatrix = viewport.camera.combined
+        batch.begin()
+        font.color = tacticColor
+        val tacticLabel = "作戦: ${unit.tactic.displayName}"
+        glyphLayout.setText(font, tacticLabel)
+        font.draw(
+            batch, tacticLabel,
+            tacticButtonX + tacticButtonW / 2f - glyphLayout.width / 2f,
+            tacticButtonY + tacticButtonH / 2f + 12f
+        )
+        batch.end()
+    }
+
+    /**
+     * 作戦に対応する表示色を返す
+     *
+     * @param tactic 作戦種別
+     * @return 対応するColor
+     */
+    private fun getTacticColor(tactic: UnitTactic): Color {
+        return when (tactic) {
+            UnitTactic.CHARGE -> Color(1f, 0.5f, 0.3f, 1f)   // オレンジ（積極）
+            UnitTactic.CAUTIOUS -> Color(0.4f, 0.7f, 1f, 1f)  // 水色（慎重）
+            UnitTactic.SUPPORT -> Color(0.4f, 1f, 0.5f, 1f)   // 緑（援護）
+            UnitTactic.FLEE -> Color(0.9f, 0.8f, 0.3f, 1f)    // 黄（逃走）
+        }
     }
 
     /**

@@ -176,6 +176,7 @@ object SaveManager {
         writer.set("exp", unit.exp)
         writer.set("currentHp", unit.currentHp)
         writer.set("isLord", unit.isLord)
+        writer.set("tactic", unit.tactic.name)
 
         // ステータス
         writer.`object`("stats")
@@ -337,6 +338,12 @@ object SaveManager {
             val exp = node.getInt("exp", 0)
             val currentHp = node.getInt("currentHp", 0)
             val isLord = node.getBoolean("isLord", false)
+            val tacticName = node.getString("tactic", UnitTactic.CHARGE.name)
+            val tactic = try {
+                UnitTactic.valueOf(tacticName)
+            } catch (e: IllegalArgumentException) {
+                UnitTactic.CHARGE
+            }
 
             val unitClass = UnitClass.ALL[classId] ?: run {
                 Gdx.app.error(TAG, "不明なクラスID: $classId")
@@ -366,6 +373,7 @@ object SaveManager {
                 isLord = isLord
             )
             unit.setCurrentHp(currentHp)
+            unit.tactic = tactic
             unit
         } catch (e: Exception) {
             Gdx.app.error(TAG, "ユニット読み込み失敗: ${e.message}", e)

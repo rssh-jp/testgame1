@@ -244,10 +244,16 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             return
         }
 
-        // AIパターン決定: 同盟はDEFENSIVE、その他はAGGRESSIVE
+        // AIパターン決定: PLAYERは作戦に基づく、同盟はDEFENSIVE、敵はAGGRESSIVE
         val pattern = when (activeUnit.faction) {
+            Faction.PLAYER -> when (activeUnit.tactic) {
+                UnitTactic.CHARGE -> AISystem.AIPattern.AGGRESSIVE
+                UnitTactic.CAUTIOUS -> AISystem.AIPattern.CAUTIOUS
+                UnitTactic.SUPPORT -> AISystem.AIPattern.SUPPORT
+                UnitTactic.FLEE -> AISystem.AIPattern.FLEE
+            }
             Faction.ALLY -> AISystem.AIPattern.DEFENSIVE
-            else -> AISystem.AIPattern.AGGRESSIVE
+            Faction.ENEMY -> AISystem.AIPattern.AGGRESSIVE
         }
 
         // 行動決定
