@@ -393,21 +393,27 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         val stats = unit.stats
         // 装備後ステータスの計算（変化がある場合のみ括弧付きで表示）
-        val effDef = stats.def + unit.totalArmorDef()
-        val effRes = stats.res + unit.totalArmorRes()
+        val armorDef = unit.totalArmorDef()
+        val armorRes = unit.totalArmorRes()
         val effSpd = unit.effectiveSpeed()
+        val spdDiff = effSpd - stats.spd
 
-        /** 装備で変化がある場合のみ「(→実効値)」を付与するヘルパー */
-        fun withEquip(label: String, base: Int, effective: Int): String =
-            if (base != effective) "$label  $base (→$effective)" else "$label  $base"
+        /** 装備による差分を括弧付きで表示するヘルパー（例: "DEF  11(+2)" や "SPD  12(-7)"） */
+        fun withDiff(label: String, base: Int, diff: Int): String =
+            if (diff != 0) {
+                val sign = if (diff > 0) "+" else ""
+                "$label  $base($sign$diff)"
+            } else {
+                "$label  $base"
+            }
 
         // ステータスを3列で表示（縦画面の横長パネル向けレイアウト）
         val col1X = textX
         val col2X = textX + 300f
         val col3X = textX + 600f
         val statRows = listOf(
-            Triple("HP  ${unit.currentHp}/${unit.maxHp}", "SKL  ${stats.skl}", withEquip("DEF", stats.def, effDef)),
-            Triple("STR  ${stats.str}", withEquip("SPD", stats.spd, effSpd), withEquip("RES", stats.res, effRes)),
+            Triple("HP  ${unit.currentHp}/${unit.maxHp}", "SKL  ${stats.skl}", withDiff("DEF", stats.def, armorDef)),
+            Triple("STR  ${stats.str}", withDiff("SPD", stats.spd, spdDiff), withDiff("RES", stats.res, armorRes)),
             Triple("MAG  ${stats.mag}", "LCK  ${stats.lck}", "MOV  ${unit.mov}")
         )
 
