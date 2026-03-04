@@ -208,7 +208,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         // タップしたユニットの調査パネル（左下）
         val inspected = inspectedUnit
-        if (inspected != null && inspected != activeUnit && !inspected.isDefeated) {
+        if (inspected != null && !inspected.isDefeated) {
             renderInspectionPanel(inspected)
         }
 
