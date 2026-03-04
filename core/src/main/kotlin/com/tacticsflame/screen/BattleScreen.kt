@@ -110,6 +110,25 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     /** 戦闘結果の一時保持 */
     private var pendingBattleResult: BattleResult? = null
 
+    /** 撤退確認ダイアログ表示フラグ */
+    private var showRetreatConfirm: Boolean = false
+
+    // 撤退ボタンの画面座標（スクリーン座標系、renderRetreatButton で更新）
+    private var retreatButtonScreenX: Float = 0f
+    private var retreatButtonScreenY: Float = 0f
+    private var retreatButtonWidth: Float = 0f
+    private var retreatButtonHeight: Float = 0f
+
+    // 確認ダイアログの「はい」「いいえ」ボタンのワールド座標
+    private var confirmYesX: Float = 0f
+    private var confirmYesY: Float = 0f
+    private var confirmYesW: Float = 0f
+    private var confirmYesH: Float = 0f
+    private var confirmNoX: Float = 0f
+    private var confirmNoY: Float = 0f
+    private var confirmNoW: Float = 0f
+    private var confirmNoH: Float = 0f
+
     /**
      * 画面表示時の初期化処理
      */
@@ -178,14 +197,17 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             handleTouchInput()
         }
 
-        // 状態に応じたロジック更新（描画前に実行）
-        when (battleState) {
-            BattleState.CT_ADVANCING -> advanceCT()
-            BattleState.AI_THINKING -> processAIThinking(delta)
-            BattleState.UNIT_MOVING -> processUnitMoving(delta)
-            BattleState.COMBAT_RESULT -> processCombatResult(delta)
-            BattleState.POST_ACTION -> processPostAction(delta)
-            BattleState.RESULT -> handleResultInput()
+        // 確認ダイアログ表示中はゲーム進行を一時停止
+        if (!showRetreatConfirm) {
+            // 状態に応じたロジック更新（描画前に実行）
+            when (battleState) {
+                BattleState.CT_ADVANCING -> advanceCT()
+                BattleState.AI_THINKING -> processAIThinking(delta)
+                BattleState.UNIT_MOVING -> processUnitMoving(delta)
+                BattleState.COMBAT_RESULT -> processCombatResult(delta)
+                BattleState.POST_ACTION -> processPostAction(delta)
+                BattleState.RESULT -> handleResultInput()
+            }
         }
 
         // 画面クリア
@@ -217,6 +239,16 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         // ターン情報描画
         renderTurnInfo()
+
+        // 撤退ボタン描画（RESULT以外で表示）
+        if (battleState != BattleState.RESULT) {
+            renderRetreatButton()
+        }
+
+        // 撤退確認ダイアログ描画
+        if (showRetreatConfirm) {
+            renderRetreatConfirmDialog()
+        }
     }
 
     // ==================== タッチ入力処理 ====================
@@ -231,9 +263,23 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun handleTouchInput() {
         if (!Gdx.input.justTouched()) return
 
-        // スクリーン座標をワールド座標に変換
         val screenX = Gdx.input.x.toFloat()
         val screenY = Gdx.input.y.toFloat()
+
+        // 撤退確認ダイアログが表示中の場合、ダイアログのボタンのみ受け付ける
+        if (showRetreatConfirm) {
+            handleRetreatConfirmInput(screenX, screenY)
+            return
+        }
+
+        // 撤退ボタンのタッチ判定（スクリーン座標で判定）
+        if (isRetreatButtonTouched(screenX, screenY)) {
+            showRetreatConfirm = true
+            Gdx.app.log(TAG, "撤退ボタン押下 → 確認ダイアログ表示")
+            return
+        }
+
+        // スクリーン座標をワールド座標に変換
         val worldCoords = viewport.unproject(Vector3(screenX, screenY, 0f))
 
         // ワールド座標をタイル座標に変換（floor で負方向への丸めを正しく処理）
@@ -255,6 +301,57 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             // 空マスタップで調査パネルを閉じる
             inspectedUnit = null
         }
+    }
+
+    /**
+     * 撤退ボタンのタッチ判定（スクリーン座標系）
+     *
+     * @param screenX タッチX座標（スクリーン座標）
+     * @param screenY タッチY座標（スクリーン座標）
+     * @return ボタン内をタッチした場合 true
+     */
+    private fun isRetreatButtonTouched(screenX: Float, screenY: Float): Boolean {
+        return screenX >= retreatButtonScreenX &&
+            screenX <= retreatButtonScreenX + retreatButtonWidth &&
+            screenY >= retreatButtonScreenY &&
+            screenY <= retreatButtonScreenY + retreatButtonHeight
+    }
+
+    /**
+     * 撤退確認ダイアログのタッチ入力を処理する
+     *
+     * @param screenX タッチX座標（スクリーン座標）
+     * @param screenY タッチY座標（スクリーン座標）
+     */
+    private fun handleRetreatConfirmInput(screenX: Float, screenY: Float) {
+        val worldCoords = viewport.unproject(Vector3(screenX, screenY, 0f))
+        val wx = worldCoords.x
+        val wy = worldCoords.y
+
+        // 「はい」ボタン判定
+        if (wx >= confirmYesX && wx <= confirmYesX + confirmYesW &&
+            wy >= confirmYesY && wy <= confirmYesY + confirmYesH) {
+            Gdx.app.log(TAG, "撤退を実行")
+            showRetreatConfirm = false
+            executeRetreat()
+            return
+        }
+
+        // 「いいえ」ボタン判定
+        if (wx >= confirmNoX && wx <= confirmNoX + confirmNoW &&
+            wy >= confirmNoY && wy <= confirmNoY + confirmNoH) {
+            Gdx.app.log(TAG, "撤退をキャンセル")
+            showRetreatConfirm = false
+            return
+        }
+    }
+
+    /**
+     * 撤退を実行する（敗北扱いでリザルト画面に遷移）
+     */
+    private fun executeRetreat() {
+        isVictory = false
+        battleState = BattleState.RESULT
     }
 
     // ==================== ゲームロジック ==
@@ -1328,6 +1425,167 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         map.placeUnit(enemy3, Position(10, 5))
 
         return map
+    }
+
+    // ==================== 撤退ボタン・確認ダイアログ ====================
+
+    /**
+     * 撤退ボタンを画面右下に描画する
+     *
+     * ボタンのスクリーン座標を保存し、タッチ入力判定に使用する。
+     * ワールド座標で描画するが、タッチ判定はスクリーン座標で行う。
+     */
+    private fun renderRetreatButton() {
+        val btnWidth = 160f
+        val btnHeight = 56f
+        val viewRight = camera.position.x + viewport.worldWidth / 2f
+        val viewBottom = camera.position.y - viewport.worldHeight / 2f
+        val btnX = viewRight - btnWidth - 20f
+        val btnY = viewBottom + 20f
+
+        // スクリーン座標に変換して保存（タッチ判定用）
+        val screenBottomRight = viewport.project(Vector3(btnX, btnY, 0f))
+        val screenTopLeft = viewport.project(Vector3(btnX + btnWidth, btnY + btnHeight, 0f))
+        retreatButtonScreenX = screenBottomRight.x
+        retreatButtonScreenY = screenTopLeft.y  // LibGDXのproject後はY上向き→スクリーン座標に変換
+        retreatButtonWidth = screenTopLeft.x - screenBottomRight.x
+        retreatButtonHeight = screenBottomRight.y - screenTopLeft.y
+
+        // ボタン背景
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.projectionMatrix = camera.combined
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0.6f, 0.15f, 0.15f, 0.85f)
+        shapeRenderer.rect(btnX, btnY, btnWidth, btnHeight)
+        shapeRenderer.end()
+
+        // ボタン枠線
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.setColor(1f, 0.4f, 0.4f, 1f)
+        shapeRenderer.rect(btnX, btnY, btnWidth, btnHeight)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // ボタンテキスト
+        batch.projectionMatrix = camera.combined
+        batch.begin()
+        font.color = Color.WHITE
+        glyphLayout.setText(font, "撤退")
+        font.draw(
+            batch, "撤退",
+            btnX + (btnWidth - glyphLayout.width) / 2f,
+            btnY + (btnHeight + glyphLayout.height) / 2f
+        )
+        batch.end()
+    }
+
+    /**
+     * 撤退確認ダイアログを画面中央に描画する
+     *
+     * 「はい」「いいえ」のボタンを含む確認ダイアログ。
+     * ダイアログ表示中は他のタッチ入力を受け付けない。
+     */
+    private fun renderRetreatConfirmDialog() {
+        val dialogWidth = 400f
+        val dialogHeight = 200f
+        val centerX = camera.position.x
+        val centerY = camera.position.y
+        val dialogX = centerX - dialogWidth / 2f
+        val dialogY = centerY - dialogHeight / 2f
+
+        // 画面全体を暗くするオーバーレイ
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.projectionMatrix = camera.combined
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0f, 0f, 0f, 0.5f)
+        shapeRenderer.rect(
+            camera.position.x - viewport.worldWidth / 2f,
+            camera.position.y - viewport.worldHeight / 2f,
+            viewport.worldWidth,
+            viewport.worldHeight
+        )
+
+        // ダイアログ背景
+        shapeRenderer.setColor(0.12f, 0.12f, 0.18f, 0.95f)
+        shapeRenderer.rect(dialogX, dialogY, dialogWidth, dialogHeight)
+        shapeRenderer.end()
+
+        // ダイアログ枠線
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.setColor(0.8f, 0.6f, 0.2f, 1f)
+        shapeRenderer.rect(dialogX, dialogY, dialogWidth, dialogHeight)
+        shapeRenderer.end()
+
+        // 「はい」「いいえ」ボタン
+        val btnW = 140f
+        val btnH = 48f
+        val btnY = dialogY + 24f
+        val yesBtnX = centerX - btnW - 20f
+        val noBtnX = centerX + 20f
+
+        // ボタン座標を保存（タッチ判定用）
+        confirmYesX = yesBtnX
+        confirmYesY = btnY
+        confirmYesW = btnW
+        confirmYesH = btnH
+        confirmNoX = noBtnX
+        confirmNoY = btnY
+        confirmNoW = btnW
+        confirmNoH = btnH
+
+        // 「はい」ボタン
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0.6f, 0.15f, 0.15f, 0.9f)
+        shapeRenderer.rect(yesBtnX, btnY, btnW, btnH)
+        shapeRenderer.end()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.setColor(1f, 0.4f, 0.4f, 1f)
+        shapeRenderer.rect(yesBtnX, btnY, btnW, btnH)
+        shapeRenderer.end()
+
+        // 「いいえ」ボタン
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0.2f, 0.2f, 0.3f, 0.9f)
+        shapeRenderer.rect(noBtnX, btnY, btnW, btnH)
+        shapeRenderer.end()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.setColor(0.5f, 0.5f, 0.7f, 1f)
+        shapeRenderer.rect(noBtnX, btnY, btnW, btnH)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // テキスト描画
+        batch.projectionMatrix = camera.combined
+        batch.begin()
+
+        // メッセージ
+        font.color = Color.WHITE
+        glyphLayout.setText(font, "撤退しますか？")
+        font.draw(
+            batch, "撤退しますか？",
+            centerX - glyphLayout.width / 2f,
+            dialogY + dialogHeight - 40f
+        )
+
+        // 「はい」テキスト
+        font.color = Color.WHITE
+        glyphLayout.setText(font, "はい")
+        font.draw(
+            batch, "はい",
+            yesBtnX + (btnW - glyphLayout.width) / 2f,
+            btnY + (btnH + glyphLayout.height) / 2f
+        )
+
+        // 「いいえ」テキスト
+        font.color = Color.WHITE
+        glyphLayout.setText(font, "いいえ")
+        font.draw(
+            batch, "いいえ",
+            noBtnX + (btnW - glyphLayout.width) / 2f,
+            btnY + (btnH + glyphLayout.height) / 2f
+        )
+
+        batch.end()
     }
 
     /**
