@@ -49,6 +49,18 @@ object GameConfig {
     /** 武器三すくみのダメージ補正 */
     const val WEAPON_TRIANGLE_DAMAGE_BONUS = 1
 
+    /** 素手攻撃の威力（STR/MAGに上乗せされる分） */
+    const val UNARMED_MIGHT = 0
+
+    /** 素手攻撃の基本命中率 */
+    const val UNARMED_HIT = 80
+
+    /** 素手攻撃の基本必殺率 */
+    const val UNARMED_CRITICAL = 0
+
+    /** 素手攻撃の重さ */
+    const val UNARMED_WEIGHT = 0
+
     /** CT（チャージタイム）の行動閾値 */
     const val CT_THRESHOLD = 100
 

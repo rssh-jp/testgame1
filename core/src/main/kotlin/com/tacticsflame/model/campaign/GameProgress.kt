@@ -148,6 +148,7 @@ class GameProgress {
             isLord = true
         )
         ares.weapons.add(Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3))
+        ares.equippedArmor = Armor("leatherArmor", "革の鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 1)
 
         val leena = GameUnit(
             id = "hero_02", name = "リーナ",
@@ -156,6 +157,7 @@ class GameProgress {
             growthRate = GrowthRate(hp = 60, str = 55, mag = 5, skl = 45, spd = 40, lck = 30, def = 50, res = 20)
         )
         leena.weapons.add(Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5))
+        leena.equippedArmor = Armor("chainMail", "鎖帷子", ArmorType.LIGHT_ARMOR, defBonus = 2, resBonus = 0, weight = 2)
 
         val maria = GameUnit(
             id = "hero_03", name = "マリア",
@@ -164,6 +166,7 @@ class GameProgress {
             growthRate = GrowthRate(hp = 55, str = 45, mag = 5, skl = 60, spd = 55, lck = 40, def = 25, res = 30)
         )
         maria.weapons.add(Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2))
+        maria.equippedArmor = Armor("leatherArmor", "革の鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 1)
 
         val eric = GameUnit(
             id = "hero_04", name = "エリック",
@@ -172,11 +175,45 @@ class GameProgress {
             growthRate = GrowthRate(hp = 45, str = 10, mag = 60, skl = 50, spd = 45, lck = 35, def = 15, res = 50)
         )
         eric.weapons.add(Weapon("fire", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2))
+        eric.equippedArmor = Armor("magicRobe", "魔法のローブ", ArmorType.MAGIC_ROBE, defBonus = 0, resBonus = 3, weight = 1)
 
         party.addUnits(listOf(ares, leena, maria, eric))
 
         // 初期出撃メンバー設定（最初の3人）
         party.setDeployedUnits(listOf("hero_01", "hero_02", "hero_03"))
+
+        // パーティ共有在庫に予備の武器・防具を追加
+        setupInitialInventory()
+    }
+
+    /**
+     * パーティ共有在庫に初期装備を配布する
+     */
+    private fun setupInitialInventory() {
+        // 予備の武器
+        party.addWeaponsToInventory(
+            listOf(
+                Weapon("steelSword", "鋼の剣", WeaponType.SWORD, might = 8, hit = 80, weight = 5),
+                Weapon("ironAxe", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6),
+                Weapon("ironLance2", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5),
+                Weapon("ironSword2", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3),
+                Weapon("fire2", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2),
+                Weapon("heal", "ライブ", WeaponType.STAFF, might = 0, hit = 100, weight = 1)
+            )
+        )
+
+        // 予備の防具
+        party.addArmorsToInventory(
+            listOf(
+                Armor("ironArmor", "鉄の鎧", ArmorType.HEAVY_ARMOR, defBonus = 4, resBonus = 0, weight = 5),
+                Armor("ironShield", "鉄の盾", ArmorType.SHIELD, defBonus = 2, resBonus = 1, weight = 3),
+                Armor("leatherArmor2", "革の鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 1),
+                Armor("guardCharm", "守りの護符", ArmorType.ACCESSORY, defBonus = 1, resBonus = 1, weight = 0),
+                Armor("speedRing", "疾風の指輪", ArmorType.ACCESSORY, defBonus = 0, resBonus = 0, weight = -2)
+            )
+        )
+
+        Gdx.app.log(TAG, "初期在庫配布完了（武器: ${party.weaponInventory.size}, 防具: ${party.armorInventory.size}）")
     }
 
     companion object {

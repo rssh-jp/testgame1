@@ -1034,7 +1034,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         textY -= lineHeight
 
         font.draw(batch, "SKL  ${stats.skl}", col1X, textY)
-        font.draw(batch, "SPD  ${stats.spd}", col2X, textY)
+        font.draw(batch, "SPD  ${stats.spd}(${unit.effectiveSpeed()})", col2X, textY)
         textY -= lineHeight
 
         font.draw(batch, "LCK  ${stats.lck}", col1X, textY)
@@ -1053,8 +1053,19 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             font.color = Color.LIGHT_GRAY
             font.draw(batch, "Mt ${weapon.might}  Hit ${weapon.hit}  Wt ${weapon.weight}", col1X, textY)
         } else {
-            font.color = Color.GRAY
-            font.draw(batch, "-- No Weapon --", col1X, textY)
+            font.color = Color(0.8f, 0.7f, 0.5f, 1f)
+            font.draw(batch, "素手 (射程1)", col1X, textY)
+        }
+
+        // 装備防具情報
+        val armor = unit.equippedArmor
+        if (armor != null) {
+            textY -= lineHeight
+            font.color = Color(0.5f, 0.7f, 1f, 1f)
+            font.draw(batch, armor.name, col1X, textY)
+            textY -= lineHeight
+            font.color = Color.LIGHT_GRAY
+            font.draw(batch, "DEF+${armor.defBonus}  RES+${armor.resBonus}  Wt ${armor.weight}", col1X, textY)
         }
 
         batch.end()
@@ -1193,7 +1204,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         textY -= lineHeight
 
         font.draw(batch, "SKL  ${stats.skl}", col1X, textY)
-        font.draw(batch, "SPD  ${stats.spd}", col2X, textY)
+        font.draw(batch, "SPD  ${stats.spd}(${unit.effectiveSpeed()})", col2X, textY)
         textY -= lineHeight
 
         font.draw(batch, "LCK  ${stats.lck}", col1X, textY)
@@ -1212,8 +1223,19 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             font.color = Color.LIGHT_GRAY
             font.draw(batch, "Mt ${weapon.might}  Hit ${weapon.hit}  Wt ${weapon.weight}", col1X, textY)
         } else {
-            font.color = Color.GRAY
-            font.draw(batch, "-- No Weapon --", col1X, textY)
+            font.color = Color(0.8f, 0.7f, 0.5f, 1f)
+            font.draw(batch, "素手 (射程1)", col1X, textY)
+        }
+
+        // 装備防具情報
+        val armor = unit.equippedArmor
+        if (armor != null) {
+            textY -= lineHeight
+            font.color = Color(0.5f, 0.7f, 1f, 1f)
+            font.draw(batch, armor.name, col1X, textY)
+            textY -= lineHeight
+            font.color = Color.LIGHT_GRAY
+            font.draw(batch, "DEF+${armor.defBonus}  RES+${armor.resBonus}  Wt ${armor.weight}", col1X, textY)
         }
 
         batch.end()

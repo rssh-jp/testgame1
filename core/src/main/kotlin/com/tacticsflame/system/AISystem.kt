@@ -88,17 +88,13 @@ class AISystem(
         movablePositions: Set<Position>,
         battleMap: BattleMap
     ): AIAction {
-        val weapon = unit.equippedWeapon()
-
-        // 攻撃可能な敵を探す
-        if (weapon != null) {
-            val targets = findAttackableTargets(unit, unitPos, movablePositions, battleMap)
-            if (targets.isNotEmpty()) {
-                // 最もダメージを与えられる対象を選択
-                val bestTarget = targets.maxByOrNull { it.second }
-                if (bestTarget != null) {
-                    return AIAction(unit, Action.MoveAndAttack(bestTarget.first, bestTarget.third))
-                }
+        // 攻撃可能な敵を探す（素手でも射程1で攻撃可能）
+        val targets = findAttackableTargets(unit, unitPos, movablePositions, battleMap)
+        if (targets.isNotEmpty()) {
+            // 最もダメージを与えられる対象を選択
+            val bestTarget = targets.maxByOrNull { it.second }
+            if (bestTarget != null) {
+                return AIAction(unit, Action.MoveAndAttack(bestTarget.first, bestTarget.third))
             }
         }
 
@@ -124,9 +120,7 @@ class AISystem(
         movablePositions: Set<Position>,
         battleMap: BattleMap
     ): AIAction {
-        val weapon = unit.equippedWeapon() ?: return AIAction(unit, Action.Wait)
-
-        // 現在位置から攻撃可能な敵のみ対象
+        // 現在位置から攻撃可能な敵のみ対象（素手でも射程1で攻撃可能）
         val targets = findAttackableTargets(unit, unitPos, setOf(unitPos), battleMap)
         if (targets.isNotEmpty()) {
             val bestTarget = targets.maxByOrNull { it.second }
@@ -164,12 +158,8 @@ class AISystem(
         // 安全な移動可能マス（脅威圏外）
         val safePositions = (movablePositions + unitPos).filter { it !in threatZone }.toSet()
 
-        val weapon = unit.equippedWeapon()
-
-        // 安全な位置から攻撃可能な敵を探す
-        // 注意: findAttackableTargets は内部で unitPos を自動追加するため、
-        // 結果を safePositions でフィルタして安全な位置からの攻撃のみに絞る
-        if (weapon != null && safePositions.isNotEmpty()) {
+        // 安全な位置から攻撃可能な敵を探す（素手でも射程1で攻撃可能）
+        if (safePositions.isNotEmpty()) {
             val allTargets = findAttackableTargets(unit, unitPos, movablePositions, battleMap)
             val safeTargets = allTargets.filter { (movePos, _, _) -> movePos in safePositions }
             if (safeTargets.isNotEmpty()) {
@@ -214,31 +204,27 @@ class AISystem(
         movablePositions: Set<Position>,
         battleMap: BattleMap
     ): AIAction {
-        val weapon = unit.equippedWeapon()
+        // 味方が隣接している敵を特定
+        val enemiesNearAllies = findEnemiesNearAllies(unit, battleMap)
 
-        if (weapon != null) {
-            // 味方が隣接している敵を特定
-            val enemiesNearAllies = findEnemiesNearAllies(unit, battleMap)
+        // 移動可能範囲から攻撃可能な全ターゲットを取得（素手でも射程1で攻撃可能）
+        val allTargets = findAttackableTargets(unit, unitPos, movablePositions, battleMap)
 
-            // 移動可能範囲から攻撃可能な全ターゲットを取得
-            val allTargets = findAttackableTargets(unit, unitPos, movablePositions, battleMap)
+        if (allTargets.isNotEmpty()) {
+            // 味方が隣接している敵を優先
+            val supportTargets = allTargets.filter { target ->
+                enemiesNearAllies.any { it.id == target.third.id }
+            }
 
-            if (allTargets.isNotEmpty()) {
-                // 味方が隣接している敵を優先
-                val supportTargets = allTargets.filter { target ->
-                    enemiesNearAllies.any { it.id == target.third.id }
-                }
+            val bestTarget = if (supportTargets.isNotEmpty()) {
+                supportTargets.maxByOrNull { it.second }
+            } else {
+                // 連携対象がなければ通常の最大ダメージターゲット
+                allTargets.maxByOrNull { it.second }
+            }
 
-                val bestTarget = if (supportTargets.isNotEmpty()) {
-                    supportTargets.maxByOrNull { it.second }
-                } else {
-                    // 連携対象がなければ通常の最大ダメージターゲット
-                    allTargets.maxByOrNull { it.second }
-                }
-
-                if (bestTarget != null) {
-                    return AIAction(unit, Action.MoveAndAttack(bestTarget.first, bestTarget.third))
-                }
+            if (bestTarget != null) {
+                return AIAction(unit, Action.MoveAndAttack(bestTarget.first, bestTarget.third))
             }
         }
 
@@ -314,12 +300,13 @@ class AISystem(
         for ((pos, enemy) in battleMap.getAllUnits()) {
             if (!isHostileFaction(myFaction, enemy.faction) || enemy.isDefeated) continue
 
-            val weapon = enemy.equippedWeapon() ?: continue
+            val minRange = enemy.attackMinRange()
+            val maxRange = enemy.attackMaxRange()
             val enemyMovable = pathFinder.getMovablePositions(enemy, pos, battleMap)
             val allPositions = enemyMovable + pos
 
             for (movePos in allPositions) {
-                for (range in weapon.minRange..weapon.maxRange) {
+                for (range in minRange..maxRange) {
                     for (attackPos in getPositionsAtRange(movePos, range)) {
                         if (battleMap.isInBounds(attackPos.x, attackPos.y)) {
                             threatZone.add(attackPos)
@@ -352,10 +339,11 @@ class AISystem(
 
         val engagedEnemies = mutableSetOf<GameUnit>()
         for ((allyPos, ally) in allies) {
-            val allyWeapon = ally.equippedWeapon() ?: continue
+            val allyMinRange = ally.attackMinRange()
+            val allyMaxRange = ally.attackMaxRange()
             for ((enemyPos, enemy) in enemies) {
                 val dist = allyPos.manhattanDistance(enemyPos)
-                if (dist in allyWeapon.minRange..allyWeapon.maxRange) {
+                if (dist in allyMinRange..allyMaxRange) {
                     engagedEnemies.add(enemy)
                 }
             }
@@ -399,13 +387,14 @@ class AISystem(
         movablePositions: Set<Position>,
         battleMap: BattleMap
     ): List<Triple<Position, Int, GameUnit>> {
-        val weapon = unit.equippedWeapon() ?: return emptyList()
+        val minRange = unit.attackMinRange()
+        val maxRange = unit.attackMaxRange()
         val results = mutableListOf<Triple<Position, Int, GameUnit>>()
 
         val positionsToCheck = movablePositions + unitPos
 
         for (pos in positionsToCheck) {
-            for (range in weapon.minRange..weapon.maxRange) {
+            for (range in minRange..maxRange) {
                 for (neighbor in getPositionsAtRange(pos, range)) {
                     val target = battleMap.getUnitAt(neighbor)
                     if (target != null && isHostileFaction(unit.faction, target.faction) && !target.isDefeated) {

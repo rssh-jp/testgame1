@@ -40,6 +40,8 @@ class GameUnit(
     val weapons: MutableList<Weapon> = mutableListOf(),
     val isLord: Boolean = false
 ) {
+    /** 装備中の防具（null = 防具なし） */
+    var equippedArmor: Armor? = null
     /** 現在HP */
     var currentHp: Int = stats.hp
         private set
@@ -77,11 +79,40 @@ class GameUnit(
     /**
      * 装備中の武器を取得する（リストの先頭）
      *
-     * @return 装備中の武器（なければnull）
+     * @return 装備中の武器（なければnull＝素手）
      */
     fun equippedWeapon(): Weapon? {
         return weapons.firstOrNull()
     }
+
+    /**
+     * 実効速度を計算する（全装備の重量を考慮）
+     *
+     * 武器と防具の重さが速度を低下させる。
+     * 軽い武器（魔法書等）や軽い防具（ローブ等）は速度への影響が少ない。
+     * 重い装備ほど回避・追撃・行動順すべてに悪影響が出る。
+     *
+     * @return 実効速度（最低0）
+     */
+    fun effectiveSpeed(): Int {
+        val weaponWeight = equippedWeapon()?.weight ?: GameConfig.UNARMED_WEIGHT
+        val armorWeight = equippedArmor?.weight ?: 0
+        return maxOf(0, stats.spd - weaponWeight - armorWeight)
+    }
+
+    /**
+     * 攻撃の最小射程を返す（素手の場合は1）
+     *
+     * @return 最小射程
+     */
+    fun attackMinRange(): Int = equippedWeapon()?.minRange ?: 1
+
+    /**
+     * 攻撃の最大射程を返す（素手の場合は1）
+     *
+     * @return 最大射程
+     */
+    fun attackMaxRange(): Int = equippedWeapon()?.maxRange ?: 1
 
     /**
      * 指定した武器を装備する（リストの先頭に移動）
