@@ -304,4 +304,124 @@ class DamageCalcTest {
     fun `追撃判定定数が仕様通りであることを確認`() {
         assertEquals(5, GameConfig.DOUBLE_ATTACK_SPEED_DIFF, "追撃に必要な速度差は5")
     }
+
+    // ==================== 攻撃側地形の命中補正テスト ====================
+
+    @Test
+    fun `森から攻撃で命中率+10される`() {
+        val attacker = createUnit(str = 10, skl = 0, lck = 0, spd = 5)
+        val defender = createUnit(def = 4, spd = 0, lck = 0)
+        val forestTile = Tile(Position(0, 0), TerrainType.FOREST)
+        val plain = plainTile()
+
+        val forecast = DamageCalc.calculateForecast(attacker, defender, forestTile, plain)
+
+        // baseHit = UNARMED_HIT(80) + SKL(0)*2 + LCK(0)/2 + hitBonus(10) = 90
+        // avoid = effectiveSpeed(0)*2 + LCK(0)/2 + avoidBonus(0) = 0
+        // hitRate = 90 - 0 = 90
+        assertEquals(90, forecast.hitRate)
+    }
+
+    @Test
+    fun `山から攻撃で命中率+15される`() {
+        val attacker = createUnit(str = 10, skl = 0, lck = 0, spd = 5)
+        val defender = createUnit(def = 4, spd = 0, lck = 0)
+        val mountainTile = Tile(Position(0, 0), TerrainType.MOUNTAIN)
+        val plain = plainTile()
+
+        val forecast = DamageCalc.calculateForecast(attacker, defender, mountainTile, plain)
+
+        // baseHit = UNARMED_HIT(80) + SKL(0)*2 + LCK(0)/2 + hitBonus(15) = 95
+        // avoid = effectiveSpeed(0)*2 + LCK(0)/2 + avoidBonus(0) = 0
+        // hitRate = 95 - 0 = 95
+        assertEquals(95, forecast.hitRate)
+    }
+
+    @Test
+    fun `砦から攻撃で命中率+10される`() {
+        val attacker = createUnit(str = 10, skl = 0, lck = 0, spd = 5)
+        val defender = createUnit(def = 4, spd = 0, lck = 0)
+        val fortTile = Tile(Position(0, 0), TerrainType.FORT)
+        val plain = plainTile()
+
+        val forecast = DamageCalc.calculateForecast(attacker, defender, fortTile, plain)
+
+        // baseHit = UNARMED_HIT(80) + SKL(0)*2 + LCK(0)/2 + hitBonus(10) = 90
+        // avoid = effectiveSpeed(0)*2 + LCK(0)/2 + avoidBonus(0) = 0
+        // hitRate = 90 - 0 = 90
+        assertEquals(90, forecast.hitRate)
+    }
+
+    @Test
+    fun `村から攻撃で命中率+5される`() {
+        val attacker = createUnit(str = 10, skl = 0, lck = 0, spd = 5)
+        val defender = createUnit(def = 4, spd = 0, lck = 0)
+        val villageTile = Tile(Position(0, 0), TerrainType.VILLAGE)
+        val plain = plainTile()
+
+        val forecast = DamageCalc.calculateForecast(attacker, defender, villageTile, plain)
+
+        // baseHit = UNARMED_HIT(80) + SKL(0)*2 + LCK(0)/2 + hitBonus(5) = 85
+        // avoid = effectiveSpeed(0)*2 + LCK(0)/2 + avoidBonus(0) = 0
+        // hitRate = 85 - 0 = 85
+        assertEquals(85, forecast.hitRate)
+    }
+
+    @Test
+    fun `水域にいる攻撃側の命中率-15される`() {
+        val attacker = createUnit(str = 10, skl = 0, lck = 0, spd = 5)
+        val defender = createUnit(def = 4, spd = 0, lck = 0)
+        val waterTile = Tile(Position(0, 0), TerrainType.WATER)
+        val plain = plainTile()
+
+        val forecast = DamageCalc.calculateForecast(attacker, defender, waterTile, plain)
+
+        // baseHit = UNARMED_HIT(80) + SKL(0)*2 + LCK(0)/2 + hitBonus(-15) = 65
+        // avoid = effectiveSpeed(0)*2 + LCK(0)/2 + avoidBonus(0) = 0
+        // hitRate = 65 - 0 = 65
+        assertEquals(65, forecast.hitRate)
+    }
+
+    @Test
+    fun `水域にいる防御側の回避が-15される`() {
+        val attacker = createUnit(str = 10, skl = 0, lck = 0, spd = 5)
+        val defender = createUnit(def = 4, spd = 0, lck = 0)
+        val plain = plainTile()
+        val waterTile = Tile(Position(0, 0), TerrainType.WATER)
+
+        val forecast = DamageCalc.calculateForecast(attacker, defender, plain, waterTile)
+
+        // baseHit = UNARMED_HIT(80) + SKL(0)*2 + LCK(0)/2 + hitBonus(0) = 80
+        // avoid = effectiveSpeed(0)*2 + LCK(0)/2 + avoidBonus(-15) = -15
+        // hitRate = 80 - (-15) = 95
+        assertEquals(95, forecast.hitRate)
+    }
+
+    @Test
+    fun `両者が地形に立っている場合の合算テスト`() {
+        val attacker = createUnit(str = 10, skl = 0, lck = 0, spd = 5)
+        val defender = createUnit(def = 4, spd = 0, lck = 0)
+        val forestTile = Tile(Position(0, 0), TerrainType.FOREST)
+        val mountainTile = Tile(Position(1, 1), TerrainType.MOUNTAIN)
+
+        val forecast = DamageCalc.calculateForecast(attacker, defender, forestTile, mountainTile)
+
+        // baseHit = UNARMED_HIT(80) + SKL(0)*2 + LCK(0)/2 + hitBonus(10) = 90
+        // avoid = effectiveSpeed(0)*2 + LCK(0)/2 + avoidBonus(30) = 30
+        // hitRate = 90 - 30 = 60
+        assertEquals(60, forecast.hitRate)
+    }
+
+    @Test
+    fun `TerrainTypeのhitBonus値が仕様通りであることを確認`() {
+        assertEquals(0, TerrainType.PLAIN.hitBonus, "平地のhitBonusは0")
+        assertEquals(10, TerrainType.FOREST.hitBonus, "森のhitBonusは10")
+        assertEquals(15, TerrainType.MOUNTAIN.hitBonus, "山のhitBonusは15")
+        assertEquals(10, TerrainType.FORT.hitBonus, "砦のhitBonusは10")
+        assertEquals(-15, TerrainType.WATER.hitBonus, "水域のhitBonusは-15")
+        assertEquals(-15, TerrainType.WATER.avoidBonus, "水域のavoidBonusは-15")
+        assertEquals(0, TerrainType.WALL.hitBonus, "壁のhitBonusは0")
+        assertEquals(5, TerrainType.VILLAGE.hitBonus, "村のhitBonusは5")
+        assertEquals(0, TerrainType.BRIDGE.hitBonus, "橋のhitBonusは0")
+    }
 }

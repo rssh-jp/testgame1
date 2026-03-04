@@ -81,8 +81,8 @@ object DamageCalc {
         val terrainDef = defenderTile.terrainType.defenseBonus
         val damage = maxOf(0, rawDamage + triangleBonus - terrainDef)
 
-        // 命中率計算（副手ペナルティ含む）
-        val hitRate = calculateHitRate(attacker, defender, defenderTile, weapon?.type, defenderWeapon?.type, weapon, useLeftHand)
+        // 命中率計算（攻撃側地形命中補正・副手ペナルティ含む）
+        val hitRate = calculateHitRate(attacker, defender, attackerTile, defenderTile, weapon?.type, defenderWeapon?.type, weapon, useLeftHand)
 
         // 必殺率計算
         val critRate = calculateCritRate(attacker, defender, weapon)
@@ -97,11 +97,15 @@ object DamageCalc {
      * 命中率を計算する
      *
      * 素手の場合は基本命中80を使用。
+     * 攻撃側の地形命中補正（森+10、山+15 等）が命中率にプラスされる。
+     * 防御側の地形回避補正（森+20、山+30 等）が回避に加算される。
+     * 水域にいるユニットは命中・回避ともに-15のペナルティを受ける。
      * 回避には実効速度（装備重量を考慮した速度）を使用する。
      * 左手攻撃時は副手命中ペナルティが適用される。
      *
      * @param attacker 攻撃ユニット
      * @param defender 防御ユニット
+     * @param attackerTile 攻撃側の地形
      * @param defenderTile 防御側の地形
      * @param attackerWeaponType 攻撃側の武器タイプ（null=素手）
      * @param defenderWeaponType 防御側の武器タイプ（null=素手）
@@ -112,6 +116,7 @@ object DamageCalc {
     private fun calculateHitRate(
         attacker: GameUnit,
         defender: GameUnit,
+        attackerTile: Tile,
         defenderTile: Tile,
         attackerWeaponType: WeaponType?,
         defenderWeaponType: WeaponType?,
@@ -120,10 +125,10 @@ object DamageCalc {
     ): Int {
         val weaponHit = weapon?.hit ?: GameConfig.UNARMED_HIT
 
-        // 基本命中 = 武器命中（または素手命中） + 技×2 + 幸運÷2
-        val baseHit = weaponHit + attacker.stats.skl * 2 + attacker.stats.lck / 2
+        // 基本命中 = 武器命中（または素手命中） + 技×2 + 幸運÷2 + 攻撃側地形命中補正
+        val baseHit = weaponHit + attacker.stats.skl * 2 + attacker.stats.lck / 2 + attackerTile.terrainType.hitBonus
 
-        // 回避 = 実効速度×2 + 幸運÷2 + 地形回避補正
+        // 回避 = 実効速度×2 + 幸運÷2 + 防御側地形回避補正
         val avoid = defender.effectiveSpeed() * 2 + defender.stats.lck / 2 + defenderTile.terrainType.avoidBonus
 
         // 武器三すくみ補正（両者が武器を持っている場合のみ）
