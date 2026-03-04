@@ -52,19 +52,19 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private val equipButtonW = 260f
     private val equipButtonH = 65f
     private val equipButtonX = GameConfig.VIRTUAL_WIDTH / 2f + 480f - equipButtonW - 20f
-    private val equipButtonY = 100f
+    private val equipButtonY = 190f
 
     /** 作戦変更ボタンの領域（詳細パネル内・左下） */
     private val tacticButtonW = 380f
     private val tacticButtonH = 65f
     private val tacticButtonX = GameConfig.VIRTUAL_WIDTH / 2f - 480f + 20f
-    private val tacticButtonY = 100f
+    private val tacticButtonY = 190f
 
     /** 出撃ボタンの領域（詳細パネル内） */
     private val deployButtonW = 200f
     private val deployButtonH = 65f
     private val deployButtonX = GameConfig.VIRTUAL_WIDTH / 2f - deployButtonW / 2f
-    private val deployButtonY = 100f
+    private val deployButtonY = 190f
 
     companion object {
         private const val TAG = "FormationScreen"
@@ -177,7 +177,7 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         // 詳細パネルが表示中の場合、パネル領域内のタップはスロットに伝播させない
         if (selectedUnit != null) {
             val panelX = GameConfig.VIRTUAL_WIDTH / 2f - 480f
-            val panelY = 80f
+            val panelY = 170f
             if (touchX in panelX..(panelX + 960f) && touchY in panelY..(panelY + 500f)) {
                 return
             }
@@ -359,7 +359,7 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val panelW = 960f
         val panelH = 500f
         val panelX = GameConfig.VIRTUAL_WIDTH / 2f - panelW / 2f
-        val panelY = 80f
+        val panelY = 170f
 
         shapeRenderer.projectionMatrix = viewport.camera.combined
 
