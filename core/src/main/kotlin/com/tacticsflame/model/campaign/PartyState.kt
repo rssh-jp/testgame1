@@ -1,11 +1,13 @@
 package com.tacticsflame.model.campaign
 
+import com.tacticsflame.model.unit.Armor
 import com.tacticsflame.model.unit.GameUnit
+import com.tacticsflame.model.unit.Weapon
 
 /**
  * プレイヤーの部隊（パーティ）状態を管理するクラス
  *
- * 所持ユニットの追加・削除、出撃メンバーの選択を行う。
+ * 所持ユニットの追加・削除、出撃メンバーの選択、共有在庫の管理を行う。
  * ゲーム全体を通して1つのインスタンスが保持される。
  */
 class PartyState {
@@ -18,12 +20,133 @@ class PartyState {
     private val _deployedIds: MutableList<String> = mutableListOf()
     val deployedIds: List<String> get() = _deployedIds
 
+    /** パーティ共有の武器在庫（ユニットに装備されていない武器） */
+    private val _weaponInventory: MutableList<Weapon> = mutableListOf()
+    val weaponInventory: List<Weapon> get() = _weaponInventory
+
+    /** パーティ共有の防具在庫（ユニットに装備されていない防具） */
+    private val _armorInventory: MutableList<Armor> = mutableListOf()
+    val armorInventory: List<Armor> get() = _armorInventory
+
     /**
      * ロスターを全クリアする（セーブデータ復元用）
      */
     fun clearRoster() {
         _roster.clear()
         _deployedIds.clear()
+    }
+
+    // ==================== 在庫管理 ====================
+
+    /**
+     * 武器を在庫に追加する
+     *
+     * @param weapon 追加する武器
+     */
+    fun addWeaponToInventory(weapon: Weapon) {
+        _weaponInventory.add(weapon)
+    }
+
+    /**
+     * 複数の武器を在庫に一括追加する
+     *
+     * @param weapons 追加する武器リスト
+     */
+    fun addWeaponsToInventory(weapons: List<Weapon>) {
+        _weaponInventory.addAll(weapons)
+    }
+
+    /**
+     * 防具を在庫に追加する
+     *
+     * @param armor 追加する防具
+     */
+    fun addArmorToInventory(armor: Armor) {
+        _armorInventory.add(armor)
+    }
+
+    /**
+     * 複数の防具を在庫に一括追加する
+     *
+     * @param armors 追加する防具リスト
+     */
+    fun addArmorsToInventory(armors: List<Armor>) {
+        _armorInventory.addAll(armors)
+    }
+
+    /**
+     * 在庫から武器をユニットに渡す
+     *
+     * 在庫から指定の武器を取り出し、ユニットの所持武器に追加する。
+     * 追加された武器は自動的に装備（リストの先頭に挿入）される。
+     *
+     * @param weapon 渡す武器
+     * @param unit 受け取るユニット
+     * @return 成功した場合 true
+     */
+    fun giveWeaponToUnit(weapon: Weapon, unit: GameUnit): Boolean {
+        val idx = _weaponInventory.indexOf(weapon)
+        if (idx < 0) return false
+        _weaponInventory.removeAt(idx)
+        unit.weapons.add(0, weapon)
+        return true
+    }
+
+    /**
+     * ユニットから武器を在庫に戻す
+     *
+     * ユニットの所持武器から指定の武器を取り出し、在庫に戻す。
+     *
+     * @param weapon 戻す武器
+     * @param unit 武器を返すユニット
+     * @return 成功した場合 true
+     */
+    fun returnWeaponFromUnit(weapon: Weapon, unit: GameUnit): Boolean {
+        val idx = unit.weapons.indexOf(weapon)
+        if (idx < 0) return false
+        unit.weapons.removeAt(idx)
+        _weaponInventory.add(weapon)
+        return true
+    }
+
+    /**
+     * 在庫から防具をユニットに装備させる
+     *
+     * ユニットが既に防具を装備している場合、現在の防具は在庫に戻される。
+     *
+     * @param armor 装備させる防具
+     * @param unit 装備するユニット
+     * @return 成功した場合 true
+     */
+    fun giveArmorToUnit(armor: Armor, unit: GameUnit): Boolean {
+        val idx = _armorInventory.indexOf(armor)
+        if (idx < 0) return false
+        _armorInventory.removeAt(idx)
+        // 既存の防具を在庫に戻す
+        unit.equippedArmor?.let { _armorInventory.add(it) }
+        unit.equippedArmor = armor
+        return true
+    }
+
+    /**
+     * ユニットの防具を外して在庫に戻す
+     *
+     * @param unit 防具を外すユニット
+     * @return 成功した場合 true
+     */
+    fun returnArmorFromUnit(unit: GameUnit): Boolean {
+        val armor = unit.equippedArmor ?: return false
+        unit.equippedArmor = null
+        _armorInventory.add(armor)
+        return true
+    }
+
+    /**
+     * 在庫を全クリアする（セーブデータ復元用）
+     */
+    fun clearInventory() {
+        _weaponInventory.clear()
+        _armorInventory.clear()
     }
 
     /**

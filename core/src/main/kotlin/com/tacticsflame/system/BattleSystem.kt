@@ -129,15 +129,16 @@ class BattleSystem {
     /**
      * 反撃可能かどうかを判定する
      *
+     * 武器装備時は武器の射程、素手の場合は隣接（距離1）でのみ反撃可能。
+     *
      * @param defender 防御ユニット
      * @param defenderPos 防御ユニットの座標
      * @param attackerPos 攻撃ユニットの座標
      * @return 反撃可能なら true
      */
     private fun canCounterAttack(defender: GameUnit, defenderPos: Position, attackerPos: Position): Boolean {
-        val weapon = defender.equippedWeapon() ?: return false
         val distance = defenderPos.manhattanDistance(attackerPos)
-        return distance in weapon.minRange..weapon.maxRange
+        return distance in defender.attackMinRange()..defender.attackMaxRange()
     }
 
     /**

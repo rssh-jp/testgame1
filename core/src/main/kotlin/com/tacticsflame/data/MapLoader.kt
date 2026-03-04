@@ -40,6 +40,9 @@ class MapLoader {
 
         /** 武器マスターデータ（weapons.json から読み込み） */
         private var weaponMasterData: Map<String, WeaponData>? = null
+
+        /** 防具マスターデータ（armors.json から読み込み） */
+        private var armorMasterData: Map<String, ArmorData>? = null
     }
 
     /**
@@ -73,6 +76,30 @@ class MapLoader {
     }
 
     /**
+     * 防具のマスターデータ（JSONパース用中間データ）
+     */
+    private data class ArmorData(
+        val id: String,
+        val name: String,
+        val type: ArmorType,
+        val defBonus: Int,
+        val resBonus: Int,
+        val weight: Int
+    ) {
+        /**
+         * Armor インスタンスを生成する
+         */
+        fun toArmor(): Armor = Armor(
+            id = id,
+            name = name,
+            type = type,
+            defBonus = defBonus,
+            resBonus = resBonus,
+            weight = weight
+        )
+    }
+
+    /**
      * マップ読み込み結果を格納するデータクラス
      *
      * @property battleMap 構築されたバトルマップ（ユニット未配置）
@@ -96,6 +123,7 @@ class MapLoader {
     fun loadMap(mapFileName: String): MapLoadResult? {
         return try {
             ensureWeaponDataLoaded()
+            ensureArmorDataLoaded()
 
             val filePath = "${AssetPaths.MAP_DIR}$mapFileName"
             val fileHandle = Gdx.files.internal(filePath)
@@ -164,6 +192,48 @@ class MapLoader {
         } catch (e: Exception) {
             Gdx.app.error(TAG, "武器データ読み込みエラー", e)
             weaponMasterData = emptyMap()
+        }
+    }
+
+    // ==================== 防具マスターデータ読み込み ====================
+
+    /**
+     * 防具マスターデータがまだ読み込まれていなければ読み込む
+     */
+    private fun ensureArmorDataLoaded() {
+        if (armorMasterData != null) return
+
+        try {
+            val fileHandle = Gdx.files.internal(AssetPaths.ARMOR_DATA)
+            if (!fileHandle.exists()) {
+                Gdx.app.log(TAG, "防具データファイルが見つかりません: ${AssetPaths.ARMOR_DATA}（省略）")
+                armorMasterData = emptyMap()
+                return
+            }
+
+            val jsonText = fileHandle.readString("UTF-8")
+            val jsonArray = JsonReader().parse(jsonText)
+            val armors = mutableMapOf<String, ArmorData>()
+
+            for (i in 0 until jsonArray.size) {
+                val a = jsonArray[i]
+                val id = a.getString("id")
+                val armorType = parseArmorType(a.getString("type"))
+                armors[id] = ArmorData(
+                    id = id,
+                    name = a.getString("name"),
+                    type = armorType,
+                    defBonus = a.getInt("defBonus", 0),
+                    resBonus = a.getInt("resBonus", 0),
+                    weight = a.getInt("weight", 0)
+                )
+            }
+
+            armorMasterData = armors
+            Gdx.app.log(TAG, "防具マスターデータ読み込み完了: ${armors.size}件")
+        } catch (e: Exception) {
+            Gdx.app.error(TAG, "防具データ読み込みエラー", e)
+            armorMasterData = emptyMap()
         }
     }
 
@@ -284,6 +354,15 @@ class MapLoader {
             }
         }
 
+        // 防具の装備
+        val armorId = json.getString("armorId", null)
+        if (armorId != null) {
+            val armor = createArmor(armorId, id)
+            if (armor != null) {
+                unit.equippedArmor = armor
+            }
+        }
+
         return unit
     }
 
@@ -365,6 +444,28 @@ class MapLoader {
         )
     }
 
+    /**
+     * 防具IDからArmorインスタンスを生成する
+     *
+     * マスターデータに存在する場合はそこから生成し、
+     * 存在しない場合はnullを返す。
+     *
+     * @param armorId 防具ID
+     * @param unitId 装備するユニットID（ログ用）
+     * @return 生成されたArmor。生成失敗時はnull
+     */
+    private fun createArmor(armorId: String, unitId: String): Armor? {
+        val masterData = armorMasterData ?: return null
+
+        val armorData = masterData[armorId]
+        if (armorData != null) {
+            return armorData.toArmor()
+        }
+
+        Gdx.app.log(TAG, "防具マスターに未登録: $armorId (ユニット: $unitId)")
+        return null
+    }
+
     // ==================== 条件パース ====================
 
     /**
@@ -408,6 +509,18 @@ class MapLoader {
         } catch (e: IllegalArgumentException) {
             Gdx.app.error(TAG, "不明な武器タイプ: $name → SWORD にフォールバック")
             WeaponType.SWORD
+        }
+    }
+
+    /**
+     * 文字列からArmorTypeを解決する
+     */
+    private fun parseArmorType(name: String): ArmorType {
+        return try {
+            ArmorType.valueOf(name.uppercase())
+        } catch (e: IllegalArgumentException) {
+            Gdx.app.error(TAG, "不明な防具タイプ: $name → LIGHT_ARMOR にフォールバック")
+            ArmorType.LIGHT_ARMOR
         }
     }
 }

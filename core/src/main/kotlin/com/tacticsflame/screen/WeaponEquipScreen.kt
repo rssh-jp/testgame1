@@ -15,6 +15,7 @@ import com.tacticsflame.core.GameConfig
 import com.tacticsflame.model.unit.GameUnit
 import com.tacticsflame.model.unit.Weapon
 import com.tacticsflame.model.unit.WeaponType
+import com.tacticsflame.model.unit.ArmorType
 import com.tacticsflame.util.FontManager
 
 /**
@@ -108,6 +109,7 @@ class WeaponEquipScreen(
 
         renderHeader()
         renderCurrentEquipPanel()
+        renderArmorPanel()
         renderWeaponList()
         renderComparisonPanel()
         renderBottomButtons()
@@ -256,6 +258,73 @@ class WeaponEquipScreen(
                 batch,
                 "威力:${equipped.might}  命中:${equipped.hit}  必殺:${equipped.critical}  重さ:${equipped.weight}  射程:${equipped.minRange}〜${equipped.maxRange}",
                 textX, textY
+            )
+        } else {
+            font.color = Color(0.8f, 0.7f, 0.5f, 1f)
+            font.draw(batch, "素手", textX, textY)
+            textY -= 40f
+
+            smallFont.color = Color.LIGHT_GRAY
+            smallFont.draw(
+                batch,
+                "威力:0  命中:80  必殺:0  重さ:0  射程:1〜1",
+                textX, textY
+            )
+        }
+
+        // 実効速度表示
+        textY -= 36f
+        smallFont.color = Color(0.8f, 0.9f, 0.4f, 1f)
+        smallFont.draw(batch, "実効速度: ${unit.effectiveSpeed()}  (SPD ${unit.stats.spd})", textX, textY)
+
+        batch.end()
+    }
+
+    /**
+     * 防具情報パネルを描画する
+     */
+    private fun renderArmorPanel() {
+        val panelX = SLOT_X
+        val panelY = 1490f - 200f  // 現在の装備パネルの下
+        val panelW = SLOT_WIDTH
+        val panelH = 100f
+
+        // パネル背景
+        shapeRenderer.projectionMatrix = viewport.camera.combined
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0.05f, 0.10f, 0.18f, 0.85f)
+        shapeRenderer.rect(panelX, panelY, panelW, panelH)
+        shapeRenderer.end()
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.color = Color(0.3f, 0.6f, 0.9f, 1f)
+        shapeRenderer.rect(panelX, panelY, panelW, panelH)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // テキスト
+        batch.projectionMatrix = viewport.camera.combined
+        batch.begin()
+
+        val textX = panelX + 20f
+        var textY = panelY + panelH - 24f
+
+        smallFont.color = Color(0.5f, 0.7f, 1f, 1f)
+        smallFont.draw(batch, "【防具】", textX, textY)
+        textY -= 40f
+
+        val armor = unit.equippedArmor
+        if (armor != null) {
+            font.color = Color.WHITE
+            font.draw(batch, armor.name, textX, textY)
+            smallFont.color = Color(0.6f, 0.8f, 1f, 1f)
+            smallFont.draw(batch, armorTypeLabel(armor.type), textX + 340f, textY - 4f)
+            smallFont.color = Color.LIGHT_GRAY
+            smallFont.draw(
+                batch,
+                "  DEF+${armor.defBonus}  RES+${armor.resBonus}  重さ:${armor.weight}",
+                textX + 420f, textY - 4f
             )
         } else {
             font.color = Color.GRAY
@@ -529,5 +598,19 @@ class WeaponEquipScreen(
         WeaponType.BOW    -> "弓"
         WeaponType.MAGIC  -> "魔法"
         WeaponType.STAFF  -> "杖"
+    }
+
+    /**
+     * 防具タイプの日本語ラベルを返す
+     *
+     * @param type 防具タイプ
+     * @return 日本語ラベル
+     */
+    private fun armorTypeLabel(type: ArmorType): String = when (type) {
+        ArmorType.LIGHT_ARMOR -> "軽装"
+        ArmorType.HEAVY_ARMOR -> "重装"
+        ArmorType.SHIELD      -> "盾"
+        ArmorType.MAGIC_ROBE  -> "ローブ"
+        ArmorType.ACCESSORY   -> "装飾品"
     }
 }

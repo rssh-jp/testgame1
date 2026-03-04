@@ -63,6 +63,8 @@ class PathFinder {
     /**
      * 攻撃可能範囲を計算する
      *
+     * 武器未装備（素手）の場合は射程1で計算する。
+     *
      * @param unit 攻撃ユニット
      * @param movablePositions 移動可能座標
      * @param battleMap バトルマップ
@@ -73,14 +75,15 @@ class PathFinder {
         movablePositions: Set<Position>,
         battleMap: BattleMap
     ): Set<Position> {
-        val weapon = unit.equippedWeapon() ?: return emptySet()
+        val minRange = unit.attackMinRange()
+        val maxRange = unit.attackMaxRange()
         val attackable = mutableSetOf<Position>()
 
         // 現在位置も含める
         val allPositions = movablePositions + (battleMap.getUnitPosition(unit) ?: return emptySet())
 
         for (pos in allPositions) {
-            for (range in weapon.minRange..weapon.maxRange) {
+            for (range in minRange..maxRange) {
                 for (target in getPositionsAtRange(pos, range)) {
                     if (battleMap.isInBounds(target.x, target.y) && target !in movablePositions) {
                         attackable.add(target)

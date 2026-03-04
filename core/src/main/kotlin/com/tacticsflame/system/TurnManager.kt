@@ -53,14 +53,14 @@ class TurnManager {
                 return readyUnit
             }
 
-            // 全ユニットのCTを進行（SPD=0でも最低1は加算）
-            livingUnits.forEach { it.ct += maxOf(1, it.stats.spd) }
+            // 全ユニットのCTを進行（実効速度=SPD-装備重量、最低1は加算）
+            livingUnits.forEach { it.ct += maxOf(1, it.effectiveSpeed()) }
             ticks++
         }
 
         // フォールバック: 最もCTが高いユニットを選択
         val fallback = livingUnits.maxWithOrNull(
-            compareBy<GameUnit> { it.ct }.thenBy { it.stats.spd }
+            compareBy<GameUnit> { it.ct }.thenBy { it.effectiveSpeed() }
         )
         activeUnit = fallback
         return fallback
@@ -111,7 +111,7 @@ class TurnManager {
             var readyUnit = livingUnits
                 .filter { (simCt[it.id] ?: 0) >= GameConfig.CT_THRESHOLD }
                 .maxWithOrNull(
-                    compareBy<GameUnit> { simCt[it.id] ?: 0 }.thenBy { it.stats.spd }
+                    compareBy<GameUnit> { simCt[it.id] ?: 0 }.thenBy { it.effectiveSpeed() }
                 )
 
             if (readyUnit == null) {
@@ -119,12 +119,12 @@ class TurnManager {
                 var safety = 1000
                 while (readyUnit == null && safety > 0) {
                     livingUnits.forEach {
-                        simCt[it.id] = (simCt[it.id] ?: 0) + maxOf(1, it.stats.spd)
+                        simCt[it.id] = (simCt[it.id] ?: 0) + maxOf(1, it.effectiveSpeed())
                     }
                     readyUnit = livingUnits
                         .filter { (simCt[it.id] ?: 0) >= GameConfig.CT_THRESHOLD }
                         .maxWithOrNull(
-                            compareBy<GameUnit> { simCt[it.id] ?: 0 }.thenBy { it.stats.spd }
+                            compareBy<GameUnit> { simCt[it.id] ?: 0 }.thenBy { it.effectiveSpeed() }
                         )
                     safety--
                 }
@@ -164,7 +164,7 @@ class TurnManager {
         return livingUnits
             .filter { it.ct >= GameConfig.CT_THRESHOLD }
             .maxWithOrNull(
-                compareBy<GameUnit> { it.ct }.thenBy { it.stats.spd }
+                compareBy<GameUnit> { it.ct }.thenBy { it.effectiveSpeed() }
             )
     }
 }

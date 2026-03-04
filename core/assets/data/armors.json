@@ -1,0 +1,82 @@
+[
+    {
+        "id": "leatherArmor",
+        "name": "革の鎧",
+        "type": "LIGHT_ARMOR",
+        "defBonus": 1,
+        "resBonus": 0,
+        "weight": 1
+    },
+    {
+        "id": "chainMail",
+        "name": "鎖帷子",
+        "type": "LIGHT_ARMOR",
+        "defBonus": 2,
+        "resBonus": 0,
+        "weight": 2
+    },
+    {
+        "id": "ironArmor",
+        "name": "鉄の鎧",
+        "type": "HEAVY_ARMOR",
+        "defBonus": 4,
+        "resBonus": 0,
+        "weight": 5
+    },
+    {
+        "id": "steelArmor",
+        "name": "鋼の鎧",
+        "type": "HEAVY_ARMOR",
+        "defBonus": 6,
+        "resBonus": 0,
+        "weight": 8
+    },
+    {
+        "id": "ironShield",
+        "name": "鉄の盾",
+        "type": "SHIELD",
+        "defBonus": 2,
+        "resBonus": 1,
+        "weight": 3
+    },
+    {
+        "id": "steelShield",
+        "name": "鋼の盾",
+        "type": "SHIELD",
+        "defBonus": 4,
+        "resBonus": 1,
+        "weight": 5
+    },
+    {
+        "id": "magicRobe",
+        "name": "魔法のローブ",
+        "type": "MAGIC_ROBE",
+        "defBonus": 0,
+        "resBonus": 3,
+        "weight": 1
+    },
+    {
+        "id": "sageRobe",
+        "name": "賢者のローブ",
+        "type": "MAGIC_ROBE",
+        "defBonus": 1,
+        "resBonus": 5,
+        "weight": 2
+    },
+    {
+        "id": "speedRing",
+        "name": "疾風の指輪",
+        "type": "ACCESSORY",
+        "defBonus": 0,
+        "resBonus": 0,
+        "weight": -2
+    },
+    {
+        "id": "guardCharm",
+        "name": "守りの護符",
+        "type": "ACCESSORY",
+        "defBonus": 1,
+        "resBonus": 1,
+        "weight": 0
+    }
+]

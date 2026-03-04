@@ -195,6 +195,14 @@ object SaveManager {
         }
         writer.pop()
 
+        // 防具
+        val armor = unit.equippedArmor
+        if (armor != null) {
+            writer.`object`("equippedArmor")
+            writeArmor(writer, armor)
+            writer.pop()
+        }
+
         writer.pop()
     }
 
@@ -241,6 +249,18 @@ object SaveManager {
         writer.set("minRange", weapon.minRange)
         writer.set("maxRange", weapon.maxRange)
         writer.pop()
+    }
+
+    /**
+     * 防具を JSON に書き出す
+     */
+    private fun writeArmor(writer: JsonWriter, armor: Armor) {
+        writer.set("id", armor.id)
+        writer.set("name", armor.name)
+        writer.set("type", armor.type.name)
+        writer.set("defBonus", armor.defBonus)
+        writer.set("resBonus", armor.resBonus)
+        writer.set("weight", armor.weight)
     }
 
     // ==================== デシリアライズ ====================
@@ -374,6 +394,13 @@ object SaveManager {
             )
             unit.setCurrentHp(currentHp)
             unit.tactic = tactic
+
+            // 防具の復元
+            val armorNode = node.get("equippedArmor")
+            if (armorNode != null) {
+                unit.equippedArmor = readArmor(armorNode)
+            }
+
             unit
         } catch (e: Exception) {
             Gdx.app.error(TAG, "ユニット読み込み失敗: ${e.message}", e)
@@ -450,6 +477,30 @@ object SaveManager {
             weight = node.getInt("weight", 0),
             minRange = node.getInt("minRange", 1),
             maxRange = node.getInt("maxRange", 1)
+        )
+    }
+
+    /**
+     * JSON から防具を1つ読み込む
+     *
+     * @param node 防具 JSON ノード
+     * @return 復元した Armor
+     */
+    private fun readArmor(node: JsonValue): Armor {
+        val typeName = node.getString("type", "LIGHT_ARMOR")
+        val armorType = try {
+            ArmorType.valueOf(typeName)
+        } catch (e: IllegalArgumentException) {
+            Gdx.app.error(TAG, "不明な防具タイプ: $typeName、LIGHT_ARMOR で代替")
+            ArmorType.LIGHT_ARMOR
+        }
+        return Armor(
+            id = node.getString("id", "unknown"),
+            name = node.getString("name", "???"),
+            type = armorType,
+            defBonus = node.getInt("defBonus", 0),
+            resBonus = node.getInt("resBonus", 0),
+            weight = node.getInt("weight", 0)
         )
     }
 }

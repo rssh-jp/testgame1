@@ -52,13 +52,19 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private val equipButtonW = 260f
     private val equipButtonH = 65f
     private val equipButtonX = GameConfig.VIRTUAL_WIDTH / 2f + 480f - equipButtonW - 20f
-    private val equipButtonY = 170f
+    private val equipButtonY = 100f
 
     /** 作戦変更ボタンの領域（詳細パネル内・左下） */
     private val tacticButtonW = 380f
     private val tacticButtonH = 65f
     private val tacticButtonX = GameConfig.VIRTUAL_WIDTH / 2f - 480f + 20f
-    private val tacticButtonY = 170f
+    private val tacticButtonY = 100f
+
+    /** 出撃ボタンの領域（詳細パネル内） */
+    private val deployButtonW = 200f
+    private val deployButtonH = 65f
+    private val deployButtonX = GameConfig.VIRTUAL_WIDTH / 2f - deployButtonW / 2f
+    private val deployButtonY = 100f
 
     companion object {
         private const val TAG = "FormationScreen"
@@ -133,17 +139,27 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             return
         }
 
+        // 出撃ボタン判定（ユニット選択中のみ有効）
+        if (selectedUnit != null &&
+            touchX in deployButtonX..(deployButtonX + deployButtonW) &&
+            touchY in deployButtonY..(deployButtonY + deployButtonH)
+        ) {
+            val unit = selectedUnit!!
+            val maxDeploy = game.gameProgress.selectedChapter?.maxDeployCount ?: 4
+            val deployed = game.gameProgress.party.toggleDeploy(unit.id, maxDeploy)
+            Gdx.app.log(TAG, "${unit.name}: 出撃=${deployed}")
+            return
+        }
+
         // 装備変更ボタン判定（ユニット選択中のみ有効）
         if (selectedUnit != null &&
             touchX in equipButtonX..(equipButtonX + equipButtonW) &&
             touchY in equipButtonY..(equipButtonY + equipButtonH)
         ) {
             val unit = selectedUnit!!
-            if (unit.weapons.isNotEmpty()) {
-                Gdx.app.log(TAG, "武器装備変更画面へ: ${unit.name}")
-                game.screenManager.navigateToWeaponEquip(unit)
-                return
-            }
+            Gdx.app.log(TAG, "武器装備変更画面へ: ${unit.name}")
+            game.screenManager.navigateToWeaponEquip(unit)
+            return
         }
 
         // 作戦変更ボタン判定（ユニット選択中のみ有効）
@@ -161,27 +177,28 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         // 詳細パネルが表示中の場合、パネル領域内のタップはスロットに伝播させない
         if (selectedUnit != null) {
             val panelX = GameConfig.VIRTUAL_WIDTH / 2f - 480f
-            val panelY = 160f
-            if (touchX in panelX..(panelX + 960f) && touchY in panelY..(panelY + 400f)) {
+            val panelY = 80f
+            if (touchX in panelX..(panelX + 960f) && touchY in panelY..(panelY + 500f)) {
                 return
             }
         }
 
         val roster = game.gameProgress.party.roster
-        val maxDeploy = game.gameProgress.selectedChapter?.maxDeployCount ?: 4
         for (i in roster.indices) {
             val slotY = SLOT_START_Y - i * (SLOT_HEIGHT + 10f) + scrollOffset
             if (touchX in SLOT_X..(SLOT_X + SLOT_WIDTH) &&
                 touchY in slotY - SLOT_HEIGHT..slotY
             ) {
                 val unit = roster[i]
-                // 出撃トグル
-                val deployed = game.gameProgress.party.toggleDeploy(unit.id, maxDeploy)
-                selectedUnit = unit
-                Gdx.app.log(TAG, "${unit.name}: 出撃=${deployed}")
+                // 選択のみ（出撃トグルはしない）
+                selectedUnit = if (selectedUnit == unit) null else unit
+                Gdx.app.log(TAG, "${unit.name}: 選択")
                 return
             }
         }
+
+        // 何もない場所をタップで選択解除
+        selectedUnit = null
     }
 
     // ==================== 描画メソッド ====================
@@ -308,6 +325,16 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         if (weapon != null) {
             smallFont.color = Color.GOLD
             smallFont.draw(batch, weapon.name, textX + 550f, y - 24f)
+        } else {
+            smallFont.color = Color(0.8f, 0.7f, 0.5f, 1f)
+            smallFont.draw(batch, "素手", textX + 550f, y - 24f)
+        }
+
+        // 防具名
+        val armor = unit.equippedArmor
+        if (armor != null) {
+            smallFont.color = Color(0.5f, 0.7f, 1f, 1f)
+            smallFont.draw(batch, armor.name, textX + 700f, y - 24f)
         }
 
         // 作戦表示（スロット右側にコンパクト表示）
@@ -330,9 +357,9 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val unit = selectedUnit ?: return
 
         val panelW = 960f
-        val panelH = 400f
+        val panelH = 500f
         val panelX = GameConfig.VIRTUAL_WIDTH / 2f - panelW / 2f
-        val panelY = 160f
+        val panelY = 80f
 
         shapeRenderer.projectionMatrix = viewport.camera.combined
 
@@ -399,6 +426,9 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         batch.end()
 
+        // 出撃ボタン
+        renderDeployButton(unit)
+
         // 装備変更ボタン
         renderEquipButton(unit)
 
@@ -407,15 +437,64 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     }
 
     /**
+     * 出撃/非出撃ボタンを描画する
+     *
+     * @param unit 選択中のユニット
+     */
+    private fun renderDeployButton(unit: GameUnit) {
+        val isDeployed = game.gameProgress.party.deployedIds.contains(unit.id)
+        val maxDeploy = game.gameProgress.selectedChapter?.maxDeployCount ?: 4
+        val currentDeploy = game.gameProgress.party.deployedIds.size
+        val canDeploy = !isDeployed && currentDeploy < maxDeploy
+
+        shapeRenderer.projectionMatrix = viewport.camera.combined
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        if (isDeployed) {
+            // 「外す」ボタン: 赤系
+            shapeRenderer.setColor(0.5f, 0.15f, 0.15f, 0.9f)
+        } else if (canDeploy) {
+            // 「出撃する」ボタン: 緑系
+            shapeRenderer.setColor(0.1f, 0.35f, 0.15f, 0.9f)
+        } else {
+            // 出撃枠が満杯: グレー
+            shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.6f)
+        }
+        shapeRenderer.rect(deployButtonX, deployButtonY, deployButtonW, deployButtonH)
+        shapeRenderer.end()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.color = if (isDeployed) Color(1f, 0.4f, 0.4f, 1f)
+            else if (canDeploy) Color(0.3f, 1f, 0.4f, 1f)
+            else Color.DARK_GRAY
+        shapeRenderer.rect(deployButtonX, deployButtonY, deployButtonW, deployButtonH)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        batch.projectionMatrix = viewport.camera.combined
+        batch.begin()
+        val label = if (isDeployed) "外す" else "出撃する"
+        font.color = if (isDeployed || canDeploy) Color.WHITE else Color.DARK_GRAY
+        glyphLayout.setText(font, label)
+        font.draw(
+            batch, label,
+            deployButtonX + deployButtonW / 2f - glyphLayout.width / 2f,
+            deployButtonY + deployButtonH / 2f + 12f
+        )
+        batch.end()
+    }
+
+    /**
      * 装備変更ボタンを描画する
      *
      * @param unit 選択中のユニット
      */
     private fun renderEquipButton(unit: GameUnit) {
+        val hasEquipOptions = unit.weapons.isNotEmpty() || game.gameProgress.party.weaponInventory.isNotEmpty()
+
         shapeRenderer.projectionMatrix = viewport.camera.combined
         Gdx.gl.glEnable(GL20.GL_BLEND)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        if (unit.weapons.isNotEmpty()) {
+        if (hasEquipOptions) {
             shapeRenderer.setColor(0.2f, 0.35f, 0.6f, 0.9f)
         } else {
             shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.6f)
@@ -423,14 +502,14 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         shapeRenderer.rect(equipButtonX, equipButtonY, equipButtonW, equipButtonH)
         shapeRenderer.end()
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.color = if (unit.weapons.isNotEmpty()) Color(0.4f, 0.6f, 1f, 1f) else Color.DARK_GRAY
+        shapeRenderer.color = if (hasEquipOptions) Color(0.4f, 0.6f, 1f, 1f) else Color.DARK_GRAY
         shapeRenderer.rect(equipButtonX, equipButtonY, equipButtonW, equipButtonH)
         shapeRenderer.end()
         Gdx.gl.glDisable(GL20.GL_BLEND)
 
         batch.projectionMatrix = viewport.camera.combined
         batch.begin()
-        font.color = if (unit.weapons.isNotEmpty()) Color.WHITE else Color.DARK_GRAY
+        font.color = if (hasEquipOptions) Color.WHITE else Color.DARK_GRAY
         val equipLabel = "装備変更"
         glyphLayout.setText(font, equipLabel)
         font.draw(
