@@ -57,7 +57,7 @@ class MapLoaderTest {
         val result = mapLoader.loadMap("chapter_1.json")!!
 
         assertTrue(result.playerSpawns.isNotEmpty(), "スポーン位置が空")
-        assertEquals(4, result.playerSpawns.size, "スポーン位置は4箇所")
+        assertEquals(6, result.playerSpawns.size, "スポーン位置は6箇所")
         assertEquals(2, result.playerSpawns[0].x)
         assertEquals(2, result.playerSpawns[0].y)
     }
@@ -116,7 +116,7 @@ class MapLoaderTest {
         assertEquals(15, result.battleMap.width)
         assertEquals(10, result.battleMap.height)
         assertEquals(4, result.enemies.size, "敵は4体")
-        assertEquals(4, result.playerSpawns.size)
+        assertEquals(6, result.playerSpawns.size)
     }
 
     @Test
