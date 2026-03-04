@@ -75,56 +75,101 @@ class PartyState {
     }
 
     /**
-     * 在庫から武器をユニットに渡す
+     * 在庫から武器をユニットの右手に装備させる
      *
-     * 在庫から指定の武器を取り出し、ユニットの所持武器に追加する。
-     * 追加された武器は自動的に装備（リストの先頭に挿入）される。
+     * 現在の右手武器は在庫に戻される。
      *
      * @param weapon 渡す武器
      * @param unit 受け取るユニット
      * @return 成功した場合 true
      */
-    fun giveWeaponToUnit(weapon: Weapon, unit: GameUnit): Boolean {
+    fun giveWeaponToRightHand(weapon: Weapon, unit: GameUnit): Boolean {
         val idx = _weaponInventory.indexOf(weapon)
         if (idx < 0) return false
         _weaponInventory.removeAt(idx)
-        unit.weapons.add(0, weapon)
+        unit.rightHand?.let { _weaponInventory.add(it) }
+        unit.rightHand = weapon
         return true
+    }
+
+    /**
+     * 在庫から武器をユニットの左手に装備させる（二刀流）
+     *
+     * クラスが二刀流非対応の場合は失敗する。
+     * 現在の左手武器は在庫に戻される。
+     *
+     * @param weapon 渡す武器
+     * @param unit 受け取るユニット
+     * @return 成功した場合 true
+     */
+    fun giveWeaponToLeftHand(weapon: Weapon, unit: GameUnit): Boolean {
+        if (!unit.unitClass.canDualWield) return false
+        val idx = _weaponInventory.indexOf(weapon)
+        if (idx < 0) return false
+        _weaponInventory.removeAt(idx)
+        unit.leftHand?.let { _weaponInventory.add(it) }
+        unit.leftHand = weapon
+        return true
+    }
+
+    /**
+     * 後方互換用: 在庫から武器をユニットの右手に渡す
+     */
+    fun giveWeaponToUnit(weapon: Weapon, unit: GameUnit): Boolean {
+        return giveWeaponToRightHand(weapon, unit)
     }
 
     /**
      * ユニットから武器を在庫に戻す
      *
-     * ユニットの所持武器から指定の武器を取り出し、在庫に戻す。
+     * 右手・左手・予備リストから該当武器を探して在庫に戻す。
      *
      * @param weapon 戻す武器
      * @param unit 武器を返すユニット
      * @return 成功した場合 true
      */
     fun returnWeaponFromUnit(weapon: Weapon, unit: GameUnit): Boolean {
-        val idx = unit.weapons.indexOf(weapon)
-        if (idx < 0) return false
-        unit.weapons.removeAt(idx)
+        when {
+            unit.rightHand == weapon -> unit.rightHand = null
+            unit.leftHand == weapon -> unit.leftHand = null
+            else -> {
+                val idx = unit.weapons.indexOf(weapon)
+                if (idx < 0) return false
+                unit.weapons.removeAt(idx)
+            }
+        }
         _weaponInventory.add(weapon)
         return true
     }
 
     /**
-     * 在庫から防具をユニットに装備させる
+     * 在庫から防具をユニットの防具スロットに装備させる
      *
-     * ユニットが既に防具を装備している場合、現在の防具は在庫に戻される。
+     * 指定スロットに既に防具がある場合、現在の防具は在庫に戻される。
      *
      * @param armor 装備させる防具
      * @param unit 装備するユニット
+     * @param slot スロット番号（1 or 2）
      * @return 成功した場合 true
      */
-    fun giveArmorToUnit(armor: Armor, unit: GameUnit): Boolean {
+    fun giveArmorToUnit(armor: Armor, unit: GameUnit, slot: Int = 1): Boolean {
         val idx = _armorInventory.indexOf(armor)
         if (idx < 0) return false
         _armorInventory.removeAt(idx)
-        // 既存の防具を在庫に戻す
-        unit.equippedArmor?.let { _armorInventory.add(it) }
-        unit.equippedArmor = armor
+        when (slot) {
+            1 -> {
+                unit.armorSlot1?.let { _armorInventory.add(it) }
+                unit.armorSlot1 = armor
+            }
+            2 -> {
+                unit.armorSlot2?.let { _armorInventory.add(it) }
+                unit.armorSlot2 = armor
+            }
+            else -> {
+                _armorInventory.add(armor) // 無効なスロット → 在庫に戻す
+                return false
+            }
+        }
         return true
     }
 
@@ -132,11 +177,19 @@ class PartyState {
      * ユニットの防具を外して在庫に戻す
      *
      * @param unit 防具を外すユニット
+     * @param slot スロット番号（1 or 2）
      * @return 成功した場合 true
      */
-    fun returnArmorFromUnit(unit: GameUnit): Boolean {
-        val armor = unit.equippedArmor ?: return false
-        unit.equippedArmor = null
+    fun returnArmorFromUnit(unit: GameUnit, slot: Int = 1): Boolean {
+        val armor = when (slot) {
+            1 -> unit.armorSlot1
+            2 -> unit.armorSlot2
+            else -> return false
+        } ?: return false
+        when (slot) {
+            1 -> unit.armorSlot1 = null
+            2 -> unit.armorSlot2 = null
+        }
         _armorInventory.add(armor)
         return true
     }

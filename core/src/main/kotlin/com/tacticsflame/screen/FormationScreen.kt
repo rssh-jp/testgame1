@@ -331,10 +331,10 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         }
 
         // 防具名
-        val armor = unit.equippedArmor
-        if (armor != null) {
+        val armor1 = unit.armorSlot1
+        if (armor1 != null) {
             smallFont.color = Color(0.5f, 0.7f, 1f, 1f)
-            smallFont.draw(batch, armor.name, textX + 700f, y - 24f)
+            smallFont.draw(batch, armor1.name, textX + 700f, y - 24f)
         }
 
         // 作戦表示（スロット右側にコンパクト表示）
@@ -489,7 +489,8 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * @param unit 選択中のユニット
      */
     private fun renderEquipButton(unit: GameUnit) {
-        val hasEquipOptions = unit.weapons.isNotEmpty() || game.gameProgress.party.weaponInventory.isNotEmpty()
+        val hasEquipOptions = unit.rightHand != null || unit.leftHand != null || game.gameProgress.party.weaponInventory.isNotEmpty()
+                || game.gameProgress.party.armorInventory.isNotEmpty()
 
         shapeRenderer.projectionMatrix = viewport.camera.combined
         Gdx.gl.glEnable(GL20.GL_BLEND)

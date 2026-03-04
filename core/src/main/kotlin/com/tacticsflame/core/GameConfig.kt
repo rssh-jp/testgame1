@@ -61,6 +61,9 @@ object GameConfig {
     /** 素手攻撃の重さ */
     const val UNARMED_WEIGHT = 0
 
+    /** 二刀流時の副手命中率ペナルティ */
+    const val DUAL_WIELD_HIT_PENALTY = 15
+
     /** CT（チャージタイム）の行動閾値 */
     const val CT_THRESHOLD = 100
 

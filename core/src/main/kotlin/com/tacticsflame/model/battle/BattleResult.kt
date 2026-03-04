@@ -33,5 +33,7 @@ data class AttackResult(
     val attackerIsInitiator: Boolean,
     val damage: Int,
     val hit: Boolean,
-    val critical: Boolean
+    val critical: Boolean,
+    /** 左手（副手）による攻撃かどうか */
+    val isLeftHand: Boolean = false
 )

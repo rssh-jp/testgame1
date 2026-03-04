@@ -30,35 +30,43 @@ data class UnitClass(
     val moveType: MoveType,
     val baseMov: Int,
     val usableWeapons: List<WeaponType>,
-    val baseStats: Stats = Stats()
+    val baseStats: Stats = Stats(),
+    /** 二刀流が可能か */
+    val canDualWield: Boolean = false,
+    /** 二刀流時の追加速度ペナルティ */
+    val dualWieldPenalty: Int = 0
 ) {
     companion object {
         /** ロード（主人公専用） */
         val LORD = UnitClass(
             id = "lord", name = "ロード",
             moveType = MoveType.INFANTRY, baseMov = 5,
-            usableWeapons = listOf(WeaponType.SWORD)
+            usableWeapons = listOf(WeaponType.SWORD),
+            canDualWield = true, dualWieldPenalty = 2
         )
 
         /** ソードファイター */
         val SWORD_FIGHTER = UnitClass(
             id = "swordFighter", name = "ソードファイター",
             moveType = MoveType.INFANTRY, baseMov = 5,
-            usableWeapons = listOf(WeaponType.SWORD)
+            usableWeapons = listOf(WeaponType.SWORD),
+            canDualWield = true, dualWieldPenalty = 2
         )
 
         /** ランサー */
         val LANCER = UnitClass(
             id = "lancer", name = "ランサー",
             moveType = MoveType.INFANTRY, baseMov = 5,
-            usableWeapons = listOf(WeaponType.LANCE)
+            usableWeapons = listOf(WeaponType.LANCE),
+            canDualWield = true, dualWieldPenalty = 4
         )
 
         /** アクスファイター */
         val AXE_FIGHTER = UnitClass(
             id = "axeFighter", name = "アクスファイター",
             moveType = MoveType.INFANTRY, baseMov = 5,
-            usableWeapons = listOf(WeaponType.AXE)
+            usableWeapons = listOf(WeaponType.AXE),
+            canDualWield = true, dualWieldPenalty = 3
         )
 
         /** アーチャー */
@@ -86,7 +94,8 @@ data class UnitClass(
         val KNIGHT = UnitClass(
             id = "knight", name = "ナイト",
             moveType = MoveType.CAVALRY, baseMov = 7,
-            usableWeapons = listOf(WeaponType.SWORD, WeaponType.LANCE)
+            usableWeapons = listOf(WeaponType.SWORD, WeaponType.LANCE),
+            canDualWield = true, dualWieldPenalty = 3
         )
 
         /** ペガサスナイト（飛行） */
@@ -100,7 +109,8 @@ data class UnitClass(
         val ARMOR_KNIGHT = UnitClass(
             id = "armorKnight", name = "アーマーナイト",
             moveType = MoveType.ARMORED, baseMov = 4,
-            usableWeapons = listOf(WeaponType.LANCE)
+            usableWeapons = listOf(WeaponType.LANCE),
+            canDualWield = true, dualWieldPenalty = 5
         )
 
         /** 全クラスのマップ */

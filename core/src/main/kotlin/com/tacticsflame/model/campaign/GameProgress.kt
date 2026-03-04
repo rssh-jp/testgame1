@@ -147,8 +147,8 @@ class GameProgress {
             growthRate = GrowthRate(hp = 70, str = 50, mag = 10, skl = 55, spd = 60, lck = 40, def = 35, res = 25),
             isLord = true
         )
-        ares.weapons.add(Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3))
-        ares.equippedArmor = Armor("leatherArmor", "革の鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 1)
+        ares.rightHand = Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3)
+        ares.armorSlot1 = Armor("leatherArmor", "革の鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 1)
 
         val leena = GameUnit(
             id = "hero_02", name = "リーナ",
@@ -156,8 +156,8 @@ class GameProgress {
             stats = Stats(hp = 18, str = 7, mag = 0, skl = 5, spd = 5, lck = 3, def = 7, res = 1),
             growthRate = GrowthRate(hp = 60, str = 55, mag = 5, skl = 45, spd = 40, lck = 30, def = 50, res = 20)
         )
-        leena.weapons.add(Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5))
-        leena.equippedArmor = Armor("chainMail", "鎖帷子", ArmorType.LIGHT_ARMOR, defBonus = 2, resBonus = 0, weight = 2)
+        leena.rightHand = Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5)
+        leena.armorSlot1 = Armor("chainMail", "鎖帷子", ArmorType.LIGHT_ARMOR, defBonus = 2, resBonus = 0, weight = 2)
 
         val maria = GameUnit(
             id = "hero_03", name = "マリア",
@@ -165,8 +165,8 @@ class GameProgress {
             stats = Stats(hp = 16, str = 5, mag = 0, skl = 8, spd = 7, lck = 4, def = 3, res = 3),
             growthRate = GrowthRate(hp = 55, str = 45, mag = 5, skl = 60, spd = 55, lck = 40, def = 25, res = 30)
         )
-        maria.weapons.add(Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2))
-        maria.equippedArmor = Armor("leatherArmor", "革の鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 1)
+        maria.rightHand = Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2)
+        maria.armorSlot1 = Armor("leatherArmor", "革の鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 1)
 
         val eric = GameUnit(
             id = "hero_04", name = "エリック",
@@ -174,8 +174,8 @@ class GameProgress {
             stats = Stats(hp = 15, str = 1, mag = 7, skl = 6, spd = 6, lck = 4, def = 2, res = 6),
             growthRate = GrowthRate(hp = 45, str = 10, mag = 60, skl = 50, spd = 45, lck = 35, def = 15, res = 50)
         )
-        eric.weapons.add(Weapon("fire", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2))
-        eric.equippedArmor = Armor("magicRobe", "魔法のローブ", ArmorType.MAGIC_ROBE, defBonus = 0, resBonus = 3, weight = 1)
+        eric.rightHand = Weapon("fire", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2)
+        eric.armorSlot1 = Armor("magicRobe", "魔法のローブ", ArmorType.MAGIC_ROBE, defBonus = 0, resBonus = 3, weight = 1)
 
         party.addUnits(listOf(ares, leena, maria, eric))
 
@@ -209,7 +209,10 @@ class GameProgress {
                 Armor("ironShield", "鉄の盾", ArmorType.SHIELD, defBonus = 2, resBonus = 1, weight = 3),
                 Armor("leatherArmor2", "革の鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 1),
                 Armor("guardCharm", "守りの護符", ArmorType.ACCESSORY, defBonus = 1, resBonus = 1, weight = 0),
-                Armor("speedRing", "疾風の指輪", ArmorType.ACCESSORY, defBonus = 0, resBonus = 0, weight = -2)
+                Armor("speedRing", "疾風の指輪", ArmorType.ACCESSORY, defBonus = 0, resBonus = 0, weight = -2),
+                Armor("ironHelm", "鉄の兜", ArmorType.HEAD, defBonus = 2, resBonus = 0, weight = 2),
+                Armor("leatherBoots", "革の靴", ArmorType.FEET, defBonus = 0, resBonus = 0, weight = -1),
+                Armor("ironGreaves", "鉄の脛当て", ArmorType.FEET, defBonus = 1, resBonus = 0, weight = 1)
             )
         )
 

@@ -3,6 +3,7 @@
 import com.tacticsflame.core.GameConfig
 import com.tacticsflame.model.map.Tile
 import com.tacticsflame.model.unit.GameUnit
+import com.tacticsflame.model.unit.Weapon
 import com.tacticsflame.model.unit.WeaponType
 
 /**
@@ -34,27 +35,30 @@ object DamageCalc {
      * 攻撃側の戦闘予測を計算する
      *
      * 武器未装備（素手）の場合は威力0・命中80・射程1で計算する。
-     * 防御側の防具ボーナスもダメージに反映される。
+     * 防御側の全防具ボーナス（2スロット分）もダメージに反映される。
+     * 左手攻撃時は副手命中ペナルティが適用される。
      *
      * @param attacker 攻撃ユニット
      * @param defender 防御ユニット
      * @param attackerTile 攻撃側の地形
      * @param defenderTile 防御側の地形
+     * @param useLeftHand 左手（副手）武器で攻撃するか
      * @return 戦闘予測データ
      */
     fun calculateForecast(
         attacker: GameUnit,
         defender: GameUnit,
         attackerTile: Tile,
-        defenderTile: Tile
+        defenderTile: Tile,
+        useLeftHand: Boolean = false
     ): BattleForecast {
-        val weapon = attacker.equippedWeapon()
+        val weapon = if (useLeftHand) attacker.secondaryWeapon() else attacker.equippedWeapon()
         val isMagic = weapon?.type == WeaponType.MAGIC
         val weaponMight = weapon?.might ?: GameConfig.UNARMED_MIGHT
 
-        // 防御側の防具ボーナス
-        val armorDef = defender.equippedArmor?.defBonus ?: 0
-        val armorRes = defender.equippedArmor?.resBonus ?: 0
+        // 防御側の全防具ボーナス（2スロット合算）
+        val armorDef = defender.totalArmorDef()
+        val armorRes = defender.totalArmorRes()
 
         // ダメージ計算（素手は物理攻撃扱い）
         val rawDamage = if (isMagic) {
@@ -77,11 +81,11 @@ object DamageCalc {
         val terrainDef = defenderTile.terrainType.defenseBonus
         val damage = maxOf(0, rawDamage + triangleBonus - terrainDef)
 
-        // 命中率計算
-        val hitRate = calculateHitRate(attacker, defender, defenderTile, weapon?.type, defenderWeapon?.type)
+        // 命中率計算（副手ペナルティ含む）
+        val hitRate = calculateHitRate(attacker, defender, defenderTile, weapon?.type, defenderWeapon?.type, weapon, useLeftHand)
 
         // 必殺率計算
-        val critRate = calculateCritRate(attacker, defender)
+        val critRate = calculateCritRate(attacker, defender, weapon)
 
         // 追撃判定（実効速度を使用: SPD - 武器重量 - 防具重量）
         val canDoubleAttack = (attacker.effectiveSpeed() - defender.effectiveSpeed()) >= GameConfig.DOUBLE_ATTACK_SPEED_DIFF
@@ -94,12 +98,15 @@ object DamageCalc {
      *
      * 素手の場合は基本命中80を使用。
      * 回避には実効速度（装備重量を考慮した速度）を使用する。
+     * 左手攻撃時は副手命中ペナルティが適用される。
      *
      * @param attacker 攻撃ユニット
      * @param defender 防御ユニット
      * @param defenderTile 防御側の地形
      * @param attackerWeaponType 攻撃側の武器タイプ（null=素手）
      * @param defenderWeaponType 防御側の武器タイプ（null=素手）
+     * @param weapon 使用武器（null=素手）
+     * @param isLeftHand 左手攻撃かどうか
      * @return 命中率（0〜100にクランプ）
      */
     private fun calculateHitRate(
@@ -107,9 +114,10 @@ object DamageCalc {
         defender: GameUnit,
         defenderTile: Tile,
         attackerWeaponType: WeaponType?,
-        defenderWeaponType: WeaponType?
+        defenderWeaponType: WeaponType?,
+        weapon: Weapon?,
+        isLeftHand: Boolean = false
     ): Int {
-        val weapon = attacker.equippedWeapon()
         val weaponHit = weapon?.hit ?: GameConfig.UNARMED_HIT
 
         // 基本命中 = 武器命中（または素手命中） + 技×2 + 幸運÷2
@@ -127,7 +135,10 @@ object DamageCalc {
             }
         } else 0
 
-        return (baseHit - avoid + triangleHitBonus).coerceIn(0, 100)
+        // 副手命中ペナルティ
+        val offHandPenalty = if (isLeftHand) GameConfig.DUAL_WIELD_HIT_PENALTY else 0
+
+        return (baseHit - avoid + triangleHitBonus - offHandPenalty).coerceIn(0, 100)
     }
 
     /**
@@ -137,10 +148,10 @@ object DamageCalc {
      *
      * @param attacker 攻撃ユニット
      * @param defender 防御ユニット
+     * @param weapon 使用武器（null=素手）
      * @return 必殺率（0〜100にクランプ）
      */
-    private fun calculateCritRate(attacker: GameUnit, defender: GameUnit): Int {
-        val weapon = attacker.equippedWeapon()
+    private fun calculateCritRate(attacker: GameUnit, defender: GameUnit, weapon: Weapon? = null): Int {
         val weaponCrit = weapon?.critical ?: GameConfig.UNARMED_CRITICAL
         val baseCrit = weaponCrit + attacker.stats.skl / 2
         val critAvoid = defender.stats.lck / 2

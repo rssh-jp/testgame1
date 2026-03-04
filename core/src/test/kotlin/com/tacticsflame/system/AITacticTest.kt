@@ -64,7 +64,7 @@ class AITacticTest {
             stats = Stats(hp = 20, str = 6, mag = 1, skl = 7, spd = 8, lck = 5, def = 5, res = 2),
             growthRate = GrowthRate()
         )
-        unit.weapons.add(ironSword)
+        unit.rightHand = ironSword
         return unit
     }
 
@@ -80,7 +80,7 @@ class AITacticTest {
             stats = Stats(hp = 18, str = 5, mag = 0, skl = 5, spd = 5, lck = 3, def = 4, res = 1),
             growthRate = GrowthRate()
         )
-        unit.weapons.add(ironSword)
+        unit.rightHand = ironSword
         return unit
     }
 
@@ -96,7 +96,7 @@ class AITacticTest {
             stats = Stats(hp = 18, str = 5, mag = 0, skl = 5, spd = 5, lck = 3, def = 4, res = 1),
             growthRate = GrowthRate()
         )
-        unit.weapons.add(ironSword)
+        unit.rightHand = ironSword
         return unit
     }
 

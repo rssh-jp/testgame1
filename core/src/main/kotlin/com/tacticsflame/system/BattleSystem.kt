@@ -41,7 +41,7 @@ class BattleSystem {
             attacker, defender, attackerTile, defenderTile
         )
 
-        // 攻撃側の攻撃
+        // 攻撃側の攻撃（右手）
         attacks.add(resolveAttack(attackerForecast, isInitiator = true))
         applyAttackResult(attacks.last(), attacker, defender)
 
@@ -54,7 +54,16 @@ class BattleSystem {
             applyAttackResult(attacks.last(), defender, attacker)
         }
 
-        // 追撃（攻撃側）
+        // 攻撃側の左手攻撃（二刀流時のみ）
+        if (!attacker.isDefeated && !defender.isDefeated && attacker.isDualWielding()) {
+            val leftForecast = DamageCalc.calculateForecast(
+                attacker, defender, attackerTile, defenderTile, useLeftHand = true
+            )
+            attacks.add(resolveAttack(leftForecast, isInitiator = true, isLeftHand = true))
+            applyAttackResult(attacks.last(), attacker, defender)
+        }
+
+        // 追撃（攻撃側: 右手）
         if (!attacker.isDefeated && !defender.isDefeated && attackerForecast.canDoubleAttack) {
             attacks.add(resolveAttack(attackerForecast, isInitiator = true))
             applyAttackResult(attacks.last(), attacker, defender)
@@ -89,11 +98,13 @@ class BattleSystem {
      *
      * @param forecast 戦闘予測
      * @param isInitiator 攻撃を仕掛けた側かどうか
+     * @param isLeftHand 左手（副手）による攻撃かどうか
      * @return 攻撃結果
      */
     private fun resolveAttack(
         forecast: DamageCalc.BattleForecast,
-        isInitiator: Boolean
+        isInitiator: Boolean,
+        isLeftHand: Boolean = false
     ): AttackResult {
         val hitRoll = (Math.random() * 100).toInt()
         val hit = hitRoll < forecast.hitRate
@@ -109,7 +120,8 @@ class BattleSystem {
             attackerIsInitiator = isInitiator,
             damage = damage,
             hit = hit,
-            critical = critical
+            critical = critical,
+            isLeftHand = isLeftHand
         )
     }
 

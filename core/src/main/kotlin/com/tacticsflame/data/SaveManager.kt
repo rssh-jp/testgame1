@@ -188,18 +188,42 @@ object SaveManager {
         writeGrowthRate(writer, unit.growthRate)
         writer.pop()
 
-        // 武器リスト
+        // 武器リスト（予備武器）
         writer.array("weapons")
         for (weapon in unit.weapons) {
             writeWeapon(writer, weapon)
         }
         writer.pop()
 
-        // 防具
-        val armor = unit.equippedArmor
-        if (armor != null) {
-            writer.`object`("equippedArmor")
-            writeArmor(writer, armor)
+        // 装備スロット: 右手
+        val rh = unit.rightHand
+        if (rh != null) {
+            writer.`object`("rightHand")
+            writeWeaponFields(writer, rh)
+            writer.pop()
+        }
+
+        // 装備スロット: 左手
+        val lh = unit.leftHand
+        if (lh != null) {
+            writer.`object`("leftHand")
+            writeWeaponFields(writer, lh)
+            writer.pop()
+        }
+
+        // 装備スロット: 防具1
+        val a1 = unit.armorSlot1
+        if (a1 != null) {
+            writer.`object`("armorSlot1")
+            writeArmor(writer, a1)
+            writer.pop()
+        }
+
+        // 装備スロット: 防具2
+        val a2 = unit.armorSlot2
+        if (a2 != null) {
+            writer.`object`("armorSlot2")
+            writeArmor(writer, a2)
             writer.pop()
         }
 
@@ -235,10 +259,18 @@ object SaveManager {
     }
 
     /**
-     * 武器を JSON に書き出す
+     * 武器を JSON 配列要素として書き出す（object/pop 付き）
      */
     private fun writeWeapon(writer: JsonWriter, weapon: Weapon) {
         writer.`object`()
+        writeWeaponFields(writer, weapon)
+        writer.pop()
+    }
+
+    /**
+     * 武器のフィールドを JSON に書き出す（object/pop なし）
+     */
+    private fun writeWeaponFields(writer: JsonWriter, weapon: Weapon) {
         writer.set("id", weapon.id)
         writer.set("name", weapon.name)
         writer.set("type", weapon.type.name)
@@ -248,7 +280,6 @@ object SaveManager {
         writer.set("weight", weapon.weight)
         writer.set("minRange", weapon.minRange)
         writer.set("maxRange", weapon.maxRange)
-        writer.pop()
     }
 
     /**
@@ -395,10 +426,36 @@ object SaveManager {
             unit.setCurrentHp(currentHp)
             unit.tactic = tactic
 
-            // 防具の復元
-            val armorNode = node.get("equippedArmor")
-            if (armorNode != null) {
-                unit.equippedArmor = readArmor(armorNode)
+            // 新しい装備スロットの復元
+            val rightHandNode = node.get("rightHand")
+            if (rightHandNode != null) {
+                // 新フォーマット: スロット別に読み込み
+                unit.rightHand = readWeapon(rightHandNode)
+
+                val leftHandNode = node.get("leftHand")
+                if (leftHandNode != null) {
+                    unit.leftHand = readWeapon(leftHandNode)
+                }
+
+                val armorSlot1Node = node.get("armorSlot1")
+                if (armorSlot1Node != null) {
+                    unit.armorSlot1 = readArmor(armorSlot1Node)
+                }
+
+                val armorSlot2Node = node.get("armorSlot2")
+                if (armorSlot2Node != null) {
+                    unit.armorSlot2 = readArmor(armorSlot2Node)
+                }
+            } else {
+                // 旧フォーマットからの移行: weapons[0] → rightHand
+                if (unit.weapons.isNotEmpty()) {
+                    unit.rightHand = unit.weapons.removeAt(0)
+                }
+
+                val armorNode = node.get("equippedArmor")
+                if (armorNode != null) {
+                    unit.armorSlot1 = readArmor(armorNode)
+                }
             }
 
             unit

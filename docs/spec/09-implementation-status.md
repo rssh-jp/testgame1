@@ -30,8 +30,10 @@
 |------|------|------|
 | GameUnit クラス | ✅ | 全ステータス・武器・経験値・CT |
 | Weapon クラス | ✅ | 武器タイプ・攻撃力・命中・射程・重さ |
-| **Armor クラス** | **✅** | **新規追加: 防具タイプ・DEF/RESボーナス・重さ** |
-| **ArmorType enum** | **✅** | **新規追加: LIGHT_ARMOR/HEAVY_ARMOR/SHIELD/MAGIC_ROBE/ACCESSORY** |
+| **Armor クラス** | **✅** | **防具タイプ・DEF/RESボーナス・重さ** |
+| **ArmorType enum** | **✅** | **LIGHT_ARMOR/HEAVY_ARMOR/SHIELD/MAGIC_ROBE/ACCESSORY/HEAD/FEET** |
+| **装備スロットシステム** | **✅** | **新規: rightHand/leftHand/armorSlot1/armorSlot2 の4スロット** |
+| **二刀流システム** | **✅** | **新規: UnitClass.canDualWield/dualWieldPenalty、副手命中ペナルティ-15** |
 | **armors.json (防具マスターデータ)** | **✅** | **新規追加: 10種の防具定義** |
 | BattleMap クラス | ✅ | グリッド管理・地形取得 |
 | TerrainType enum | ✅ | 8種（PLAIN/FOREST/MOUNTAIN/WATER/FORT/WALL/VILLAGE/BRIDGE） |
@@ -63,8 +65,9 @@
 | 戦闘予測 (BattleForecast) | ✅ | |
 | 戦闘実行 (executeBattle) | ✅ | 攻撃→反撃→追撃、**素手攻撃対応** |
 | **素手攻撃システム** | **✅** | **新規追加: 武器未装備でも射程1で攻撃可能（might=0, hit=80）** |
-| **防具システム** | **✅** | **新規追加: 防具のDEF/RESボーナスがダメージ軽減に反映** |
-| **装備重量→スピード減少** | **✅** | **新規追加: effectiveSpeed() = SPD - 武器重さ - 防具重さ** |
+| **防具システム** | **✅** | **防具のDEF/RESボーナスがダメージ軽減に反映（2スロット合算）** |
+| **装備重量→スピード減少** | **✅** | **effectiveSpeed() = SPD - 右手重さ - 左手重さ - 防具1重さ - 防具2重さ - 二刀流ペナ** |
+| **二刀流攻撃** | **✅** | **新規: 右手→反撃→左手→右手追撃→防御側追撃** |
 | 経験値計算 | ✅ | レベル差補正あり、GameConfig定数参照 |
 | レベルアップ処理 | ✅ | 成長率による判定 |
 | **経験値付与（戦闘後）** | **✅** | **新規追加: プレイヤーユニットが戦闘後にEXP獲得、レベルアップ対応** |
@@ -170,7 +173,7 @@
 | バトル画面 (BattleScreen) | ✅ | BattleConfig対応・CTベースターン制 |
 | **バトルリザルト画面 (BattleResultScreen)** | **✅** | **新規追加: 勝敗表示・生存ユニット・撃破数・チャプタークリア処理** |
 | リザルト画面 (ResultScreen) | ⚠️ | レガシー互換用に残存 |
-| **武器装備変更画面 (WeaponEquipScreen)** | **✅** | **所持武器・パーティ在庫武器/防具表示・装備変更・受け取り/返却・スクロール対応** |
+| **武器装備変更画面 (WeaponEquipScreen)** | **✅** | **4スロット装備パネル・パーティ在庫・右手/左手/防具1/防具2装備・二刀流対応** |
 | ショップ画面 | ❌ | |
 | 会話・ストーリー画面 | ❌ | |
 

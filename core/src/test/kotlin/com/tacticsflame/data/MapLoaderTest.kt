@@ -75,7 +75,7 @@ class MapLoaderTest {
         assertEquals(Faction.ENEMY, enemy1.faction)
         assertEquals(11, pos1.x)
         assertEquals(3, pos1.y)
-        assertTrue(enemy1.weapons.isNotEmpty(), "武器が装備されている")
+        assertNotNull(enemy1.rightHand, "武器が装備されている")
     }
 
     @Test

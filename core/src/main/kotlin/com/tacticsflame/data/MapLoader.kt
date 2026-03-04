@@ -350,7 +350,7 @@ class MapLoader {
         if (weaponId != null) {
             val weapon = createWeapon(weaponId, id)
             if (weapon != null) {
-                unit.weapons.add(weapon)
+                unit.rightHand = weapon
             }
         }
 
@@ -359,7 +359,7 @@ class MapLoader {
         if (armorId != null) {
             val armor = createArmor(armorId, id)
             if (armor != null) {
-                unit.equippedArmor = armor
+                unit.armorSlot1 = armor
             }
         }
 

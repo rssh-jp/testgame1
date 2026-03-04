@@ -17,6 +17,12 @@ enum class Faction {
 /**
  * ゲーム中の1ユニットを表すクラス
  *
+ * 装備スロット:
+ * - 右手（rightHand）: 主武器
+ * - 左手（leftHand）: 副武器（二刀流用。クラスが canDualWield の場合のみ）
+ * - 防具1（armorSlot1）: 任意の防具
+ * - 防具2（armorSlot2）: 任意の防具
+ *
  * @property id ユニットID
  * @property name ユニット名
  * @property unitClass 兵種
@@ -25,7 +31,7 @@ enum class Faction {
  * @property exp 現在の経験値（0〜99）
  * @property stats 現在のステータス
  * @property growthRate 成長率
- * @property weapons 所持武器リスト
+ * @property weapons 予備武器リスト（装備スロット外の所持武器）
  * @property isLord ロード（主人公）かどうか
  */
 class GameUnit(
@@ -40,8 +46,20 @@ class GameUnit(
     val weapons: MutableList<Weapon> = mutableListOf(),
     val isLord: Boolean = false
 ) {
-    /** 装備中の防具（null = 防具なし） */
-    var equippedArmor: Armor? = null
+    // ==================== 装備スロット ====================
+
+    /** 右手装備（主武器） */
+    var rightHand: Weapon? = null
+
+    /** 左手装備（副武器、二刀流用） */
+    var leftHand: Weapon? = null
+
+    /** 防具スロット1 */
+    var armorSlot1: Armor? = null
+
+    /** 防具スロット2 */
+    var armorSlot2: Armor? = null
+
     /** 現在HP */
     var currentHp: Int = stats.hp
         private set
@@ -77,27 +95,55 @@ class GameUnit(
         get() = unitClass.baseMov
 
     /**
-     * 装備中の武器を取得する（リストの先頭）
+     * 装備中の主武器（右手）を取得する
      *
      * @return 装備中の武器（なければnull＝素手）
      */
-    fun equippedWeapon(): Weapon? {
-        return weapons.firstOrNull()
-    }
+    fun equippedWeapon(): Weapon? = rightHand
 
     /**
-     * 実効速度を計算する（全装備の重量を考慮）
+     * 副武器（左手）を取得する
      *
-     * 武器と防具の重さが速度を低下させる。
-     * 軽い武器（魔法書等）や軽い防具（ローブ等）は速度への影響が少ない。
-     * 重い装備ほど回避・追撃・行動順すべてに悪影響が出る。
+     * @return 左手の武器（なければnull）
+     */
+    fun secondaryWeapon(): Weapon? = leftHand
+
+    /**
+     * 二刀流状態かどうかを返す
+     *
+     * @return 両手に武器を装備している場合 true
+     */
+    fun isDualWielding(): Boolean = rightHand != null && leftHand != null
+
+    /**
+     * 全防具のDEFボーナス合計を返す
+     *
+     * @return DEFボーナス合計
+     */
+    fun totalArmorDef(): Int = (armorSlot1?.defBonus ?: 0) + (armorSlot2?.defBonus ?: 0)
+
+    /**
+     * 全防具のRESボーナス合計を返す
+     *
+     * @return RESボーナス合計
+     */
+    fun totalArmorRes(): Int = (armorSlot1?.resBonus ?: 0) + (armorSlot2?.resBonus ?: 0)
+
+    /**
+     * 実効速度を計算する（全装備の重量 + 二刀流ペナルティを考慮）
+     *
+     * 右手・左手の武器と防具1・防具2の重さが速度を低下させる。
+     * 二刀流時は、クラスごとの追加速度ペナルティが適用される。
      *
      * @return 実効速度（最低0）
      */
     fun effectiveSpeed(): Int {
-        val weaponWeight = equippedWeapon()?.weight ?: GameConfig.UNARMED_WEIGHT
-        val armorWeight = equippedArmor?.weight ?: 0
-        return maxOf(0, stats.spd - weaponWeight - armorWeight)
+        val rWeight = rightHand?.weight ?: GameConfig.UNARMED_WEIGHT
+        val lWeight = leftHand?.weight ?: 0
+        val a1Weight = armorSlot1?.weight ?: 0
+        val a2Weight = armorSlot2?.weight ?: 0
+        val dualPenalty = if (isDualWielding()) unitClass.dualWieldPenalty else 0
+        return maxOf(0, stats.spd - rWeight - lWeight - a1Weight - a2Weight - dualPenalty)
     }
 
     /**
@@ -115,17 +161,42 @@ class GameUnit(
     fun attackMaxRange(): Int = equippedWeapon()?.maxRange ?: 1
 
     /**
-     * 指定した武器を装備する（リストの先頭に移動）
+     * 指定した武器を右手に装備する
      *
-     * 既に先頭（装備中）の武器を指定した場合は何もしない。
+     * 現在の右手武器は予備武器リストへ移動する。
+     * 対象武器が予備リストまたは左手にある場合はそこから取り出す。
      *
-     * @param weapon 装備する武器（所持武器リストに含まれていること）
+     * @param weapon 装備する武器
+     */
+    fun equipWeaponToRightHand(weapon: Weapon) {
+        weapons.remove(weapon)
+        if (leftHand == weapon) leftHand = null
+        rightHand?.let { weapons.add(0, it) }
+        rightHand = weapon
+    }
+
+    /**
+     * 指定した武器を左手に装備する（二刀流）
+     *
+     * クラスが二刀流非対応の場合は何もしない。
+     *
+     * @param weapon 装備する武器
+     */
+    fun equipWeaponToLeftHand(weapon: Weapon) {
+        if (!unitClass.canDualWield) return
+        weapons.remove(weapon)
+        if (rightHand == weapon) rightHand = null
+        leftHand?.let { weapons.add(0, it) }
+        leftHand = weapon
+    }
+
+    /**
+     * 後方互換用: 指定した武器を右手に装備する
+     *
+     * @param weapon 装備する武器
      */
     fun equipWeapon(weapon: Weapon) {
-        val idx = weapons.indexOf(weapon)
-        if (idx <= 0) return
-        weapons.removeAt(idx)
-        weapons.add(0, weapon)
+        equipWeaponToRightHand(weapon)
     }
 
     /**

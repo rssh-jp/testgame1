@@ -145,7 +145,7 @@ class SaveManagerTest {
             stats = Stats(hp = 20, str = 6, mag = 1, skl = 7, spd = 8, lck = 5, def = 5, res = 2),
             growthRate = GrowthRate(hp = 100, str = 100, mag = 100, skl = 100, spd = 100, lck = 100, def = 100, res = 100)
         )
-        unit.weapons.add(Weapon("testSword", "テスト剣", WeaponType.SWORD, might = 5, hit = 90))
+        unit.rightHand = Weapon("testSword", "テスト剣", WeaponType.SWORD, might = 5, hit = 90)
         unit.gainExp(100) // レベルアップ
         gp.party.addUnit(unit)
 
@@ -216,8 +216,8 @@ class SaveManagerTest {
         SaveManager.deserializeFromJson(root, gp2)
 
         val ares2 = gp2.party.findUnit("hero_01")!!
-        assertEquals(1, ares2.weapons.size, "武器の数が一致しない")
-        val sword = ares2.weapons[0]
+        assertNotNull(ares2.rightHand, "武器が装備されていない")
+        val sword = ares2.rightHand!!
         assertEquals("ironSword", sword.id, "武器IDが一致しない")
         assertEquals("鉄の剣", sword.name, "武器名が一致しない")
         assertEquals(WeaponType.SWORD, sword.type, "武器タイプが一致しない")
@@ -313,7 +313,7 @@ class SaveManagerTest {
 
         // マリア（アーチャー）の弓は射程2-2
         val maria = gp2.party.findUnit("hero_03")!!
-        val bow = maria.weapons[0]
+        val bow = maria.rightHand!!
         assertEquals(2, bow.minRange, "弓の最小射程が一致しない")
         assertEquals(2, bow.maxRange, "弓の最大射程が一致しない")
     }
@@ -333,7 +333,7 @@ class SaveManagerTest {
         // エリック（メイジ）
         val eric = gp2.party.findUnit("hero_04")!!
         assertEquals("メイジ", eric.unitClass.name, "兵種名が一致しない")
-        assertEquals(WeaponType.MAGIC, eric.weapons[0].type, "武器タイプが一致しない")
+        assertEquals(WeaponType.MAGIC, eric.rightHand!!.type, "武器タイプが一致しない")
         assertEquals(7, eric.stats.mag, "魔力が一致しない")
     }
 }

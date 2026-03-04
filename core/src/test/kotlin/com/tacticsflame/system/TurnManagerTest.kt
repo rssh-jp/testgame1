@@ -204,8 +204,8 @@ class TurnManagerTest {
         // 同じSPDだが装備重量が異なる2ユニット
         val light = createUnit("u1", "軽装", 10)
         val heavy = createUnit("u2", "重装", 10, Faction.ENEMY)
-        heavy.weapons.add(Weapon("axe", "重い斧", WeaponType.AXE, might = 10, hit = 70, weight = 5))
-        heavy.equippedArmor = Armor("armor", "重鎧", ArmorType.HEAVY_ARMOR, defBonus = 5, resBonus = 0, weight = 5)
+        heavy.rightHand = Weapon("axe", "重い斧", WeaponType.AXE, might = 10, hit = 70, weight = 5)
+        heavy.armorSlot1 = Armor("armor", "重鎧", ArmorType.HEAVY_ARMOR, defBonus = 5, resBonus = 0, weight = 5)
 
         val units = listOf(light, heavy)
         turnManager.reset(units)
@@ -220,11 +220,11 @@ class TurnManagerTest {
     fun `装備重量でeffectiveSpeedが同一ならCTで公平に行動する`() {
         val u1 = createUnit("u1", "ユニットA", 10)
         val sword = Weapon("sword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3)
-        u1.weapons.add(sword) // effectiveSpeed = 10 - 3 = 7
+        u1.rightHand = sword // effectiveSpeed = 10 - 3 = 7
 
         val u2 = createUnit("u2", "ユニットB", 10, Faction.ENEMY)
         val lightArmor = Armor("armor", "革鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 3)
-        u2.equippedArmor = lightArmor // effectiveSpeed = 10 - 3 = 7
+        u2.armorSlot1 = lightArmor // effectiveSpeed = 10 - 3 = 7
 
         val units = listOf(u1, u2)
         turnManager.reset(units)
@@ -246,7 +246,7 @@ class TurnManagerTest {
         val fast = createUnit("u1", "軽装", 10) // effectiveSpeed = 10
         val heavy = createUnit("u2", "重装", 10, Faction.ENEMY)
         val heavyWeapon = Weapon("heavy", "巨大斧", WeaponType.AXE, might = 15, hit = 60, weight = 8)
-        heavy.weapons.add(heavyWeapon)
+        heavy.rightHand = heavyWeapon
         // heavy effectiveSpeed = 10 - 8 = 2
 
         val units = listOf(fast, heavy)

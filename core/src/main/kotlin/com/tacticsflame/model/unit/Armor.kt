@@ -13,7 +13,11 @@ enum class ArmorType {
     /** 魔法ローブ（魔防重視。軽量で速度低下が少ない） */
     MAGIC_ROBE,
     /** アクセサリ（指輪・護符など。軽量で微補正） */
-    ACCESSORY
+    ACCESSORY,
+    /** 頭防具（兜など） */
+    HEAD,
+    /** 足防具（靴など） */
+    FEET
 }
 
 /**

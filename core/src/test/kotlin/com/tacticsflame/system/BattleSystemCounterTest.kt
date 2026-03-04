@@ -37,13 +37,15 @@ class BattleSystemCounterTest {
         hp: Int = 50,
         weapons: MutableList<Weapon> = mutableListOf()
     ): GameUnit {
-        return GameUnit(
+        val unit = GameUnit(
             id = id, name = "テスト$id",
             unitClass = UnitClass.LORD, faction = faction,
             stats = Stats(hp = hp, str = str, mag = 1, skl = 7, spd = spd, lck = 5, def = def, res = 2),
             growthRate = GrowthRate(),
             weapons = weapons
         )
+        unit.rightHand = weapons.firstOrNull()
+        return unit
     }
 
     @BeforeTest

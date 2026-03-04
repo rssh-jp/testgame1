@@ -38,7 +38,8 @@ class DamageCalcTest {
             growthRate = GrowthRate(),
             weapons = weapons
         )
-        unit.equippedArmor = armor
+        unit.rightHand = weapons.firstOrNull()
+        unit.armorSlot1 = armor
         return unit
     }
 
@@ -219,7 +220,7 @@ class DamageCalcTest {
         val heavyArmor = Armor("armor", "重鎧", ArmorType.HEAVY_ARMOR, defBonus = 5, resBonus = 0, weight = 8)
 
         val attacker = createUnit(spd = 15, weapons = mutableListOf(sword))
-        attacker.equippedArmor = heavyArmor
+        attacker.armorSlot1 = heavyArmor
 
         val defender = createUnit(spd = 8)
         val tile = plainTile()

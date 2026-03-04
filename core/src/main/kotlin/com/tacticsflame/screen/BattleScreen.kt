@@ -1058,14 +1058,16 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         }
 
         // 装備防具情報
-        val armor = unit.equippedArmor
-        if (armor != null) {
+        val armor1 = unit.armorSlot1
+        val armor2 = unit.armorSlot2
+        if (armor1 != null || armor2 != null) {
             textY -= lineHeight
             font.color = Color(0.5f, 0.7f, 1f, 1f)
-            font.draw(batch, armor.name, col1X, textY)
+            val armorNames = listOfNotNull(armor1?.name, armor2?.name).joinToString(", ")
+            font.draw(batch, armorNames, col1X, textY)
             textY -= lineHeight
             font.color = Color.LIGHT_GRAY
-            font.draw(batch, "DEF+${armor.defBonus}  RES+${armor.resBonus}  Wt ${armor.weight}", col1X, textY)
+            font.draw(batch, "DEF+${unit.totalArmorDef()}  RES+${unit.totalArmorRes()}", col1X, textY)
         }
 
         batch.end()
@@ -1228,14 +1230,16 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         }
 
         // 装備防具情報
-        val armor = unit.equippedArmor
-        if (armor != null) {
+        val inspArmor1 = unit.armorSlot1
+        val inspArmor2 = unit.armorSlot2
+        if (inspArmor1 != null || inspArmor2 != null) {
             textY -= lineHeight
             font.color = Color(0.5f, 0.7f, 1f, 1f)
-            font.draw(batch, armor.name, col1X, textY)
+            val armorNames = listOfNotNull(inspArmor1?.name, inspArmor2?.name).joinToString(", ")
+            font.draw(batch, armorNames, col1X, textY)
             textY -= lineHeight
             font.color = Color.LIGHT_GRAY
-            font.draw(batch, "DEF+${armor.defBonus}  RES+${armor.resBonus}  Wt ${armor.weight}", col1X, textY)
+            font.draw(batch, "DEF+${unit.totalArmorDef()}  RES+${unit.totalArmorRes()}", col1X, textY)
         }
 
         batch.end()
