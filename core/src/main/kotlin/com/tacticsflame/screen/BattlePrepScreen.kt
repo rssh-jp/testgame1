@@ -100,7 +100,7 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     override fun show() {
         batch = SpriteBatch()
         shapeRenderer = ShapeRenderer()
-        titleFont = FontManager.getFont(size = 42)
+        titleFont = FontManager.getFont(size = 48)
         font = FontManager.getFont(size = 32)
         smallFont = FontManager.getFont(size = 24)
 

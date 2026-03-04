@@ -54,9 +54,9 @@ class BattleResultScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     override fun show() {
         batch = SpriteBatch()
         shapeRenderer = ShapeRenderer()
-        titleFont = FontManager.getFont(size = 72)
-        font = FontManager.getFont(size = 36)
-        smallFont = FontManager.getFont(size = 28)
+        titleFont = FontManager.getFont(size = 64)
+        font = FontManager.getFont(size = 32)
+        smallFont = FontManager.getFont(size = 24)
 
         resultData = game.currentBattleResult ?: BattleResultData(
             chapterInfo = game.gameProgress.selectedChapter!!,

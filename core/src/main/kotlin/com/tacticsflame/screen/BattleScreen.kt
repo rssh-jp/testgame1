@@ -135,7 +135,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     override fun show() {
         batch = SpriteBatch()
         shapeRenderer = ShapeRenderer()
-        font = FontManager.getFont(size = 28)
+        font = FontManager.getFont(size = 24)
 
         // BattleConfig からマップを構築、なければテスト用マップにフォールバック
         battleConfig = game.currentBattleConfig
