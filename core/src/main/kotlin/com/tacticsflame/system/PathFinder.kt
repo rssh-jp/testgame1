@@ -130,6 +130,10 @@ class PathFinder {
                 val moveCost = getMoveCost(unit.unitClass.moveType, tile.terrainType)
                 if (moveCost < 0) continue
 
+                // 敵ユニットがいるマスは通過不可（すり抜け防止）
+                val unitOnTile = battleMap.getUnitAt(neighbor)
+                if (unitOnTile != null && unitOnTile.faction != unit.faction) continue
+
                 val tentativeG = (gScore[current.position] ?: Int.MAX_VALUE) + moveCost
 
                 if (tentativeG < (gScore[neighbor] ?: Int.MAX_VALUE)) {
