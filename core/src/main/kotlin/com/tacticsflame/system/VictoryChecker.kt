@@ -54,11 +54,14 @@ class VictoryChecker {
     ): BattleOutcome {
         val allUnits = battleMap.getAllUnits()
 
-        // 敗北判定: ロードが戦闘不能、またはロードがマップ上に存在しない（撃破により除去済み）
+        // 敗北判定:
+        // 1. ロードが存在して戦闘不能 → 敗北
+        // 2. プレイヤーユニットが全滅（全員除去） → 敗北
+        // ※ ロードが最初からいないマップでは、ロード不在だけでは敗北にならない
         val playerUnits = allUnits.filter { it.second.faction == Faction.PLAYER }
         val lordDefeated = playerUnits.any { it.second.isLord && it.second.isDefeated }
-        val lordAbsent = playerUnits.none { it.second.isLord }
-        if (lordDefeated || lordAbsent) return BattleOutcome.DEFEAT
+        val allPlayersEliminated = playerUnits.isEmpty() || playerUnits.all { it.second.isDefeated }
+        if (lordDefeated || allPlayersEliminated) return BattleOutcome.DEFEAT
 
         // 勝利判定
         return when (conditionType) {

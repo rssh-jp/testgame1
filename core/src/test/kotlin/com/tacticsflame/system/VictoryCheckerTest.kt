@@ -100,9 +100,9 @@ class VictoryCheckerTest {
     }
 
     @Test
-    fun `ロードがマップから除去された場合は敗北になる_バグ修正回帰テスト`() {
-        // バグ再現: ロードが撃破されてマップから removeUnit された後に
-        // checkOutcome が呼ばれるケース
+    fun `ロードがマップから除去されても味方が残っていれば継続中`() {
+        // ロードが撃破されてマップから removeUnit された後に
+        // checkOutcome が呼ばれるケース — 味方が残っていれば敗北にならない
         val map = createTestMap()
         val lord = createUnit("hero", "アレス", Faction.PLAYER, isLord = true)
         val ally = createUnit("ally", "リーナ", Faction.PLAYER)
@@ -120,8 +120,8 @@ class VictoryCheckerTest {
         )
 
         assertEquals(
-            VictoryChecker.BattleOutcome.DEFEAT, outcome,
-            "ロードがマップから除去された場合、敗北が検出されるべき"
+            VictoryChecker.BattleOutcome.ONGOING, outcome,
+            "ロードがいなくても味方が生存している限りバトルは継続するべき"
         )
     }
 
@@ -261,7 +261,7 @@ class VictoryCheckerTest {
     }
 
     @Test
-    fun `ロード除去かつ敵全滅でも敗北が優先される`() {
+    fun `ロードなしマップで敵全滅なら勝利になる`() {
         val map = createTestMap()
         val ally = createUnit("ally", "リーナ", Faction.PLAYER)
         map.placeUnit(ally, Position(0, 0))
@@ -272,8 +272,43 @@ class VictoryCheckerTest {
         )
 
         assertEquals(
+            VictoryChecker.BattleOutcome.VICTORY, outcome,
+            "ロードがいなくても敵全滅なら勝利になるべき"
+        )
+    }
+
+    @Test
+    fun `ロードなしマップで敵が残っていれば継続中`() {
+        val map = createTestMap()
+        val ally = createUnit("ally", "リーナ", Faction.PLAYER)
+        val enemy = createUnit("enemy", "山賊", Faction.ENEMY)
+        map.placeUnit(ally, Position(0, 0))
+        map.placeUnit(enemy, Position(4, 4))
+
+        val outcome = victoryChecker.checkOutcome(
+            map, VictoryChecker.VictoryConditionType.DEFEAT_ALL
+        )
+
+        assertEquals(
+            VictoryChecker.BattleOutcome.ONGOING, outcome,
+            "ロードがいなくても味方と敵が残っていれば継続"
+        )
+    }
+
+    @Test
+    fun `全プレイヤーユニットが除去されたら敗北になる_ロードなし`() {
+        val map = createTestMap()
+        val enemy = createUnit("enemy", "山賊", Faction.ENEMY)
+        map.placeUnit(enemy, Position(4, 4))
+        // プレイヤーユニットが誰もいない
+
+        val outcome = victoryChecker.checkOutcome(
+            map, VictoryChecker.VictoryConditionType.DEFEAT_ALL
+        )
+
+        assertEquals(
             VictoryChecker.BattleOutcome.DEFEAT, outcome,
-            "ロードがマップにいなければ、敵がいなくても敗北"
+            "プレイヤーユニットが全滅したら敗北"
         )
     }
 }
