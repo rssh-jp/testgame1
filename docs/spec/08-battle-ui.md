@@ -154,6 +154,35 @@ stateDiagram-v2
 | 25〜50% | 黄 (0.8, 0.8, 0) |
 | 25%未満 | 赤 (0.8, 0, 0) |
 
+## 調査パネル（ユニット情報パネル）
+
+戦闘中に任意のユニットをタップすると、画面左下にそのユニットの詳細情報パネルを表示する。
+アクティブユニットのステータスパネル（右上）とは別の位置に表示され、両方同時に確認できる。
+
+### 表示トリガー
+
+- 任意のユニット（味方・敵・同盟）をタップすると `inspectedUnit` にセットされ表示
+- アクティブユニットと同じユニットの場合は調査パネルを表示しない（重複防止）
+- 撃破済みユニットは表示対象外
+- 空マスまたはマップ外をタップすると非表示
+- 戦闘で撃破されたユニットが調査対象の場合は自動的に非表示
+
+### パネルレイアウト
+
+（画面左下、panelX = viewLeft + 16, panelY = viewBottom + 16）
+
+| 項目 | 位置 | 説明 |
+|------|------|------|
+| パネル背景 | 左下 +16px, W=380, H=480 | 半透明黒 (0,0,0, 0.8f) |
+| ヘッダー | パネル上部 | 「INSPECT」ラベル（金色） |
+| ユニット名 | ヘッダーの下 | 陣営カラーテキスト |
+| Lv / クラス | 名前の下 | レベルとクラスタイプ |
+| EXP | Lv の下（PLAYERのみ） | 経験値 |
+| HPバー | W=348, H=12 | 残HP比率で色分け |
+| CTバー | W=348, H=12 | CT比率で色分け |
+| ステータス | 2列表示 | STR/MAG/SKL/SPD/LCK/DEF/RES/MOV |
+| 装備武器 | パネル下部 | 武器名・Mt・Hit・Wt |
+
 ## 移動範囲の表示
 
 - `PathFinder.findReachable()` の結果を使用
@@ -183,10 +212,8 @@ stateDiagram-v2
 
 | 状態 | タップ対象 | 処理 |
 |------|-----------|------|
-| PLAYER_TURN | 移動可能マス | 移動実行 → CT消費 |
-| PLAYER_TURN | 現在位置 | 待機 → CT消費 |
-| PLAYER_TURN | 他ユニット | ステータス表示 |
-| PLAYER_TURN | 空マス | inspectedUnit = null |
+| 全状態（RESULT除く） | ユニット | 調査パネル表示（inspectedUnit にセット） |
+| 全状態（RESULT除く） | 空マス / マップ外 | 調査パネル非表示（inspectedUnit = null） |
 | RESULT | 任意 | リザルト画面へ遷移 |
 
 ## レンダリングパイプライン
@@ -198,8 +225,9 @@ stateDiagram-v2
 3. **グリッド線** — ShapeRenderer (Line)
 4. **ユニット** — ShapeRenderer (Filled, アクティブ金色リング → 円形CTバー → ユニット円 → HPバー)
 5. **ステータスパネル** — ShapeRenderer (Filled) + BitmapFont
-6. **行動順キュー** — ShapeRenderer (Filled) + BitmapFont
-7. **ラウンド情報テキスト** — BitmapFont
+6. **調査パネル** — ShapeRenderer (Filled) + BitmapFont
+7. **行動順キュー** — ShapeRenderer (Filled) + BitmapFont
+8. **ラウンド情報テキスト** — BitmapFont
 
 ## 未実装の項目
 
