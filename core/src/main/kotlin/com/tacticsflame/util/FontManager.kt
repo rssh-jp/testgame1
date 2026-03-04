@@ -21,8 +21,8 @@ object FontManager : Disposable {
     /**
      * 生成に含める日本語文字セット
      *
-     * ゲーム内で使用される文字を網羅する。
-     * ひらがな・カタカナ・基本漢字・記号を含む。
+     * ひらがな・カタカナ・CJK統合漢字・記号を包括的に含む。
+     * 手動で漢字を列挙する方式ではなく、Unicode範囲指定で全漢字を網羅する。
      */
     private val JAPANESE_CHARS: String by lazy {
         buildString {
@@ -36,49 +36,12 @@ object FontManager : Disposable {
             for (c in '\u3000'..'\u303F') append(c)
             // 半角カタカナ・全角英数
             for (c in '\uFF00'..'\uFFEF') append(c)
+            // CJK統合漢字（全範囲: 日本語の常用漢字・人名漢字をすべて含む）
+            for (c in '\u4E00'..'\u9FFF') append(c)
             // 画面UIで使用する特殊記号
             append("\u2014\u2015\u2190\u2191\u2192\u2193\u25B6\u25B7\u25C0\u25C1\u25CF\u25CB\u25A0\u25A1\u25B2\u25B3\u25BC\u25BD\u2713\u2717\u2605\u2606")
-            // ゲーム内で使用する漢字
-            append(GAME_KANJI)
         }
     }
-
-    /**
-     * ゲーム内で使用する漢字
-     *
-     * ユニット名・武器名・UI表示・地形名・メッセージ等に使われる漢字を列挙。
-     * 必要に応じて追加する。
-     */
-    private const val GAME_KANJI =
-        // 戦闘・ステータス関連
-        "力魔技速幸運守備抵抗移動攻撃命中威回避必殺重量射程距離経験値" +
-        "体力残上昇成長率最大小限界突破発動効果追撃反" +
-        // ユニット・兵種関連
-        "剣士槍斧弓騎兵馬飛天聖魔導師僧侶盗賊山賊将軍竜王子姫" +
-        "勇者英雄傭兵暗殺戦闘員隊長副官" +
-        // 武器・アイテム関連
-        "鉄鋼銀炎氷雷風光闇神聖杖薬傷短刀細身手裏投矢弩" +
-        "紋章宝玉鍵扉箱指輪護符盾鎧兜靴腕輪" +
-        // 地形関連
-        "平原森林山岳砦水壁村橋荒廃墟門城塞塔洞窟海岸砂漠沼地丘陵" +
-        // UI・ターン関連
-        "行動順番予測味方敵同盟選択了待機装備交換使用捨持物" +
-        "開始終止勝利敗北引分撤退進軍配陣形出撃準完全" +
-        // マップ・シナリオ関連
-        "章節場面会話台詞作名前称号位階級" +
-        // 数量・方向
-        "一二三四五六七八九十百千万無限個本枚回目番" +
-        "東西南北左右中央前後表裏内外" +
-        // 状態・属性
-        "生死傷毒眠石混乱沈黙封印呪解除復活消滅強化弱" +
-        // 接続詞・助詞（テキストメッセージ用）
-        "的在是不有和与及或也但而且因為所以" +
-        "日月火水木金土年時分秒間" +
-        "確認取消保存読込新続再設定音量画質言語" +
-        // ターン表示
-        "現相手味側自分対象範囲全体単" +
-        // 画面UI・チャプターテキスト用
-        "部編戻数人過第制圧国境防衛線侵黒抜要"
 
     private var generator: FreeTypeFontGenerator? = null
     private val fontCache = mutableMapOf<Int, BitmapFont>()
@@ -101,6 +64,10 @@ object FontManager : Disposable {
                 this.characters = JAPANESE_CHARS
                 // アンチエイリアス有効
                 this.mono = false
+                // CJK全漢字を含むためテクスチャページを大きめに確保
+                this.packer = com.badlogic.gdx.graphics.g2d.PixmapPacker(
+                    2048, 2048, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888, 1, false
+                )
                 // ミップマップ設定（スケーリング品質向上）
                 this.minFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear
                 this.magFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear

@@ -392,11 +392,21 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         textY -= lineH + 8f
 
         val stats = unit.stats
-        // 装備後ステータスの計算（変化がある場合のみ括弧付きで表示）
+        // 装備後ステータスの計算
         val armorDef = unit.totalArmorDef()
         val armorRes = unit.totalArmorRes()
         val effSpd = unit.effectiveSpeed()
         val spdDiff = effSpd - stats.spd
+
+        // 攻撃力 = STR(物理) or MAG(魔法) + 武器威力
+        val weapon = unit.equippedWeapon()
+        val weaponMight = weapon?.might ?: 0
+        val isMagic = weapon?.type == com.tacticsflame.model.unit.WeaponType.MAGIC
+        val atk = if (isMagic) stats.mag + weaponMight else stats.str + weaponMight
+        // 総防御力 = DEF + 防具DEF
+        val totalDef = stats.def + armorDef
+        // 総魔防 = RES + 防具RES
+        val totalRes = stats.res + armorRes
 
         /** 装備による差分を括弧付きで表示するヘルパー（例: "DEF  11(+2)" や "SPD  12(-7)"） */
         fun withDiff(label: String, base: Int, diff: Int): String =
@@ -412,9 +422,10 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val col2X = textX + 300f
         val col3X = textX + 600f
         val statRows = listOf(
-            Triple("HP  ${unit.currentHp}/${unit.maxHp}", "SKL  ${stats.skl}", withDiff("DEF", stats.def, armorDef)),
-            Triple("STR  ${stats.str}", withDiff("SPD", stats.spd, spdDiff), withDiff("RES", stats.res, armorRes)),
-            Triple("MAG  ${stats.mag}", "LCK  ${stats.lck}", "MOV  ${unit.mov}")
+            Triple("HP  ${unit.currentHp}/${unit.maxHp}", "SKL  ${stats.skl}", "ATK  $atk"),
+            Triple("STR  ${stats.str}", withDiff("SPD", stats.spd, spdDiff), withDiff("DEF", stats.def, armorDef)),
+            Triple("MAG  ${stats.mag}", "LCK  ${stats.lck}", withDiff("RES", stats.res, armorRes)),
+            Triple("MOV  ${unit.mov}", "", "")
         )
 
         smallFont.color = Color.WHITE
@@ -426,7 +437,6 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         }
 
         textY -= 8f
-        val weapon = unit.equippedWeapon()
         if (weapon != null) {
             font.color = Color.GOLD
             font.draw(batch, weapon.name, textX, textY)
