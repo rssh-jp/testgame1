@@ -535,11 +535,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * @param unit 行動を完了したユニット
      */
     private fun completeUnitAction(unit: GameUnit) {
-        // 選択状態をクリア
+        // 選択状態をクリア（inspectedUnit はプレイヤーが明示的に解除するまで保持）
         selectedUnit = null
         movablePositions = emptySet()
         attackablePositions = emptySet()
-        inspectedUnit = null
 
         // アニメーション状態をクリア
         pendingAction = null
