@@ -177,6 +177,8 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         for (i in 0 until chapters.size - 1) {
             val from = chapters[i]
             val to = chapters[i + 1]
+            // ランダムマップ（another_chapter）は独立ノードなので接続線を引かない
+            if (from.id == "another_chapter" || to.id == "another_chapter") continue
             shapeRenderer.line(
                 from.worldMapX * GameConfig.VIRTUAL_WIDTH,
                 from.worldMapY * GameConfig.VIRTUAL_HEIGHT,
@@ -213,6 +215,7 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             // ノード本体
             when {
                 !chapter.unlocked -> shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1f)
+                chapter.id == "another_chapter" -> shapeRenderer.setColor(0.7f, 0.3f, 0.9f, 1f) // ランダムマップは紫
                 chapter.completed -> shapeRenderer.setColor(0.2f, 0.8f, 0.3f, 1f)
                 else -> shapeRenderer.setColor(0.3f, 0.5f, 1f, 1f)
             }

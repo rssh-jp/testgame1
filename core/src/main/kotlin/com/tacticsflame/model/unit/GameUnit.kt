@@ -228,15 +228,12 @@ class GameUnit(
      * 経験値を加算し、レベルアップ判定を行う
      *
      * 経験値が [GameConfig.EXP_TO_LEVEL_UP] (100) に達するとレベルアップし、
-     * 成長率に基づいてステータスが上昇する。
-     * レベルが [GameConfig.MAX_LEVEL] に達している場合は経験値を加算しない。
+     * 成長率に基づいてステータスが上昇する。レベル上限はなく、どこまでも成長可能。
      *
      * @param amount 獲得経験値（0以上）
      * @return レベルアップした場合は成長したステータス、しなかった場合はnull
      */
     fun gainExp(amount: Int): Stats? {
-        // レベル上限に達している場合は経験値を加算しない
-        if (level >= GameConfig.MAX_LEVEL) return null
         val safeAmount = amount.coerceAtLeast(0)
         exp += safeAmount
         if (exp >= GameConfig.EXP_TO_LEVEL_UP) {

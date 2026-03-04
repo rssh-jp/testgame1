@@ -41,12 +41,16 @@ class GameProgress {
     fun completeChapter(chapterId: String) {
         val index = _chapters.indexOfFirst { it.id == chapterId }
         if (index >= 0) {
-            _chapters[index].completed = true
-            // 次のチャプターを開放
-            if (index + 1 < _chapters.size) {
+            val chapter = _chapters[index]
+            // ランダムマップは何度でも挑戦可能なので完了状態にしない
+            if (chapter.id != "another_chapter") {
+                chapter.completed = true
+            }
+            // 次のチャプターを開放（ランダムマップの次は開放しない）
+            if (chapter.id != "another_chapter" && index + 1 < _chapters.size) {
                 _chapters[index + 1].unlocked = true
             }
-            Gdx.app.log(TAG, "チャプター完了: ${_chapters[index].name}")
+            Gdx.app.log(TAG, "チャプター完了: ${chapter.name}")
         }
     }
 
@@ -131,6 +135,17 @@ class GameProgress {
                     unlocked = false,
                     maxDeployCount = 4,
                     requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "another_chapter",
+                    name = "ランダムマップ - 遭遇戦",
+                    description = "パーティの平均レベルに応じた敵が出現する特殊マップ。何度でも挑戦可能。",
+                    mapFileName = "another_chapter.json",
+                    worldMapX = 0.5f,
+                    worldMapY = 0.75f,
+                    unlocked = true,
+                    maxDeployCount = 4,
+                    requiredUnits = emptyList()
                 )
             )
         )

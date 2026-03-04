@@ -22,9 +22,6 @@ object GameConfig {
     /** レベルアップに必要な経験値 */
     const val EXP_TO_LEVEL_UP = 100
 
-    /** レベル上限 */
-    const val MAX_LEVEL = 20
-
     /** 経験値計算: 基本経験値 */
     const val EXP_BASE = 30
 

@@ -118,9 +118,10 @@ class MapLoader {
      * マップJSONファイルを読み込み、MapLoadResult を返す
      *
      * @param mapFileName マップファイル名（例: "chapter_1.json"）
+     * @param partyAverageLevel パーティの平均レベル（ランダム敵生成用、デフォルト0＝未指定）
      * @return 読み込み結果。読み込み失敗時は null
      */
-    fun loadMap(mapFileName: String): MapLoadResult? {
+    fun loadMap(mapFileName: String, partyAverageLevel: Int = 0): MapLoadResult? {
         return try {
             ensureWeaponDataLoaded()
             ensureArmorDataLoaded()
@@ -137,11 +138,20 @@ class MapLoader {
 
             val battleMap = parseBattleMap(json)
             val playerSpawns = parsePlayerSpawns(json)
-            val enemies = parseEnemies(json)
+
+            // ランダム敵生成フラグが true の場合、敵を動的生成する
+            val isRandomEnemies = json.getBoolean("randomEnemies", false)
+            val enemies = if (isRandomEnemies && partyAverageLevel > 0) {
+                generateRandomEnemies(battleMap, playerSpawns, partyAverageLevel)
+            } else {
+                parseEnemies(json)
+            }
+
             val victoryConditionType = parseVictoryCondition(json)
 
             Gdx.app.log(TAG, "マップ読み込み完了: $mapFileName " +
-                "(${battleMap.width}x${battleMap.height}, スポーン: ${playerSpawns.size}, 敵: ${enemies.size})")
+                "(${battleMap.width}x${battleMap.height}, スポーン: ${playerSpawns.size}, 敵: ${enemies.size}" +
+                if (isRandomEnemies) ", ランダム敵Lv.$partyAverageLevel)" else ")")
 
             MapLoadResult(battleMap, playerSpawns, enemies, victoryConditionType)
         } catch (e: Exception) {
@@ -464,6 +474,143 @@ class MapLoader {
 
         Gdx.app.log(TAG, "防具マスターに未登録: $armorId (ユニット: $unitId)")
         return null
+    }
+
+    // ==================== ランダム敵生成 ====================
+
+    /**
+     * ランダムマップ用に敵ユニットを動的生成する
+     *
+     * パーティ平均レベルに応じた敵を4〜6体、マップ右側のランダム位置に配置する。
+     * 敵のステータスはベースステータス + レベルに応じた成長分で計算される。
+     *
+     * @param battleMap バトルマップ
+     * @param playerSpawns プレイヤースポーン位置（敵と重複しないよう除外する）
+     * @param averageLevel パーティの平均レベル
+     * @return 敵ユニットと配置位置のペアリスト
+     */
+    private fun generateRandomEnemies(
+        battleMap: BattleMap,
+        playerSpawns: List<Position>,
+        averageLevel: Int
+    ): List<Pair<GameUnit, Position>> {
+        val random = java.util.Random()
+        val enemies = mutableListOf<Pair<GameUnit, Position>>()
+
+        // 敵の数: 4〜6体
+        val enemyCount = 4 + random.nextInt(3)
+
+        // 敵クラスのプール（武器ID付き）
+        val enemyTemplates = listOf(
+            Triple(UnitClass.SWORD_FIGHTER, "ironSword", "剣士"),
+            Triple(UnitClass.LANCER, "ironLance", "槍兵"),
+            Triple(UnitClass.AXE_FIGHTER, "ironAxe", "斧戦士"),
+            Triple(UnitClass.ARCHER, "ironBow", "弓兵"),
+            Triple(UnitClass.MAGE, "fire", "魔道士")
+        )
+
+        // プレイヤースポーンと被らない位置を確保するためのセット
+        val usedPositions = playerSpawns.toMutableSet()
+
+        for (i in 0 until enemyCount) {
+            val template = enemyTemplates[random.nextInt(enemyTemplates.size)]
+            val unitClass = template.first
+            val weaponId = template.second
+            val nameBase = template.third
+
+            // レベルを平均レベル ± 1 の範囲でランダム（最低1）
+            val level = maxOf(1, averageLevel + random.nextInt(3) - 1)
+
+            // ベースステータスにレベル分を上乗せ
+            val stats = generateStatsForLevel(level, random)
+
+            val unit = GameUnit(
+                id = "random_enemy_${i + 1}",
+                name = "${nameBase}${('A'.code + i).toChar()}",
+                unitClass = unitClass,
+                faction = Faction.ENEMY,
+                level = level,
+                stats = stats,
+                growthRate = GrowthRate()
+            )
+
+            // 武器を装備
+            val weapon = createWeapon(weaponId, unit.id)
+            if (weapon != null) {
+                unit.rightHand = weapon
+            }
+
+            // マップ右半分のランダム位置に配置
+            val pos = findRandomEnemyPosition(battleMap, usedPositions, random)
+            if (pos != null) {
+                usedPositions.add(pos)
+                enemies.add(unit to pos)
+            }
+        }
+
+        Gdx.app.log(TAG, "ランダム敵生成完了: ${enemies.size}体 (平均Lv.$averageLevel)")
+        return enemies
+    }
+
+    /**
+     * 指定レベルに応じた敵ステータスを生成する
+     *
+     * Lv.1のベースステータスに、レベルごとに確率で各ステータスを+1する。
+     * 成長確率は各ステータスで固定（敵用の均一的な成長率）。
+     *
+     * @param level 敵のレベル
+     * @param random 乱数生成器
+     * @return 生成されたステータス
+     */
+    private fun generateStatsForLevel(level: Int, random: java.util.Random): Stats {
+        // Lv.1 ベースステータス
+        var hp = 18; var str = 5; var mag = 0; var skl = 3
+        var spd = 4; var lck = 1; var def = 3; var res = 0
+
+        // レベルごとの成長（成長率%で判定）
+        for (lv in 2..level) {
+            if (random.nextInt(100) < 60) hp++
+            if (random.nextInt(100) < 40) str++
+            if (random.nextInt(100) < 20) mag++
+            if (random.nextInt(100) < 35) skl++
+            if (random.nextInt(100) < 35) spd++
+            if (random.nextInt(100) < 25) lck++
+            if (random.nextInt(100) < 30) def++
+            if (random.nextInt(100) < 20) res++
+        }
+        return Stats(hp = hp, str = str, mag = mag, skl = skl, spd = spd, lck = lck, def = def, res = res)
+    }
+
+    /**
+     * マップ右半分から、使用済み位置と重複しないランダム位置を探す
+     *
+     * @param battleMap バトルマップ
+     * @param usedPositions 既に使用されている位置
+     * @param random 乱数生成器
+     * @return 配置可能な位置（見つからなければnull）
+     */
+    private fun findRandomEnemyPosition(
+        battleMap: BattleMap,
+        usedPositions: Set<Position>,
+        random: java.util.Random
+    ): Position? {
+        // マップ右半分の平地を候補にする
+        val candidates = mutableListOf<Position>()
+        val halfWidth = battleMap.width / 2
+        for (y in 0 until battleMap.height) {
+            for (x in halfWidth until battleMap.width) {
+                val pos = Position(x, y)
+                val tile = battleMap.getTile(x, y)
+                if (pos !in usedPositions && tile != null &&
+                    tile.terrainType != com.tacticsflame.model.map.TerrainType.MOUNTAIN &&
+                    tile.terrainType != com.tacticsflame.model.map.TerrainType.WALL
+                ) {
+                    candidates.add(pos)
+                }
+            }
+        }
+        if (candidates.isEmpty()) return null
+        return candidates[random.nextInt(candidates.size)]
     }
 
     // ==================== 条件パース ====================

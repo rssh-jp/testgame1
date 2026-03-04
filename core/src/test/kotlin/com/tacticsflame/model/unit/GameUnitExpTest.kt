@@ -172,21 +172,16 @@ class GameUnitExpTest {
         assertEquals(0, unit.exp)
     }
 
-    // ==================== レベル上限テスト ====================
+    // ==================== レベル上限なしテスト ====================
 
     @Test
-    fun `レベル上限に達している場合は経験値が加算されない`() {
-        val unit = createUnit(level = GameConfig.MAX_LEVEL, exp = 0)
-        val result = unit.gainExp(50)
+    fun `高レベルでも経験値が加算されレベルアップできる`() {
+        val unit = createUnit(level = 99, exp = 0)
+        val result = unit.gainExp(100)
 
-        assertNull(result, "レベル上限のためレベルアップしない")
-        assertEquals(0, unit.exp, "経験値は加算されない")
-        assertEquals(GameConfig.MAX_LEVEL, unit.level)
-    }
-
-    @Test
-    fun `MAX_LEVEL定数が20であることを確認`() {
-        assertEquals(20, GameConfig.MAX_LEVEL)
+        assertNotNull(result, "レベル上限がないためレベルアップする")
+        assertEquals(100, unit.level)
+        assertEquals(0, unit.exp)
     }
 
     // ==================== 入力バリデーションテスト ====================

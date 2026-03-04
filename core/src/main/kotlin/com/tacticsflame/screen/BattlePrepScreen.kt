@@ -127,7 +127,15 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * マップ・敵ユニット・スポーン位置・勝利条件を読み込む。
      */
     private fun setupBattlePreview() {
-        val result = mapLoader.loadMap(chapter.mapFileName)
+        // パーティの平均レベルを計算（ランダム敵生成用）
+        val roster = game.gameProgress.party.roster
+        val partyAverageLevel = if (roster.isNotEmpty()) {
+            roster.sumOf { it.level } / roster.size
+        } else {
+            1
+        }
+
+        val result = mapLoader.loadMap(chapter.mapFileName, partyAverageLevel)
 
         if (result == null) {
             Gdx.app.error(TAG, "マップ読み込み失敗: ${chapter.mapFileName}、ワールドマップに戻る")
