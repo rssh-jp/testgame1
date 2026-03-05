@@ -323,8 +323,14 @@ class AISystem(
         // 回復可能な味方を探す
         val healTargets = findHealableTargets(unit, unitPos, movablePositions, battleMap)
         if (healTargets.isNotEmpty()) {
-            // HP割合が最も低い（最もダメージを受けている）味方を選択
-            val bestTarget = healTargets.minByOrNull { (_, _, ally) ->
+            // 自分のHPが1/3以下なら自己回復を最優先
+            val selfHealThreshold = 1f / 3f
+            val selfTarget = if (unit.currentHp.toFloat() / unit.maxHp.toFloat() <= selfHealThreshold) {
+                healTargets.firstOrNull { (_, _, ally) -> ally.id == unit.id }
+            } else null
+
+            // 自己回復対象がなければ、HP割合が最も低い味方を選択
+            val bestTarget = selfTarget ?: healTargets.minByOrNull { (_, _, ally) ->
                 ally.currentHp.toFloat() / ally.maxHp.toFloat()
             }
             if (bestTarget != null) {
