@@ -73,21 +73,24 @@ data class UnitClass(
         val ARCHER = UnitClass(
             id = "archer", name = "アーチャー",
             moveType = MoveType.INFANTRY, baseMov = 5,
-            usableWeapons = listOf(WeaponType.BOW)
+            usableWeapons = listOf(WeaponType.BOW),
+            canDualWield = true, dualWieldPenalty = 3
         )
 
         /** メイジ */
         val MAGE = UnitClass(
             id = "mage", name = "メイジ",
             moveType = MoveType.INFANTRY, baseMov = 5,
-            usableWeapons = listOf(WeaponType.MAGIC)
+            usableWeapons = listOf(WeaponType.MAGIC),
+            canDualWield = true, dualWieldPenalty = 3
         )
 
         /** ヒーラー */
         val HEALER = UnitClass(
             id = "healer", name = "ヒーラー",
             moveType = MoveType.INFANTRY, baseMov = 5,
-            usableWeapons = listOf(WeaponType.STAFF)
+            usableWeapons = listOf(WeaponType.STAFF),
+            canDualWield = true, dualWieldPenalty = 2
         )
 
         /** ナイト（騎馬） */
@@ -102,7 +105,8 @@ data class UnitClass(
         val PEGASUS_KNIGHT = UnitClass(
             id = "pegasusKnight", name = "ペガサスナイト",
             moveType = MoveType.FLYING, baseMov = 7,
-            usableWeapons = listOf(WeaponType.LANCE)
+            usableWeapons = listOf(WeaponType.LANCE),
+            canDualWield = true, dualWieldPenalty = 4
         )
 
         /** アーマーナイト（重装） */

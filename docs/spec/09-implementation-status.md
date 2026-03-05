@@ -33,7 +33,7 @@
 | **Armor クラス** | **✅** | **防具タイプ・DEF/RESボーナス・重さ** |
 | **ArmorType enum** | **✅** | **LIGHT_ARMOR/HEAVY_ARMOR/SHIELD/MAGIC_ROBE/ACCESSORY/HEAD/FEET** |
 | **装備スロットシステム** | **✅** | **新規: rightHand/leftHand/armorSlot1/armorSlot2 の4スロット** |
-| **二刀流システム** | **✅** | **新規: UnitClass.canDualWield/dualWieldPenalty、副手命中ペナルティ-15** |
+| **二刀流システム** | **✅** | **UnitClass.canDualWield/dualWieldPenalty（全10職業で左手装備可能）、副手命中ペナルティ-15** |
 | **armors.json (防具マスターデータ)** | **✅** | **新規追加: 10種の防具定義** |
 | BattleMap クラス | ✅ | グリッド管理・地形取得 |
 | TerrainType enum | ✅ | 8種（PLAIN/FOREST/MOUNTAIN/WATER/FORT/WALL/VILLAGE/BRIDGE）、**hitBonusプロパティ追加** |
@@ -185,7 +185,7 @@
 | バトル画面 (BattleScreen) | ✅ | BattleConfig対応・CTベースターン制 |
 | **バトルリザルト画面 (BattleResultScreen)** | **✅** | **新規追加: 勝敗表示・生存ユニット・撃破数・チャプタークリア処理** |
 | リザルト画面 (ResultScreen) | ⚠️ | レガシー互換用に残存 |
-| **武器装備変更画面 (WeaponEquipScreen)** | **✅** | **4スロット装備パネル・パーティ在庫・右手/左手/防具1/防具2装備・二刀流対応** |
+| **武器装備変更画面 (WeaponEquipScreen)** | **✅** | **4スロット装備パネル・パーティ在庫・右手/左手/防具1/防具2装備・二刀流対応・スクロール修正済み** |
 | ショップ画面 | ❌ | |
 | 会話・ストーリー画面 | ❌ | |
 

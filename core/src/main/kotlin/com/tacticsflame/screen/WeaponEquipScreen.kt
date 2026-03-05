@@ -486,7 +486,7 @@ class WeaponEquipScreen(
         val contentH = calcContentHeight()
         val viewH = LIST_TOP - LIST_BOTTOM
         val maxScroll = maxOf(0f, contentH - viewH)
-        scrollOffset = scrollOffset.coerceIn(-maxScroll, 0f)
+        scrollOffset = scrollOffset.coerceIn(0f, maxScroll)
     }
 
     /**
@@ -503,6 +503,8 @@ class WeaponEquipScreen(
             h += LABEL_H + 8f + invA.size * (SLOT_HEIGHT + SLOT_GAP)
         }
         if (h == 0f) h = 50f
+        // 最後のアイテムが表示域内に十分見えるよう下端余白を追加
+        h += SLOT_GAP * 2
         return h
     }
 
