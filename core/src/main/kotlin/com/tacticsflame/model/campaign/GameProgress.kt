@@ -190,6 +190,7 @@ class GameProgress {
             growthRate = GrowthRate(hp = 45, str = 10, mag = 60, skl = 50, spd = 45, lck = 35, def = 15, res = 50)
         )
         eric.rightHand = Weapon("fire", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2)
+        eric.leftHand = Weapon("heal", "ライブ", WeaponType.STAFF, might = 0, hit = 100, weight = 1, healPower = 10)
         eric.armorSlot1 = Armor("magicRobe", "魔法のローブ", ArmorType.MAGIC_ROBE, defBonus = 0, resBonus = 3, weight = 1)
 
         val cecilia = GameUnit(
