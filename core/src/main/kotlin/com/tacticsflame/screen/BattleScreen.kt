@@ -19,6 +19,7 @@ import com.tacticsflame.model.campaign.BattleConfig
 import com.tacticsflame.model.campaign.BattleResultData
 import com.tacticsflame.model.map.*
 import com.tacticsflame.model.unit.*
+import com.tacticsflame.render.UnitShapeRenderer
 import com.tacticsflame.system.*
 import com.tacticsflame.util.FontManager
 
@@ -860,13 +861,12 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             shapeRenderer.arc(cx, cy, ctRingRadius, 90f, 360f * ctRatio, 64)
         }
 
-        // 4. ユニット本体（陣営カラーの円、CTリング内側を覆ってリング効果を作る）
-        when (unit.faction) {
-            Faction.PLAYER -> shapeRenderer.setColor(0.2f, 0.4f, 1f, 1f)
-            Faction.ENEMY -> shapeRenderer.setColor(1f, 0.2f, 0.2f, 1f)
-            Faction.ALLY -> shapeRenderer.setColor(0.2f, 1f, 0.4f, 1f)
-        }
+        // 4a. ベース円でCTリング内側を確実にカバー（非円形シェイプでもリング幅を均一に保つ）
+        shapeRenderer.setColor(0.12f, 0.12f, 0.18f, 1f)
         shapeRenderer.circle(cx, cy, unitRadius)
+
+        // 4b. ユニット本体（兵種ごとの形状を上に重ねて描画）
+        UnitShapeRenderer.drawClassShape(shapeRenderer, unit, cx, cy, unitRadius)
 
         // 5. HPバー（ユニット下部に小さなバーを描画）
         val barWidth = tileSize * 0.7f
