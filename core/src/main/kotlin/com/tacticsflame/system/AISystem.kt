@@ -313,9 +313,9 @@ class AISystem(
         movablePositions: Set<Position>,
         battleMap: BattleMap
     ): AIAction {
-        // 回復杖を装備しているか確認
-        val weapon = unit.equippedWeapon()
-        if (weapon == null || !weapon.isHealingStaff) {
+        // 回復杖を装備しているか確認（右手・左手両方を探索）
+        val weapon = unit.equippedHealingStaff()
+        if (weapon == null) {
             // 杖がなければ攻撃AI（AGGRESSIVE）にフォールバック
             return decideAggressiveAction(unit, unitPos, movablePositions, battleMap)
         }
@@ -375,7 +375,7 @@ class AISystem(
         movablePositions: Set<Position>,
         battleMap: BattleMap
     ): List<Triple<Position, Int, GameUnit>> {
-        val weapon = unit.equippedWeapon() ?: return emptyList()
+        val weapon = unit.equippedHealingStaff() ?: return emptyList()
         val minRange = weapon.minRange
         val maxRange = weapon.maxRange
         val results = mutableListOf<Triple<Position, Int, GameUnit>>()

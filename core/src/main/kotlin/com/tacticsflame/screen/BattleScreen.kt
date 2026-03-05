@@ -418,8 +418,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             Faction.ALLY -> AISystem.AIPattern.DEFENSIVE
             Faction.ENEMY -> {
                 // 敵ヒーラー（回復杖装備）は自動で回復AI
-                val weapon = activeUnit.equippedWeapon()
-                if (weapon != null && weapon.isHealingStaff) {
+                if (activeUnit.equippedHealingStaff() != null) {
                     AISystem.AIPattern.HEAL
                 } else {
                     AISystem.AIPattern.AGGRESSIVE

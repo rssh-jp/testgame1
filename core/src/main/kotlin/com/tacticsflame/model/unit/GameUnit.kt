@@ -109,6 +109,19 @@ class GameUnit(
     fun secondaryWeapon(): Weapon? = leftHand
 
     /**
+     * 装備中の回復杖を取得する
+     *
+     * 右手・左手の順に回復杖（isHealingStaff）を探し、最初に見つかったものを返す。
+     *
+     * @return 回復杖（なければnull）
+     */
+    fun equippedHealingStaff(): Weapon? {
+        if (rightHand?.isHealingStaff == true) return rightHand
+        if (leftHand?.isHealingStaff == true) return leftHand
+        return null
+    }
+
+    /**
      * 二刀流状態かどうかを返す
      *
      * @return 両手に武器を装備している場合 true

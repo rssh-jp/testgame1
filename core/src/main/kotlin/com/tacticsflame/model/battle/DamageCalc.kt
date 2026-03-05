@@ -196,7 +196,7 @@ object DamageCalc {
      * @return 回復予測データ
      */
     fun calculateHealForecast(healer: GameUnit, target: GameUnit): HealForecast {
-        val weapon = healer.equippedWeapon()
+        val weapon = healer.equippedHealingStaff()
         val healPower = weapon?.healPower ?: 0
         val healAmount = healer.stats.mag + healPower
 
