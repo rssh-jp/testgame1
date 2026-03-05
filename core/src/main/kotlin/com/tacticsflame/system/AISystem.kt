@@ -383,6 +383,15 @@ class AISystem(
         val positionsToCheck = movablePositions + unitPos
 
         for (pos in positionsToCheck) {
+            // 自分自身への回復チェック（距離0 = 杖の射程外でも自己回復を許可）
+            if (pos == unitPos
+                && !unit.isDefeated
+                && unit.currentHp < unit.maxHp
+            ) {
+                results.add(Triple(pos, 0, unit))
+            }
+
+            // 射程内の味方への回復チェック
             for (range in minRange..maxRange) {
                 for (neighbor in getPositionsAtRange(pos, range)) {
                     val target = battleMap.getUnitAt(neighbor)
