@@ -15,15 +15,15 @@ class LevelUpSystemTest {
         exp: Int = 0,
         level: Int = 1,
         growthRate: GrowthRate = GrowthRate(
-            hp = 100, str = 100, mag = 100, skl = 100,
-            spd = 100, lck = 100, def = 100, res = 100
+            hp = 1.0f, str = 1.0f, mag = 1.0f, skl = 1.0f,
+            spd = 1.0f, lck = 1.0f, def = 1.0f, res = 1.0f
         )
     ): GameUnit {
         return GameUnit(
             id = "test_unit", name = "テストユニット",
             unitClass = UnitClass.LORD, faction = Faction.PLAYER,
             level = level, exp = exp,
-            stats = Stats(hp = 20, str = 6, mag = 1, skl = 7, spd = 8, lck = 5, def = 5, res = 2),
+            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
             growthRate = growthRate
         )
     }
@@ -78,7 +78,7 @@ class LevelUpSystemTest {
     fun `レベルアップ後のステータスが正しく反映される`() {
         val unit = createUnit(
             exp = 99,
-            growthRate = GrowthRate(hp = 100, str = 100)
+            growthRate = GrowthRate(hp = 1.0f, str = 1.0f)
         )
         val initialHp = unit.stats.hp
         val initialStr = unit.stats.str
@@ -86,7 +86,7 @@ class LevelUpSystemTest {
         val result = levelUpSystem.awardExp(unit, 1)
 
         assertNotNull(result)
-        assertEquals(initialHp + 1, unit.stats.hp)
-        assertEquals(initialStr + 1, unit.stats.str)
+        assertEquals(initialHp + 1f, unit.stats.hp)
+        assertEquals(initialStr + 1f, unit.stats.str)
     }
 }

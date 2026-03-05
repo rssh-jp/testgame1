@@ -14,15 +14,15 @@ class GameUnitExpTest {
         exp: Int = 0,
         spd: Int = 8,
         growthRate: GrowthRate = GrowthRate(
-            hp = 100, str = 100, mag = 100, skl = 100,
-            spd = 100, lck = 100, def = 100, res = 100
+            hp = 1.0f, str = 1.0f, mag = 1.0f, skl = 1.0f,
+            spd = 1.0f, lck = 1.0f, def = 1.0f, res = 1.0f
         )
     ): GameUnit {
         return GameUnit(
             id = "test_unit", name = "テストユニット",
             unitClass = UnitClass.LORD, faction = Faction.PLAYER,
             level = level, exp = exp,
-            stats = Stats(hp = 20, str = 6, mag = 1, skl = 7, spd = spd, lck = 5, def = 5, res = 2),
+            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 2f),
             growthRate = growthRate
         )
     }
@@ -81,8 +81,8 @@ class GameUnitExpTest {
         val unit = createUnit(
             exp = 99,
             growthRate = GrowthRate(
-                hp = 100, str = 100, mag = 100, skl = 100,
-                spd = 100, lck = 100, def = 100, res = 100
+                hp = 1.0f, str = 1.0f, mag = 1.0f, skl = 1.0f,
+                spd = 1.0f, lck = 1.0f, def = 1.0f, res = 1.0f
             )
         )
         val initialStats = unit.stats.copy()
@@ -100,8 +100,8 @@ class GameUnitExpTest {
         assertEquals(1, result.def)
         assertEquals(1, result.res)
         // ステータスが実際に上昇していること
-        assertEquals(initialStats.hp + 1, unit.stats.hp)
-        assertEquals(initialStats.str + 1, unit.stats.str)
+        assertEquals(initialStats.hp + 1f, unit.stats.hp)
+        assertEquals(initialStats.str + 1f, unit.stats.str)
     }
 
     @Test
@@ -109,8 +109,8 @@ class GameUnitExpTest {
         val unit = createUnit(
             exp = 99,
             growthRate = GrowthRate(
-                hp = 0, str = 0, mag = 0, skl = 0,
-                spd = 0, lck = 0, def = 0, res = 0
+                hp = 0f, str = 0f, mag = 0f, skl = 0f,
+                spd = 0f, lck = 0f, def = 0f, res = 0f
             )
         )
         val initialStats = unit.stats.copy()
@@ -136,7 +136,7 @@ class GameUnitExpTest {
     fun `レベルアップ時にcurrentHpがHP成長分だけ回復する`() {
         val unit = createUnit(
             exp = 99,
-            growthRate = GrowthRate(hp = 100) // HPのみ100%成長
+            growthRate = GrowthRate(hp = 1.0f) // HPのみ100%成長
         )
         // ダメージを受けた状態
         unit.takeDamage(5)

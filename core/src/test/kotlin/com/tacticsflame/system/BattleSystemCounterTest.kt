@@ -40,7 +40,7 @@ class BattleSystemCounterTest {
         val unit = GameUnit(
             id = id, name = "テスト$id",
             unitClass = UnitClass.LORD, faction = faction,
-            stats = Stats(hp = hp, str = str, mag = 1, skl = 7, spd = spd, lck = 5, def = def, res = 2),
+            stats = Stats(hp = hp.toFloat(), str = str.toFloat(), mag = 1f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = def.toFloat(), res = 2f),
             growthRate = GrowthRate(),
             weapons = weapons
         )

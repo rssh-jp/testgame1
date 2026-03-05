@@ -1323,19 +1323,19 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val col1X = textX
         val col2X = textX + 180f
 
-        font.draw(batch, "STR  ${stats.str}", col1X, textY)
-        font.draw(batch, "MAG  ${stats.mag}", col2X, textY)
+        font.draw(batch, "STR  ${stats.effectiveStr}", col1X, textY)
+        font.draw(batch, "MAG  ${stats.effectiveMag}", col2X, textY)
         textY -= lineHeight
 
-        font.draw(batch, "SKL  ${stats.skl}", col1X, textY)
-        font.draw(batch, "SPD  ${stats.spd}(${unit.effectiveSpeed()})", col2X, textY)
+        font.draw(batch, "SKL  ${stats.effectiveSkl}", col1X, textY)
+        font.draw(batch, "SPD  ${stats.effectiveSpd}(${unit.effectiveSpeed()})", col2X, textY)
         textY -= lineHeight
 
-        font.draw(batch, "LCK  ${stats.lck}", col1X, textY)
-        font.draw(batch, "DEF  ${stats.def}", col2X, textY)
+        font.draw(batch, "LCK  ${stats.effectiveLck}", col1X, textY)
+        font.draw(batch, "DEF  ${stats.effectiveDef}", col2X, textY)
         textY -= lineHeight
 
-        font.draw(batch, "RES  ${stats.res}", col1X, textY)
+        font.draw(batch, "RES  ${stats.effectiveRes}", col1X, textY)
         font.draw(batch, "MOV  ${unit.mov}", col2X, textY)
         textY -= lineHeight + 8f
 
@@ -1495,19 +1495,19 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val col1X = textX
         val col2X = textX + 180f
 
-        font.draw(batch, "STR  ${stats.str}", col1X, textY)
-        font.draw(batch, "MAG  ${stats.mag}", col2X, textY)
+        font.draw(batch, "STR  ${stats.effectiveStr}", col1X, textY)
+        font.draw(batch, "MAG  ${stats.effectiveMag}", col2X, textY)
         textY -= lineHeight
 
-        font.draw(batch, "SKL  ${stats.skl}", col1X, textY)
-        font.draw(batch, "SPD  ${stats.spd}(${unit.effectiveSpeed()})", col2X, textY)
+        font.draw(batch, "SKL  ${stats.effectiveSkl}", col1X, textY)
+        font.draw(batch, "SPD  ${stats.effectiveSpd}(${unit.effectiveSpeed()})", col2X, textY)
         textY -= lineHeight
 
-        font.draw(batch, "LCK  ${stats.lck}", col1X, textY)
-        font.draw(batch, "DEF  ${stats.def}", col2X, textY)
+        font.draw(batch, "LCK  ${stats.effectiveLck}", col1X, textY)
+        font.draw(batch, "DEF  ${stats.effectiveDef}", col2X, textY)
         textY -= lineHeight
 
-        font.draw(batch, "RES  ${stats.res}", col1X, textY)
+        font.draw(batch, "RES  ${stats.effectiveRes}", col1X, textY)
         font.draw(batch, "MOV  ${unit.mov}", col2X, textY)
         textY -= lineHeight + 4f
 
@@ -1566,8 +1566,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val playerUnit1 = GameUnit(
             id = "hero_01", name = "アレス",
             unitClass = UnitClass.LORD, faction = Faction.PLAYER,
-            stats = Stats(hp = 20, str = 6, mag = 1, skl = 7, spd = 8, lck = 5, def = 5, res = 2),
-            growthRate = GrowthRate(hp = 70, str = 50, mag = 10, skl = 55, spd = 60, lck = 40, def = 35, res = 25),
+            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
+            growthRate = GrowthRate(hp = 0.70f, str = 0.50f, mag = 0.10f, skl = 0.55f, spd = 0.20f, lck = 0.40f, def = 0.35f, res = 0.25f),
             isLord = true
         )
         playerUnit1.weapons.add(Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3))
@@ -1575,16 +1575,16 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val playerUnit2 = GameUnit(
             id = "hero_02", name = "リーナ",
             unitClass = UnitClass.LANCER, faction = Faction.PLAYER,
-            stats = Stats(hp = 18, str = 7, mag = 0, skl = 5, spd = 5, lck = 3, def = 7, res = 1),
-            growthRate = GrowthRate(hp = 60, str = 55, mag = 5, skl = 45, spd = 40, lck = 30, def = 50, res = 20)
+            stats = Stats(hp = 18f, str = 7f, mag = 0f, skl = 5f, spd = 5f, lck = 3f, def = 7f, res = 1f),
+            growthRate = GrowthRate(hp = 0.60f, str = 0.55f, mag = 0.05f, skl = 0.45f, spd = 0.20f, lck = 0.30f, def = 0.50f, res = 0.20f)
         )
         playerUnit2.weapons.add(Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5))
 
         val playerUnit3 = GameUnit(
             id = "hero_03", name = "マリア",
             unitClass = UnitClass.ARCHER, faction = Faction.PLAYER,
-            stats = Stats(hp = 16, str = 5, mag = 0, skl = 8, spd = 7, lck = 4, def = 3, res = 3),
-            growthRate = GrowthRate(hp = 55, str = 45, mag = 5, skl = 60, spd = 55, lck = 40, def = 25, res = 30)
+            stats = Stats(hp = 16f, str = 5f, mag = 0f, skl = 8f, spd = 7f, lck = 4f, def = 3f, res = 3f),
+            growthRate = GrowthRate(hp = 0.55f, str = 0.45f, mag = 0.05f, skl = 0.60f, spd = 0.20f, lck = 0.40f, def = 0.25f, res = 0.30f)
         )
         playerUnit3.weapons.add(Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2))
 
@@ -1596,7 +1596,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val enemy1 = GameUnit(
             id = "enemy_01", name = "山賊A",
             unitClass = UnitClass.AXE_FIGHTER, faction = Faction.ENEMY,
-            stats = Stats(hp = 18, str = 6, mag = 0, skl = 3, spd = 4, lck = 1, def = 3, res = 0),
+            stats = Stats(hp = 18f, str = 6f, mag = 0f, skl = 3f, spd = 4f, lck = 1f, def = 3f, res = 0f),
             growthRate = GrowthRate()
         )
         enemy1.weapons.add(Weapon("ironAxe", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6))
@@ -1604,7 +1604,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val enemy2 = GameUnit(
             id = "enemy_02", name = "山賊B",
             unitClass = UnitClass.AXE_FIGHTER, faction = Faction.ENEMY,
-            stats = Stats(hp = 18, str = 5, mag = 0, skl = 2, spd = 3, lck = 0, def = 3, res = 0),
+            stats = Stats(hp = 18f, str = 5f, mag = 0f, skl = 2f, spd = 3f, lck = 0f, def = 3f, res = 0f),
             growthRate = GrowthRate()
         )
         enemy2.weapons.add(Weapon("ironAxe2", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6))
@@ -1612,7 +1612,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val enemy3 = GameUnit(
             id = "enemy_03", name = "盗賊",
             unitClass = UnitClass.SWORD_FIGHTER, faction = Faction.ENEMY,
-            stats = Stats(hp = 16, str = 4, mag = 0, skl = 6, spd = 9, lck = 2, def = 2, res = 1),
+            stats = Stats(hp = 16f, str = 4f, mag = 0f, skl = 6f, spd = 9f, lck = 2f, def = 2f, res = 1f),
             growthRate = GrowthRate()
         )
         enemy3.weapons.add(Weapon("ironSword2", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3))

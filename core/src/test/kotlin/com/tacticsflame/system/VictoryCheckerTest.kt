@@ -45,7 +45,7 @@ class VictoryCheckerTest {
         return GameUnit(
             id = id, name = name,
             unitClass = UnitClass.LORD, faction = faction,
-            stats = Stats(hp = hp, str = 5, mag = 0, skl = 5, spd = 5, lck = 5, def = 5, res = 5),
+            stats = Stats(hp = hp.toFloat(), str = 5f, mag = 0f, skl = 5f, spd = 5f, lck = 5f, def = 5f, res = 5f),
             growthRate = GrowthRate(),
             isLord = isLord
         )

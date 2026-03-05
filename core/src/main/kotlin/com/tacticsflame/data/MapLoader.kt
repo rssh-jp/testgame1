@@ -384,17 +384,17 @@ class MapLoader {
      */
     private fun parseStats(statsJson: JsonValue?): Stats {
         if (statsJson == null) {
-            return Stats(hp = 18, str = 5, mag = 0, skl = 3, spd = 4, lck = 1, def = 3, res = 0)
+            return Stats(hp = 18f, str = 5f, mag = 0f, skl = 3f, spd = 4f, lck = 1f, def = 3f, res = 0f)
         }
         return Stats(
-            hp = statsJson.getInt("hp", 18),
-            str = statsJson.getInt("str", 5),
-            mag = statsJson.getInt("mag", 0),
-            skl = statsJson.getInt("skl", 3),
-            spd = statsJson.getInt("spd", 4),
-            lck = statsJson.getInt("lck", 1),
-            def = statsJson.getInt("def", 3),
-            res = statsJson.getInt("res", 0)
+            hp = statsJson.getFloat("hp", 18f),
+            str = statsJson.getFloat("str", 5f),
+            mag = statsJson.getFloat("mag", 0f),
+            skl = statsJson.getFloat("skl", 3f),
+            spd = statsJson.getFloat("spd", 4f),
+            lck = statsJson.getFloat("lck", 1f),
+            def = statsJson.getFloat("def", 3f),
+            res = statsJson.getFloat("res", 0f)
         )
     }
 
@@ -560,29 +560,29 @@ class MapLoader {
     /**
      * 指定レベルに応じた敵ステータスを生成する
      *
-     * Lv.1のベースステータスに、レベルごとに確率で各ステータスを+1する。
-     * 成長確率は各ステータスで固定（敵用の均一的な成長率）。
+     * Lv.1のベースステータスに、レベルごとに固定成長値を加算する。
+     * 確定成長システム（FFT方式）に基づく決定論的な計算。
      *
      * @param level 敵のレベル
-     * @param random 乱数生成器
+     * @param random 乱数生成器（互換性のため引数に残すが未使用）
      * @return 生成されたステータス
      */
     private fun generateStatsForLevel(level: Int, random: java.util.Random): Stats {
         // Lv.1 ベースステータス
-        var hp = 18; var str = 5; var mag = 0; var skl = 3
-        var spd = 4; var lck = 1; var def = 3; var res = 0
+        var hp = 18f; var str = 5f; var mag = 0f; var skl = 3f
+        var spd = 4f; var lck = 1f; var def = 3f; var res = 0f
 
-        // レベルごとの成長（成長率%で判定）
-        for (lv in 2..level) {
-            if (random.nextInt(100) < 60) hp++
-            if (random.nextInt(100) < 40) str++
-            if (random.nextInt(100) < 20) mag++
-            if (random.nextInt(100) < 35) skl++
-            if (random.nextInt(100) < 35) spd++
-            if (random.nextInt(100) < 25) lck++
-            if (random.nextInt(100) < 30) def++
-            if (random.nextInt(100) < 20) res++
-        }
+        // 敵用デフォルト成長値（確定加算）
+        val levelsGrown = level - 1
+        hp += 0.60f * levelsGrown
+        str += 0.40f * levelsGrown
+        mag += 0.20f * levelsGrown
+        skl += 0.35f * levelsGrown
+        spd += 0.20f * levelsGrown  // SPDは全ユニット共通 0.20
+        lck += 0.25f * levelsGrown
+        def += 0.30f * levelsGrown
+        res += 0.20f * levelsGrown
+
         return Stats(hp = hp, str = str, mag = mag, skl = skl, spd = spd, lck = lck, def = def, res = res)
     }
 

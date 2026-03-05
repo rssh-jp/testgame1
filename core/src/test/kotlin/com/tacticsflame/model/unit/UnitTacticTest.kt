@@ -58,7 +58,7 @@ class UnitTacticTest {
             name = "テスト兵士",
             unitClass = UnitClass.LORD,
             faction = Faction.PLAYER,
-            stats = Stats(hp = 20, str = 5, mag = 0, skl = 5, spd = 5, lck = 5, def = 5, res = 5),
+            stats = Stats(hp = 20f, str = 5f, mag = 0f, skl = 5f, spd = 5f, lck = 5f, def = 5f, res = 5f),
             growthRate = GrowthRate()
         )
         assertEquals(UnitTactic.CHARGE, unit.tactic)
@@ -73,7 +73,7 @@ class UnitTacticTest {
             name = "テスト兵士",
             unitClass = UnitClass.LORD,
             faction = Faction.PLAYER,
-            stats = Stats(hp = 20, str = 5, mag = 0, skl = 5, spd = 5, lck = 5, def = 5, res = 5),
+            stats = Stats(hp = 20f, str = 5f, mag = 0f, skl = 5f, spd = 5f, lck = 5f, def = 5f, res = 5f),
             growthRate = GrowthRate()
         )
 

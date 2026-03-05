@@ -179,7 +179,7 @@ class MapLoaderTest {
 
         val (enemy, _) = result.enemies[0]
         // chapter_1.json: enemy_01 の stats.hp = 18
-        assertEquals(18, enemy.stats.hp)
+        assertEquals(18f, enemy.stats.hp)
         assertEquals(18, enemy.currentHp) // 初期HPはmaxHP
     }
 

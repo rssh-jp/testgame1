@@ -17,14 +17,14 @@
             "res": 2
         },
         "growthRates": {
-            "hp": 70,
-            "str": 50,
-            "mag": 10,
-            "skl": 55,
-            "spd": 60,
-            "lck": 40,
-            "def": 35,
-            "res": 25
+            "hp": 0.70,
+            "str": 0.50,
+            "mag": 0.10,
+            "skl": 0.55,
+            "spd": 0.20,
+            "lck": 0.40,
+            "def": 0.35,
+            "res": 0.25
         },
         "weapons": [
             "ironSword"
@@ -48,14 +48,14 @@
             "res": 1
         },
         "growthRates": {
-            "hp": 60,
-            "str": 55,
-            "mag": 5,
-            "skl": 45,
-            "spd": 40,
-            "lck": 30,
-            "def": 50,
-            "res": 20
+            "hp": 0.60,
+            "str": 0.55,
+            "mag": 0.05,
+            "skl": 0.45,
+            "spd": 0.20,
+            "lck": 0.30,
+            "def": 0.50,
+            "res": 0.20
         },
         "weapons": [
             "ironLance"
@@ -79,14 +79,14 @@
             "res": 3
         },
         "growthRates": {
-            "hp": 55,
-            "str": 45,
-            "mag": 5,
-            "skl": 60,
-            "spd": 55,
-            "lck": 40,
-            "def": 25,
-            "res": 30
+            "hp": 0.55,
+            "str": 0.45,
+            "mag": 0.05,
+            "skl": 0.60,
+            "spd": 0.20,
+            "lck": 0.40,
+            "def": 0.25,
+            "res": 0.30
         },
         "weapons": [
             "ironBow"
@@ -110,14 +110,14 @@
             "res": 6
         },
         "growthRates": {
-            "hp": 45,
-            "str": 10,
-            "mag": 60,
-            "skl": 50,
-            "spd": 45,
-            "lck": 35,
-            "def": 15,
-            "res": 50
+            "hp": 0.45,
+            "str": 0.10,
+            "mag": 0.60,
+            "skl": 0.50,
+            "spd": 0.20,
+            "lck": 0.35,
+            "def": 0.15,
+            "res": 0.50
         },
         "weapons": [
             "fire"
@@ -141,14 +141,14 @@
             "res": 7
         },
         "growthRates": {
-            "hp": 50,
-            "str": 5,
-            "mag": 65,
-            "skl": 40,
-            "spd": 45,
-            "lck": 50,
-            "def": 10,
-            "res": 55
+            "hp": 0.50,
+            "str": 0.05,
+            "mag": 0.65,
+            "skl": 0.40,
+            "spd": 0.20,
+            "lck": 0.50,
+            "def": 0.10,
+            "res": 0.55
         },
         "weapons": [
             "heal"

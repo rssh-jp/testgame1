@@ -61,7 +61,7 @@ class AITacticTest {
             name = name,
             unitClass = UnitClass.LORD,
             faction = Faction.PLAYER,
-            stats = Stats(hp = 20, str = 6, mag = 1, skl = 7, spd = 8, lck = 5, def = 5, res = 2),
+            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
             growthRate = GrowthRate()
         )
         unit.rightHand = ironSword
@@ -77,7 +77,7 @@ class AITacticTest {
             name = name,
             unitClass = UnitClass.SWORD_FIGHTER,
             faction = Faction.ENEMY,
-            stats = Stats(hp = 18, str = 5, mag = 0, skl = 5, spd = 5, lck = 3, def = 4, res = 1),
+            stats = Stats(hp = 18f, str = 5f, mag = 0f, skl = 5f, spd = 5f, lck = 3f, def = 4f, res = 1f),
             growthRate = GrowthRate()
         )
         unit.rightHand = ironSword
@@ -93,7 +93,7 @@ class AITacticTest {
             name = name,
             unitClass = UnitClass.LORD,
             faction = Faction.ENEMY,
-            stats = Stats(hp = 18, str = 5, mag = 0, skl = 5, spd = 5, lck = 3, def = 4, res = 1),
+            stats = Stats(hp = 18f, str = 5f, mag = 0f, skl = 5f, spd = 5f, lck = 3f, def = 4f, res = 1f),
             growthRate = GrowthRate()
         )
         unit.rightHand = ironSword
