@@ -36,8 +36,6 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private lateinit var batch: SpriteBatch
     private lateinit var shapeRenderer: ShapeRenderer
     private lateinit var font: BitmapFont
-    /** ユニット名表示用の小さいフォント（16px） */
-    private lateinit var smallFont: BitmapFont
     private val glyphLayout = GlyphLayout()
     private val camera = OrthographicCamera()
     private lateinit var viewport: ExtendViewport
@@ -139,7 +137,6 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         batch = SpriteBatch()
         shapeRenderer = ShapeRenderer()
         font = FontManager.getFont(size = 24)
-        smallFont = FontManager.getFont(size = 16)
 
         // BattleConfig からマップを構築、なければテスト用マップにフォールバック
         battleConfig = game.currentBattleConfig
@@ -824,33 +821,58 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     /**
      * マップ上の各ユニットの上に名前ラベルを描画する
      *
-     * 戦闘準備画面（BattlePrepScreen）と同様のスタイルで、
-     * 各ユニットのタイル上方に名前を中央揃えで表示する。
-     * 陣営ごとに文字色を変えて視認性を確保する。
+     * 各ユニットのタイル上方に暗い背景付きで名前を中央揃え表示する。
+     * 背景を先に ShapeRenderer で一括描画し、その後 SpriteBatch で文字を描画する。
      * 撃破済みユニットは非表示、移動アニメーション中のユニットは補間位置に表示する。
      */
     private fun renderUnitNames() {
         val tileSize = GameConfig.TILE_SIZE
 
-        batch.projectionMatrix = camera.combined
-        batch.begin()
+        // 1. 名前表示位置の一時リストを構築
+        val nameEntries = mutableListOf<Triple<GameUnit, Float, Float>>()
 
         for ((pos, unit) in battleMap.getAllUnits()) {
             if (unit.isDefeated) continue
-            // 移動アニメーション中のユニットはスキップ（後で補間位置に描画）
             if (unit == animatingUnit && battleState == BattleState.UNIT_MOVING) continue
-
             val cx = pos.x * tileSize + tileSize / 2f
             val cy = pos.y * tileSize + tileSize / 2f
-            drawUnitName(unit, cx, cy)
+            nameEntries.add(Triple(unit, cx, cy))
         }
 
-        // 移動アニメーション中のユニットは補間位置に名前を表示
+        // 移動アニメーション中のユニット
         if (battleState == BattleState.UNIT_MOVING && animatingUnit != null && animationPath.size >= 2) {
             val (cx, cy) = getAnimatedUnitPosition()
-            drawUnitName(animatingUnit!!, cx, cy)
+            nameEntries.add(Triple(animatingUnit!!, cx, cy))
         }
 
+        if (nameEntries.isEmpty()) return
+
+        // 2. 暗い背景矩形を ShapeRenderer で一括描画
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        for ((unit, cx, cy) in nameEntries) {
+            glyphLayout.setText(font, unit.name)
+            val textW = glyphLayout.width
+            val textH = glyphLayout.height
+            val padX = 6f
+            val padY = 3f
+            val bgX = cx - textW / 2f - padX
+            val bgY = cy + tileSize / 2f + 4f - padY
+            val bgW = textW + padX * 2
+            val bgH = textH + padY * 2
+
+            shapeRenderer.setColor(0f, 0f, 0f, 0.7f)
+            shapeRenderer.rect(bgX, bgY, bgW, bgH)
+        }
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // 3. 文字をSpriteBatchで描画
+        batch.projectionMatrix = camera.combined
+        batch.begin()
+        for ((unit, cx, cy) in nameEntries) {
+            drawUnitName(unit, cx, cy)
+        }
         batch.end()
     }
 
@@ -858,7 +880,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * 個別のユニット名ラベルを描画する
      *
      * タイル上端のやや上にユニット名を中央揃えで表示する。
-     * 陣営カラーで文字色を切り替える。
+     * 暗背景の上に明るい文字を描画して高コントラストを確保する。
      *
      * @param unit 描画対象ユニット
      * @param cx ユニット中心X座標（ピクセル）
@@ -867,19 +889,19 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun drawUnitName(unit: GameUnit, cx: Float, cy: Float) {
         val tileSize = GameConfig.TILE_SIZE
 
-        // 陣営に応じた文字色を設定
-        smallFont.color = when (unit.faction) {
-            Faction.PLAYER -> Color(0.7f, 0.85f, 1f, 1f)   // 淡い青
-            Faction.ENEMY -> Color(1f, 0.6f, 0.6f, 1f)     // 淡い赤
-            Faction.ALLY -> Color(0.6f, 1f, 0.7f, 1f)      // 淡い緑
+        // 陣営に応じた明るい文字色を設定
+        font.color = when (unit.faction) {
+            Faction.PLAYER -> Color(0.85f, 0.93f, 1f, 1f)    // 明るい青白
+            Faction.ENEMY -> Color(1f, 0.75f, 0.75f, 1f)     // 明るいピンク
+            Faction.ALLY -> Color(0.75f, 1f, 0.85f, 1f)      // 明るい黄緑
         }
 
         // テキスト幅を計算して中央揃えにする
-        glyphLayout.setText(smallFont, unit.name)
+        glyphLayout.setText(font, unit.name)
         val textX = cx - glyphLayout.width / 2f
-        val textY = cy + tileSize / 2f + 16f  // タイル上端の少し上
+        val textY = cy + tileSize / 2f + 4f + glyphLayout.height  // 背景矩形内に収まる位置
 
-        smallFont.draw(batch, unit.name, textX, textY)
+        font.draw(batch, unit.name, textX, textY)
     }
 
     /**
