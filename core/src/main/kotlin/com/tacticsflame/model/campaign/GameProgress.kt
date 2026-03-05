@@ -222,7 +222,7 @@ class GameProgress {
                 Weapon("ironLance2", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5),
                 Weapon("ironSword2", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3),
                 Weapon("fire2", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2),
-                Weapon("heal", "ライブ", WeaponType.STAFF, might = 0, hit = 100, weight = 1)
+                Weapon("heal", "ライブ", WeaponType.STAFF, might = 0, hit = 100, weight = 1, healPower = 10)
             )
         )
 

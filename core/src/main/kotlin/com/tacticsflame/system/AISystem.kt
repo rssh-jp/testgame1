@@ -341,8 +341,21 @@ class AISystem(
             }
         }
 
-        // 全員満タンの場合は攻撃AI（CAUTIOUS: 安全に待機）にフォールバック
-        return decideCautiousAction(unit, unitPos, movablePositions, battleMap)
+        // 全員満タンの場合、最も近い味方に寄り添う（敵に近づかない）
+        val nearestAlly = findNearestFriendly(unit, unitPos, battleMap)
+        if (nearestAlly != null) {
+            val threatZone = calculateThreatZone(unit.faction, battleMap)
+            // 味方に近づきつつ、脅威圏外を優先
+            val safePositions = (movablePositions + unitPos).filter { it !in threatZone }
+            val candidatePositions = safePositions.ifEmpty { (movablePositions + unitPos).toList() }
+            val bestPos = candidatePositions.minByOrNull { it.manhattanDistance(nearestAlly) }
+            if (bestPos != null && bestPos != unitPos) {
+                return AIAction(unit, Action.Move(bestPos))
+            }
+        }
+
+        // 味方もいない場合は待機
+        return AIAction(unit, Action.Wait)
     }
 
     /**
@@ -404,6 +417,27 @@ class AISystem(
                     && it.second.currentHp < it.second.maxHp
             }
             .minByOrNull { it.second.currentHp.toFloat() / it.second.maxHp.toFloat() }
+            ?.first
+    }
+
+    /**
+     * 最も近い味方ユニットの座標を返す
+     *
+     * HP状態に関係なく、自分以外の友好ユニットのうち一番近い座標を返す。
+     *
+     * @param unit 自ユニット（除外）
+     * @param unitPos 自ユニットの現在位置
+     * @param battleMap バトルマップ
+     * @return 最も近い味方の座標（味方がいない場合はnull）
+     */
+    private fun findNearestFriendly(unit: GameUnit, unitPos: Position, battleMap: BattleMap): Position? {
+        return battleMap.getAllUnits()
+            .filter {
+                isFriendlyFaction(unit.faction, it.second.faction)
+                    && it.second.id != unit.id
+                    && !it.second.isDefeated
+            }
+            .minByOrNull { it.first.manhattanDistance(unitPos) }
             ?.first
     }
 
