@@ -15,7 +15,7 @@ class GameUnitEquipmentTest {
         return GameUnit(
             id = "test_unit", name = "テストユニット",
             unitClass = UnitClass.LORD, faction = Faction.PLAYER,
-            stats = Stats(hp = 20, str = 8, mag = 3, skl = 7, spd = spd, lck = 5, def = 5, res = 2),
+            stats = Stats(hp = 20f, str = 8f, mag = 3f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 2f),
             growthRate = GrowthRate()
         ).also { it.rightHand = rightHand }
     }

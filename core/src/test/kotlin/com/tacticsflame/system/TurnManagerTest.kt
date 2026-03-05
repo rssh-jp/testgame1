@@ -16,7 +16,7 @@ class TurnManagerTest {
         return GameUnit(
             id = id, name = name,
             unitClass = UnitClass.LORD, faction = faction,
-            stats = Stats(hp = 20, str = 5, mag = 0, skl = 5, spd = spd, lck = 5, def = 5, res = 5),
+            stats = Stats(hp = 20f, str = 5f, mag = 0f, skl = 5f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 5f),
             growthRate = GrowthRate()
         )
     }

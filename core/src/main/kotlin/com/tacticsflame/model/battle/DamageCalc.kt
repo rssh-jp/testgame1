@@ -62,9 +62,9 @@ object DamageCalc {
 
         // ダメージ計算（素手は物理攻撃扱い）
         val rawDamage = if (isMagic) {
-            attacker.stats.mag + weaponMight - (defender.stats.res + armorRes)
+            attacker.stats.effectiveMag + weaponMight - (defender.stats.effectiveRes + armorRes)
         } else {
-            attacker.stats.str + weaponMight - (defender.stats.def + armorDef)
+            attacker.stats.effectiveStr + weaponMight - (defender.stats.effectiveDef + armorDef)
         }
 
         // 武器三すくみ補正（両者が武器を装備している場合のみ）
@@ -126,10 +126,10 @@ object DamageCalc {
         val weaponHit = weapon?.hit ?: GameConfig.UNARMED_HIT
 
         // 基本命中 = 武器命中（または素手命中） + 技×2 + 幸運÷2 + 攻撃側地形命中補正
-        val baseHit = weaponHit + attacker.stats.skl * 2 + attacker.stats.lck / 2 + attackerTile.terrainType.hitBonus
+        val baseHit = weaponHit + attacker.stats.effectiveSkl * 2 + attacker.stats.effectiveLck / 2 + attackerTile.terrainType.hitBonus
 
         // 回避 = 実効速度×2 + 幸運÷2 + 防御側地形回避補正
-        val avoid = defender.effectiveSpeed() * 2 + defender.stats.lck / 2 + defenderTile.terrainType.avoidBonus
+        val avoid = defender.effectiveSpeed() * 2 + defender.stats.effectiveLck / 2 + defenderTile.terrainType.avoidBonus
 
         // 武器三すくみ補正（両者が武器を持っている場合のみ）
         val triangleHitBonus = if (attackerWeaponType != null && defenderWeaponType != null) {
@@ -158,8 +158,8 @@ object DamageCalc {
      */
     private fun calculateCritRate(attacker: GameUnit, defender: GameUnit, weapon: Weapon? = null): Int {
         val weaponCrit = weapon?.critical ?: GameConfig.UNARMED_CRITICAL
-        val baseCrit = weaponCrit + attacker.stats.skl / 2
-        val critAvoid = defender.stats.lck / 2
+        val baseCrit = weaponCrit + attacker.stats.effectiveSkl / 2
+        val critAvoid = defender.stats.effectiveLck / 2
         return (baseCrit - critAvoid).coerceIn(0, 100)
     }
 
@@ -198,7 +198,7 @@ object DamageCalc {
     fun calculateHealForecast(healer: GameUnit, target: GameUnit): HealForecast {
         val weapon = healer.equippedHealingStaff()
         val healPower = weapon?.healPower ?: 0
-        val healAmount = healer.stats.mag + healPower
+        val healAmount = healer.stats.effectiveMag + healPower
 
         return HealForecast(
             healAmount = healAmount,

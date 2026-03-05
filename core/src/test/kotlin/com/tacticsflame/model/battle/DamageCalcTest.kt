@@ -34,7 +34,7 @@ class DamageCalcTest {
         val unit = GameUnit(
             id = id, name = "テスト$id",
             unitClass = UnitClass.LORD, faction = Faction.PLAYER,
-            stats = Stats(hp = hp, str = str, mag = mag, skl = skl, spd = spd, lck = lck, def = def, res = res),
+            stats = Stats(hp = hp.toFloat(), str = str.toFloat(), mag = mag.toFloat(), skl = skl.toFloat(), spd = spd.toFloat(), lck = lck.toFloat(), def = def.toFloat(), res = res.toFloat()),
             growthRate = GrowthRate(),
             weapons = weapons
         )

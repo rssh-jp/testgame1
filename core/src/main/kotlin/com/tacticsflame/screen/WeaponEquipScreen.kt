@@ -587,7 +587,7 @@ class WeaponEquipScreen(
 
         val statusX = px + 20f
         smallFont.color = Color(0.8f, 0.9f, 0.4f, 1f)
-        smallFont.draw(batch, "実効SPD: ${unit.effectiveSpeed()} (SPD ${unit.stats.spd})", statusX, slotY)
+        smallFont.draw(batch, "実効SPD: ${unit.effectiveSpeed()} (SPD ${unit.stats.effectiveSpd})", statusX, slotY)
 
         val dualLabel = if (unit.unitClass.canDualWield) {
             if (unit.isDualWielding()) "二刀流: ON (ペナ-${unit.unitClass.dualWieldPenalty})" else "二刀流: 可"

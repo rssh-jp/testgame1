@@ -61,7 +61,7 @@ class GameUnit(
     var armorSlot2: Armor? = null
 
     /** 現在HP */
-    var currentHp: Int = stats.hp
+    var currentHp: Int = stats.effectiveHp
         private set
 
     /**
@@ -86,9 +86,9 @@ class GameUnit(
     val isDefeated: Boolean
         get() = currentHp <= 0
 
-    /** 最大HP */
+    /** 最大HP（実効値: 小数点切り捨て） */
     val maxHp: Int
-        get() = stats.hp
+        get() = stats.effectiveHp
 
     /** 移動力 */
     val mov: Int
@@ -156,7 +156,7 @@ class GameUnit(
         val a1Weight = armorSlot1?.weight ?: 0
         val a2Weight = armorSlot2?.weight ?: 0
         val dualPenalty = if (isDualWielding()) unitClass.dualWieldPenalty else 0
-        return maxOf(0, stats.spd - rWeight - lWeight - a1Weight - a2Weight - dualPenalty)
+        return maxOf(0, stats.effectiveSpd - rWeight - lWeight - a1Weight - a2Weight - dualPenalty)
     }
 
     /**
@@ -241,12 +241,12 @@ class GameUnit(
      * 経験値を加算し、レベルアップ判定を行う
      *
      * 経験値が [GameConfig.EXP_TO_LEVEL_UP] (100) に達するとレベルアップし、
-     * 成長率に基づいてステータスが上昇する。レベル上限はなく、どこまでも成長可能。
+     * 成長値（Float）が確定加算される。レベル上限はなく、どこまでも成長可能。
      *
      * @param amount 獲得経験値（0以上）
-     * @return レベルアップした場合は成長したステータス、しなかった場合はnull
+     * @return レベルアップした場合は実効値の変化量（StatGrowth）、しなかった場合はnull
      */
-    fun gainExp(amount: Int): Stats? {
+    fun gainExp(amount: Int): StatGrowth? {
         val safeAmount = amount.coerceAtLeast(0)
         exp += safeAmount
         if (exp >= GameConfig.EXP_TO_LEVEL_UP) {
@@ -258,33 +258,49 @@ class GameUnit(
     }
 
     /**
-     * レベルアップ時のステータス成長を適用する
+     * レベルアップ時のステータス成長を確定加算する
      *
-     * @return 成長したステータス値
+     * 各ステータスに GrowthRate の値（Float）を加算し、
+     * 実効値（小数点切り捨て整数）の変化量を StatGrowth として返す。
+     *
+     * @return 実効値の変化量（UI表示用）
      */
-    private fun applyLevelUp(): Stats {
-        val growth = Stats()
-        if (rollGrowth(growthRate.hp)) { stats.hp++; growth.hp = 1 }
-        if (rollGrowth(growthRate.str)) { stats.str++; growth.str = 1 }
-        if (rollGrowth(growthRate.mag)) { stats.mag++; growth.mag = 1 }
-        if (rollGrowth(growthRate.skl)) { stats.skl++; growth.skl = 1 }
-        if (rollGrowth(growthRate.spd)) { stats.spd++; growth.spd = 1 }
-        if (rollGrowth(growthRate.lck)) { stats.lck++; growth.lck = 1 }
-        if (rollGrowth(growthRate.def)) { stats.def++; growth.def = 1 }
-        if (rollGrowth(growthRate.res)) { stats.res++; growth.res = 1 }
-        // レベルアップ後、最大HPに合わせてHP調整
+    private fun applyLevelUp(): StatGrowth {
+        // 成長前の実効値を記録
+        val beforeHp = stats.effectiveHp
+        val beforeStr = stats.effectiveStr
+        val beforeMag = stats.effectiveMag
+        val beforeSkl = stats.effectiveSkl
+        val beforeSpd = stats.effectiveSpd
+        val beforeLck = stats.effectiveLck
+        val beforeDef = stats.effectiveDef
+        val beforeRes = stats.effectiveRes
+
+        // 成長値を確定加算
+        stats.hp += growthRate.hp
+        stats.str += growthRate.str
+        stats.mag += growthRate.mag
+        stats.skl += growthRate.skl
+        stats.spd += growthRate.spd
+        stats.lck += growthRate.lck
+        stats.def += growthRate.def
+        stats.res += growthRate.res
+
+        // 実効値の差分を計算
+        val growth = StatGrowth(
+            hp = stats.effectiveHp - beforeHp,
+            str = stats.effectiveStr - beforeStr,
+            mag = stats.effectiveMag - beforeMag,
+            skl = stats.effectiveSkl - beforeSkl,
+            spd = stats.effectiveSpd - beforeSpd,
+            lck = stats.effectiveLck - beforeLck,
+            def = stats.effectiveDef - beforeDef,
+            res = stats.effectiveRes - beforeRes
+        )
+
+        // HP成長分だけ currentHp も加算
         currentHp += growth.hp
         return growth
-    }
-
-    /**
-     * 成長率に基づいてステータスが上昇するか判定する
-     *
-     * @param rate 成長率（0〜100）
-     * @return 上昇する場合 true
-     */
-    private fun rollGrowth(rate: Int): Boolean {
-        return (Math.random() * 100).toInt() < rate
     }
 
     /**

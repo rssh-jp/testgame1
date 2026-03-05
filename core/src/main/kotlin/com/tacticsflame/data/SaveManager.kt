@@ -24,8 +24,11 @@ object SaveManager {
     /** 一時セーブファイル名（アトミックセーブ用） */
     private const val SAVE_FILE_NAME_TMP = "save_data.json.tmp"
 
-    /** セーブデータバージョン */
-    private const val SAVE_VERSION = 1
+    /** セーブデータバージョン（v2: Stats Float化、GrowthRate 固定値加算化） */
+    private const val SAVE_VERSION = 2
+
+    /** ロード処理中のセーブデータバージョン（readGrowthRate 等でマイグレーション判定に使用） */
+    private var loadingVersion = SAVE_VERSION
 
     /**
      * ゲーム進行状態をローカルファイルに保存する
@@ -304,6 +307,7 @@ object SaveManager {
      */
     internal fun deserializeFromJson(root: JsonValue, gameProgress: GameProgress) {
         val version = root.getInt("version", 1)
+        loadingVersion = version
         Gdx.app.log(TAG, "セーブデータバージョン: $version")
 
         // バージョンマイグレーション（将来のバージョンアップ時にここで変換処理を追加）
@@ -311,8 +315,6 @@ object SaveManager {
             Gdx.app.error(TAG, "セーブデータが現在のアプリより新しいバージョンです（データ: v$version、アプリ: v$SAVE_VERSION）")
             return
         }
-        // v1 → v2 などのマイグレーションが必要な場合はここに追加
-        // if (version < 2) { migrateV1toV2(root) }
 
         // チャプター進行状態の復元
         val chaptersNode = root.get("chapters")
@@ -471,31 +473,36 @@ object SaveManager {
     private fun readStats(node: JsonValue?): Stats {
         if (node == null) return Stats()
         return Stats(
-            hp = node.getInt("hp", 0),
-            str = node.getInt("str", 0),
-            mag = node.getInt("mag", 0),
-            skl = node.getInt("skl", 0),
-            spd = node.getInt("spd", 0),
-            lck = node.getInt("lck", 0),
-            def = node.getInt("def", 0),
-            res = node.getInt("res", 0)
+            hp = node.getFloat("hp", 0f),
+            str = node.getFloat("str", 0f),
+            mag = node.getFloat("mag", 0f),
+            skl = node.getFloat("skl", 0f),
+            spd = node.getFloat("spd", 0f),
+            lck = node.getFloat("lck", 0f),
+            def = node.getFloat("def", 0f),
+            res = node.getFloat("res", 0f)
         )
     }
 
     /**
      * JSON から成長率を読み込む
+     *
+     * v1 セーブデータでは Int パーセント値（0-100）で保存されていたため、
+     * loadingVersion < 2 の場合は 100 で割って Float 固定値加算に変換する。
      */
     private fun readGrowthRate(node: JsonValue?): GrowthRate {
         if (node == null) return GrowthRate()
+        // v1 → v2: Int%(例:70) → Float固定値(例:0.70)に変換
+        val divisor = if (loadingVersion < 2) 100f else 1f
         return GrowthRate(
-            hp = node.getInt("hp", 0),
-            str = node.getInt("str", 0),
-            mag = node.getInt("mag", 0),
-            skl = node.getInt("skl", 0),
-            spd = node.getInt("spd", 0),
-            lck = node.getInt("lck", 0),
-            def = node.getInt("def", 0),
-            res = node.getInt("res", 0)
+            hp = node.getFloat("hp", 0f) / divisor,
+            str = node.getFloat("str", 0f) / divisor,
+            mag = node.getFloat("mag", 0f) / divisor,
+            skl = node.getFloat("skl", 0f) / divisor,
+            spd = node.getFloat("spd", 0f) / divisor,
+            lck = node.getFloat("lck", 0f) / divisor,
+            def = node.getFloat("def", 0f) / divisor,
+            res = node.getFloat("res", 0f) / divisor
         )
     }
 

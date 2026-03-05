@@ -13,6 +13,7 @@
 | 7 | [AI仕様](07-ai-system.md) | 敵AI行動パターン・ターゲット選択・同盟AI |
 | 8 | [バトル画面UI](08-battle-ui.md) | 操作方法・ステートマシン・ステータスパネル |
 | 9 | [実装状況](09-implementation-status.md) | 各機能の実装済み/未実装の一覧 |
+| 10 | [成長システム](10-growth-system.md) | 能力値Float化・決定論的成長・effectiveXxx |
 
 ## 策定方針
 

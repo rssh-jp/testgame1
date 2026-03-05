@@ -1,7 +1,7 @@
 ﻿package com.tacticsflame.system
 
 import com.tacticsflame.model.unit.GameUnit
-import com.tacticsflame.model.unit.Stats
+import com.tacticsflame.model.unit.StatGrowth
 
 /**
  * レベルアップ処理を管理するシステム
@@ -13,12 +13,12 @@ class LevelUpSystem {
      *
      * @property unit レベルアップしたユニット
      * @property newLevel 新しいレベル
-     * @property growthResult 成長したステータス
+     * @property growthResult 実効ステータスの変化量
      */
     data class LevelUpResult(
         val unit: GameUnit,
         val newLevel: Int,
-        val growthResult: Stats
+        val growthResult: StatGrowth
     )
 
     /**

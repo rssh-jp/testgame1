@@ -1,6 +1,6 @@
 # 09. 実装状況
 
-最終更新: 2026年3月5日
+最終更新: 2026年3月6日
 
 ## 凡例
 
@@ -39,7 +39,7 @@
 | TerrainType enum | ✅ | 8種（PLAIN/FOREST/MOUNTAIN/WATER/FORT/WALL/VILLAGE/BRIDGE）、**hitBonusプロパティ追加** |
 | ClassType enum | ✅ | 10クラス定義 |
 | Faction enum | ✅ | PLAYER/ENEMY/ALLY |
-| Stats data class | ✅ | HP/STR/MAG/SKL/SPD/LCK/DEF/RES |
+| Stats data class | ✅ | HP/STR/MAG/SKL/SPD/LCK/DEF/RES — **内部Float・effectiveXxx(Int切捨)方式** |
 | CT プロパティ (GameUnit.ct) | ✅ | **新規追加** |
 | マップデータ JSON 読み込み | ✅ | MapLoader で chapter_1〜6.json を読み込み |
 | ユニットデータ JSON 読み込み | ✅ | units.json 内のテストデータ |
@@ -51,7 +51,10 @@
 | **BattleConfig データクラス** | **✅** | **新規追加: バトル設定（マップ・ユニット配置・勝利条件）** |
 | **MapLoader（JSONマップローダー）** | **✅** | **新規追加: JSON→BattleMap/敵/スポーン/勝利条件の一括読み込み** |
 | **BattleResultData データクラス** | **✅** | **新規追加: 戦闘結果（勝敗・ラウンド数・撃破数・生存ユニット）** |
-| **SaveManager（セーブ/ロード）** | **✅** | **新規追加: JSON形式でローカルストレージに保存・復元（アトミックセーブ対応）** |
+| **GrowthRate data class** | **✅** | **Float固定値加算方式に変更（旧: Int%確率成長）、SPD=0.20f一律** |
+| **StatGrowth data class** | **✅** | **新規追加: レベルアップ時のInt実効値変化量（UI表示用）** |
+| **セーブデータ v2 マイグレーション** | **✅** | **SAVE_VERSION=2、旧v1 GrowthRate(Int%)→Float固定値に自動変換** |
+| **成長システム仕様書** | **✅** | **新規追加: docs/spec/10-growth-system.md** |
 
 ## 3. バトルシステム
 
@@ -69,7 +72,7 @@
 | **装備重量→スピード減少** | **✅** | **effectiveSpeed() = SPD - 右手重さ - 左手重さ - 防具1重さ - 防具2重さ - 二刀流ペナ** |
 | **二刀流攻撃** | **✅** | **新規: 右手→反撃→左手→右手追撃→防御側追撃** |
 | 経験値計算 | ✅ | レベル差補正あり、GameConfig定数参照 |
-| レベルアップ処理 | ✅ | 成長率による判定 |
+| レベルアップ処理 | ✅ | **決定論的成長（Float固定値加算、確率なし）** |
 | **経験値付与（戦闘後）** | **✅** | **新規追加: プレイヤーユニットが戦闘後にEXP獲得、レベルアップ対応** |
 | **撃破ボーナス経験値** | **✅** | **新規追加: 敵撃破時に+20EXPボーナス** |
 | **防御側経験値獲得** | **✅** | **新規追加: 反撃命中時に経験値獲得** |
