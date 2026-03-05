@@ -4,6 +4,7 @@ import com.tacticsflame.model.map.BattleMap
 import com.tacticsflame.model.map.Position
 import com.tacticsflame.model.unit.Faction
 import com.tacticsflame.model.unit.GameUnit
+import com.tacticsflame.model.unit.WeaponType
 
 /**
  * 敵AIの行動を決定するシステム
@@ -28,7 +29,9 @@ class AISystem(
         /** 味方が狙っている敵を優先して攻撃する（援護） */
         SUPPORT,
         /** 敵から逃げるように移動する（撤退） */
-        FLEE
+        FLEE,
+        /** HPが減った味方を回復する（回復） */
+        HEAL
     }
 
     /**
@@ -48,6 +51,8 @@ class AISystem(
     sealed class Action {
         /** 移動して攻撃 */
         data class MoveAndAttack(val moveTo: Position, val target: GameUnit) : Action()
+        /** 移動して回復 */
+        data class MoveAndHeal(val moveTo: Position, val target: GameUnit) : Action()
         /** 移動のみ */
         data class Move(val moveTo: Position) : Action()
         /** 待機 */
@@ -75,6 +80,7 @@ class AISystem(
             AIPattern.CAUTIOUS -> decideCautiousAction(unit, unitPos, movablePositions, battleMap)
             AIPattern.SUPPORT -> decideSupportAction(unit, unitPos, movablePositions, battleMap)
             AIPattern.FLEE -> decideFleeAction(unit, unitPos, movablePositions, battleMap)
+            AIPattern.HEAL -> decideHealAction(unit, unitPos, movablePositions, battleMap)
         }
     }
 
@@ -281,6 +287,139 @@ class AISystem(
         }
 
         return AIAction(unit, Action.Wait)
+    }
+
+    // ==================== 回復AIパターン ====================
+
+    /**
+     * 回復AIの行動を決定する（味方を回復しろ）
+     *
+     * HPが減った味方を探し、回復杖の射程内に入れる位置へ移動して回復する。
+     * 回復対象がいない場合は味方に近づく。杖を装備していない場合は待機。
+     *
+     * 優先順位:
+     * 1. HPが最も減っている味方（HP割合が低い順）
+     * 2. 同率の場合は距離が近い方を優先
+     *
+     * @param unit 行動ユニット
+     * @param unitPos 現在位置
+     * @param movablePositions 移動可能座標
+     * @param battleMap バトルマップ
+     * @return 決定された行動
+     */
+    private fun decideHealAction(
+        unit: GameUnit,
+        unitPos: Position,
+        movablePositions: Set<Position>,
+        battleMap: BattleMap
+    ): AIAction {
+        // 回復杖を装備しているか確認
+        val weapon = unit.equippedWeapon()
+        if (weapon == null || !weapon.isHealingStaff) {
+            // 杖がなければ攻撃AI（AGGRESSIVE）にフォールバック
+            return decideAggressiveAction(unit, unitPos, movablePositions, battleMap)
+        }
+
+        // 回復可能な味方を探す
+        val healTargets = findHealableTargets(unit, unitPos, movablePositions, battleMap)
+        if (healTargets.isNotEmpty()) {
+            // HP割合が最も低い（最もダメージを受けている）味方を選択
+            val bestTarget = healTargets.minByOrNull { (_, _, ally) ->
+                ally.currentHp.toFloat() / ally.maxHp.toFloat()
+            }
+            if (bestTarget != null) {
+                return AIAction(unit, Action.MoveAndHeal(bestTarget.first, bestTarget.third))
+            }
+        }
+
+        // 回復対象がいない場合、ダメージを受けている味方に近づく
+        val injuredAlly = findMostInjuredAlly(unit, battleMap)
+        if (injuredAlly != null) {
+            val bestMovePos = movablePositions.minByOrNull { it.manhattanDistance(injuredAlly) }
+            if (bestMovePos != null) {
+                return AIAction(unit, Action.Move(bestMovePos))
+            }
+        }
+
+        // 全員満タンの場合は攻撃AI（CAUTIOUS: 安全に待機）にフォールバック
+        return decideCautiousAction(unit, unitPos, movablePositions, battleMap)
+    }
+
+    /**
+     * 回復可能な味方ユニットを探す
+     *
+     * 移動後に杖の射程内に入る、HPが最大でない味方ユニットの一覧を返す。
+     *
+     * @param unit 回復ユニット
+     * @param unitPos 現在位置
+     * @param movablePositions 移動可能座標
+     * @param battleMap バトルマップ
+     * @return (移動先位置, 距離, 回復対象ユニット) のリスト
+     */
+    private fun findHealableTargets(
+        unit: GameUnit,
+        unitPos: Position,
+        movablePositions: Set<Position>,
+        battleMap: BattleMap
+    ): List<Triple<Position, Int, GameUnit>> {
+        val weapon = unit.equippedWeapon() ?: return emptyList()
+        val minRange = weapon.minRange
+        val maxRange = weapon.maxRange
+        val results = mutableListOf<Triple<Position, Int, GameUnit>>()
+
+        val positionsToCheck = movablePositions + unitPos
+
+        for (pos in positionsToCheck) {
+            for (range in minRange..maxRange) {
+                for (neighbor in getPositionsAtRange(pos, range)) {
+                    val target = battleMap.getUnitAt(neighbor)
+                    if (target != null
+                        && isFriendlyFaction(unit.faction, target.faction)
+                        && target.id != unit.id
+                        && !target.isDefeated
+                        && target.currentHp < target.maxHp
+                    ) {
+                        results.add(Triple(pos, pos.manhattanDistance(unitPos), target))
+                    }
+                }
+            }
+        }
+
+        return results
+    }
+
+    /**
+     * 最もHPが減っている味方ユニットの座標を返す
+     *
+     * @param unit 自ユニット（除外）
+     * @param battleMap バトルマップ
+     * @return 最もHP割合が低い味方の座標（全員満タンの場合はnull）
+     */
+    private fun findMostInjuredAlly(unit: GameUnit, battleMap: BattleMap): Position? {
+        return battleMap.getAllUnits()
+            .filter {
+                isFriendlyFaction(unit.faction, it.second.faction)
+                    && it.second.id != unit.id
+                    && !it.second.isDefeated
+                    && it.second.currentHp < it.second.maxHp
+            }
+            .minByOrNull { it.second.currentHp.toFloat() / it.second.maxHp.toFloat() }
+            ?.first
+    }
+
+    /**
+     * 二つの陣営が友好関係にあるかを判定する
+     *
+     * @param from 行動ユニットの陣営
+     * @param to 対象ユニットの陣営
+     * @return 友好関係なら true
+     */
+    private fun isFriendlyFaction(from: Faction, to: Faction): Boolean {
+        return when (from) {
+            Faction.PLAYER -> to == Faction.PLAYER || to == Faction.ALLY
+            Faction.ENEMY -> to == Faction.ENEMY
+            Faction.ALLY -> to == Faction.PLAYER || to == Faction.ALLY
+        }
     }
 
     // ==================== ヘルパーメソッド ====================

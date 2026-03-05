@@ -590,6 +590,7 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             UnitTactic.CHARGE -> Color(1f, 0.5f, 0.3f, 1f)   // オレンジ（積極）
             UnitTactic.CAUTIOUS -> Color(0.4f, 0.7f, 1f, 1f)  // 水色（慎重）
             UnitTactic.SUPPORT -> Color(0.4f, 1f, 0.5f, 1f)   // 緑（援護）
+            UnitTactic.HEAL -> Color(0.5f, 1f, 0.8f, 1f)      // ミントグリーン（回復）
             UnitTactic.FLEE -> Color(0.9f, 0.8f, 0.3f, 1f)    // 黄（逃走）
         }
     }

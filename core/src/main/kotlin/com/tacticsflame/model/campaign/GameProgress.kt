@@ -192,7 +192,16 @@ class GameProgress {
         eric.rightHand = Weapon("fire", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2)
         eric.armorSlot1 = Armor("magicRobe", "魔法のローブ", ArmorType.MAGIC_ROBE, defBonus = 0, resBonus = 3, weight = 1)
 
-        party.addUnits(listOf(ares, leena, maria, eric))
+        val cecilia = GameUnit(
+            id = "hero_05", name = "セシリア",
+            unitClass = UnitClass.HEALER, faction = Faction.PLAYER,
+            stats = Stats(hp = 16, str = 1, mag = 8, skl = 5, spd = 6, lck = 7, def = 2, res = 7),
+            growthRate = GrowthRate(hp = 50, str = 5, mag = 65, skl = 40, spd = 45, lck = 50, def = 10, res = 55)
+        )
+        cecilia.rightHand = Weapon("heal", "ライブ", WeaponType.STAFF, might = 0, hit = 100, weight = 1, healPower = 10)
+        cecilia.tactic = UnitTactic.HEAL
+
+        party.addUnits(listOf(ares, leena, maria, eric, cecilia))
 
         // 初期出撃メンバー設定（最初の3人）
         party.setDeployedUnits(listOf("hero_01", "hero_02", "hero_03"))

@@ -30,6 +30,7 @@ enum class WeaponType {
  * @property weight 重さ（攻速に影響）
  * @property minRange 最小射程
  * @property maxRange 最大射程
+ * @property healPower 回復量（STAFF武器のみ使用。0の場合は攻撃武器扱い）
  */
 data class Weapon(
     val id: String,
@@ -40,5 +41,10 @@ data class Weapon(
     val critical: Int = 0,
     val weight: Int = 0,
     val minRange: Int = 1,
-    val maxRange: Int = 1
-)
+    val maxRange: Int = 1,
+    val healPower: Int = 0
+) {
+    /** この武器が回復用杖かどうか */
+    val isHealingStaff: Boolean
+        get() = type == WeaponType.STAFF && healPower > 0
+}

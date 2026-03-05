@@ -19,6 +19,9 @@ enum class UnitTactic(val displayName: String, val description: String) {
     /** 味方と一緒に敵を攻撃する */
     SUPPORT("味方を援護しろ", "味方が狙っている敵を優先して攻撃する"),
 
+    /** 味方のHP回復を優先する（杖装備時のみ有効） */
+    HEAL("味方を回復しろ", "HPが減った味方の回復を優先する"),
+
     /** 敵から逃げるように行動する */
     FLEE("逃げまどえ", "敵から離れるように移動する");
 

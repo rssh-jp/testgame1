@@ -4,6 +4,7 @@ import com.tacticsflame.core.GameConfig
 import com.tacticsflame.model.battle.AttackResult
 import com.tacticsflame.model.battle.BattleResult
 import com.tacticsflame.model.battle.DamageCalc
+import com.tacticsflame.model.battle.HealResult
 import com.tacticsflame.model.map.BattleMap
 import com.tacticsflame.model.map.Position
 import com.tacticsflame.model.unit.GameUnit
@@ -169,5 +170,56 @@ class BattleSystem {
         val bonus = if (defender.isDefeated) GameConfig.EXP_DEFEAT_BONUS else 0
         return (baseExp + levelDiff * GameConfig.EXP_LEVEL_DIFF_MULTIPLIER + bonus)
             .coerceIn(GameConfig.EXP_MIN, GameConfig.EXP_MAX)
+    }
+
+    // ==================== 回復処理 ====================
+
+    /**
+     * 回復行動を実行する
+     *
+     * 回復量 = 使用者のMAG + 杖のhealPower。
+     * 経験値は回復量に応じた固定値。
+     *
+     * @param healer 回復を行うユニット
+     * @param target 回復対象ユニット
+     * @return 回復結果
+     */
+    fun executeHeal(healer: GameUnit, target: GameUnit): HealResult {
+        val forecast = DamageCalc.calculateHealForecast(healer, target)
+        val hpBefore = target.currentHp
+
+        // 回復を適用
+        target.heal(forecast.healAmount)
+
+        val hpAfter = target.currentHp
+        val actualHeal = hpAfter - hpBefore
+
+        // 回復経験値: 基本20 + 実効回復量×係数（最大1～100）
+        val expGained = calculateHealExp(healer, actualHeal)
+
+        return HealResult(
+            healer = healer,
+            target = target,
+            healAmount = actualHeal,
+            targetHpBefore = hpBefore,
+            targetHpAfter = hpAfter,
+            expGained = expGained
+        )
+    }
+
+    /**
+     * 回復行動で得られる経験値を計算する
+     *
+     * 計算式: 基本経験値(20) + 実回復量 / 2
+     * 範囲: 1～100
+     *
+     * @param healer 回復ユニット
+     * @param actualHeal 実際の回復量
+     * @return 獲得経験値
+     */
+    private fun calculateHealExp(healer: GameUnit, actualHeal: Int): Int {
+        val baseExp = 20
+        val healBonus = actualHeal / 2
+        return (baseExp + healBonus).coerceIn(GameConfig.EXP_MIN, GameConfig.EXP_MAX)
     }
 }

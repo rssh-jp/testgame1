@@ -22,8 +22,13 @@ class UnitTacticTest {
     }
 
     @Test
-    fun `SUPPORTの次はFLEE`() {
-        assertEquals(UnitTactic.FLEE, UnitTactic.SUPPORT.next())
+    fun `SUPPORTの次はHEAL`() {
+        assertEquals(UnitTactic.HEAL, UnitTactic.SUPPORT.next())
+    }
+
+    @Test
+    fun `HEALの次はFLEE`() {
+        assertEquals(UnitTactic.FLEE, UnitTactic.HEAL.next())
     }
 
     @Test
@@ -39,7 +44,7 @@ class UnitTacticTest {
             tactic = tactic.next()
             visited.add(tactic)
         }
-        // 4回 next() を呼ぶと元に戻る
+        // 5回 next() を呼ぶと元に戻る
         assertEquals(UnitTactic.CHARGE, visited.last(), "一周してCHARGEに戻る")
         assertEquals(UnitTactic.entries.size + 1, visited.size)
     }

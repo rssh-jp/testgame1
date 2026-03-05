@@ -162,4 +162,48 @@ object DamageCalc {
         val critAvoid = defender.stats.lck / 2
         return (baseCrit - critAvoid).coerceIn(0, 100)
     }
+
+    // ==================== 回復計算 ====================
+
+    /**
+     * 回復予測データ
+     *
+     * @property healAmount 予測回復量
+     * @property targetCurrentHp 回復前の対象HP
+     * @property targetMaxHp 対象の最大HP
+     */
+    data class HealForecast(
+        val healAmount: Int,
+        val targetCurrentHp: Int,
+        val targetMaxHp: Int
+    ) {
+        /** 回復後のHP（最大HPを超えない） */
+        val hpAfterHeal: Int
+            get() = minOf(targetCurrentHp + healAmount, targetMaxHp)
+
+        /** 実効回復量（最大HPからの超過分を除いた実際の回復量） */
+        val effectiveHealAmount: Int
+            get() = hpAfterHeal - targetCurrentHp
+    }
+
+    /**
+     * 回復予測を計算する
+     *
+     * 回復量 = 使用者のMAG + 杖のhealPower
+     *
+     * @param healer 回復を行うユニット
+     * @param target 回復対象ユニット
+     * @return 回復予測データ
+     */
+    fun calculateHealForecast(healer: GameUnit, target: GameUnit): HealForecast {
+        val weapon = healer.equippedWeapon()
+        val healPower = weapon?.healPower ?: 0
+        val healAmount = healer.stats.mag + healPower
+
+        return HealForecast(
+            healAmount = healAmount,
+            targetCurrentHp = target.currentHp,
+            targetMaxHp = target.maxHp
+        )
+    }
 }

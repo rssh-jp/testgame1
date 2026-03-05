@@ -132,6 +132,10 @@ class AITacticTest {
             is AISystem.Action.Wait -> {
                 // 安全な場所がない場合は待機
             }
+            is AISystem.Action.MoveAndHeal -> {
+                // CAUTIOUSでは回復行動は想定しない
+                fail("CAUTIOUSパターンでMoveAndHealは想定外")
+            }
         }
     }
 
@@ -161,6 +165,9 @@ class AITacticTest {
             }
             is AISystem.Action.MoveAndAttack -> {
                 fail("遠距離で攻撃はできないはず")
+            }
+            is AISystem.Action.MoveAndHeal -> {
+                fail("CAUTIOUSパターンでMoveAndHealは想定外")
             }
         }
     }
@@ -197,6 +204,9 @@ class AITacticTest {
             is AISystem.Action.Wait -> {
                 // フォールバック
             }
+            is AISystem.Action.MoveAndHeal -> {
+                // SUPPORTでは回復行動も許容
+            }
         }
     }
 
@@ -223,6 +233,9 @@ class AITacticTest {
             }
             is AISystem.Action.Wait -> {
                 fail("隣接する敵がいるので待機にはならないはず")
+            }
+            is AISystem.Action.MoveAndHeal -> {
+                // SUPPORTフォールバックでは回復は想定外
             }
         }
     }
@@ -257,6 +270,9 @@ class AITacticTest {
             }
             is AISystem.Action.MoveAndAttack -> {
                 fail("FLEEパターンは攻撃しない")
+            }
+            is AISystem.Action.MoveAndHeal -> {
+                fail("FLEEパターンでMoveAndHealは想定外")
             }
         }
     }

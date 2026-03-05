@@ -57,7 +57,8 @@ class MapLoader {
         val critical: Int = 0,
         val weight: Int = 0,
         val minRange: Int = 1,
-        val maxRange: Int = 1
+        val maxRange: Int = 1,
+        val healPower: Int = 0
     ) {
         /**
          * Weapon インスタンスを生成する
@@ -71,7 +72,8 @@ class MapLoader {
             critical = critical,
             weight = weight,
             minRange = minRange,
-            maxRange = maxRange
+            maxRange = maxRange,
+            healPower = healPower
         )
     }
 
@@ -193,7 +195,8 @@ class MapLoader {
                     critical = w.getInt("critical", 0),
                     weight = w.getInt("weight", 0),
                     minRange = w.getInt("minRange", 1),
-                    maxRange = w.getInt("maxRange", 1)
+                    maxRange = w.getInt("maxRange", 1),
+                    healPower = w.getInt("healPower", 0)
                 )
             }
 
@@ -442,6 +445,7 @@ class MapLoader {
         }
 
         Gdx.app.log(TAG, "フォールバック武器生成: $weaponId → ${type.name} (ユニット: $unitId)")
+        val healPower = if (type == WeaponType.STAFF) 10 else 0
         return Weapon(
             id = weaponId,
             name = weaponId,
@@ -450,7 +454,8 @@ class MapLoader {
             hit = hit,
             weight = weight,
             minRange = minRange,
-            maxRange = maxRange
+            maxRange = maxRange,
+            healPower = healPower
         )
     }
 

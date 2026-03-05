@@ -15,6 +15,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.core.GameConfig
 import com.tacticsflame.model.battle.BattleResult
+import com.tacticsflame.model.battle.HealResult
 import com.tacticsflame.model.campaign.BattleConfig
 import com.tacticsflame.model.campaign.BattleResultData
 import com.tacticsflame.model.map.*
@@ -72,6 +73,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         UNIT_MOVING,
         /** 戦闘結果表示中 */
         COMBAT_RESULT,
+        /** 回復結果表示中 */
+        HEAL_RESULT,
         /** 行動後ウェイト中 */
         POST_ACTION,
         /** 勝利/敗北 */
@@ -110,6 +113,9 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
     /** 戦闘結果の一時保持 */
     private var pendingBattleResult: BattleResult? = null
+
+    /** 回復結果の一時保持 */
+    private var pendingHealResult: HealResult? = null
 
     /** 撤退確認ダイアログ表示フラグ */
     private var showRetreatConfirm: Boolean = false
@@ -206,6 +212,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                 BattleState.AI_THINKING -> processAIThinking(delta)
                 BattleState.UNIT_MOVING -> processUnitMoving(delta)
                 BattleState.COMBAT_RESULT -> processCombatResult(delta)
+                BattleState.HEAL_RESULT -> processHealResult(delta)
                 BattleState.POST_ACTION -> processPostAction(delta)
                 BattleState.RESULT -> handleResultInput()
             }
@@ -241,6 +248,11 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         // ターン情報描画
         renderTurnInfo()
+
+        // 回復結果表示（HEAL_RESULT状態のとき）
+        if (battleState == BattleState.HEAL_RESULT) {
+            renderHealResultOverlay()
+        }
 
         // 撤退ボタン描画（RESULT以外で表示）
         if (battleState != BattleState.RESULT) {
@@ -400,10 +412,19 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                 UnitTactic.CHARGE -> AISystem.AIPattern.AGGRESSIVE
                 UnitTactic.CAUTIOUS -> AISystem.AIPattern.CAUTIOUS
                 UnitTactic.SUPPORT -> AISystem.AIPattern.SUPPORT
+                UnitTactic.HEAL -> AISystem.AIPattern.HEAL
                 UnitTactic.FLEE -> AISystem.AIPattern.FLEE
             }
             Faction.ALLY -> AISystem.AIPattern.DEFENSIVE
-            Faction.ENEMY -> AISystem.AIPattern.AGGRESSIVE
+            Faction.ENEMY -> {
+                // 敵ヒーラー（回復杖装備）は自動で回復AI
+                val weapon = activeUnit.equippedWeapon()
+                if (weapon != null && weapon.isHealingStaff) {
+                    AISystem.AIPattern.HEAL
+                } else {
+                    AISystem.AIPattern.AGGRESSIVE
+                }
+            }
         }
 
         // 行動決定
@@ -418,6 +439,15 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                 } else {
                     // 移動なしで攻撃
                     startCombat(activeUnit, act.target)
+                }
+            }
+            is AISystem.Action.MoveAndHeal -> {
+                val unitPos = battleMap.getUnitPosition(activeUnit)!!
+                if (act.moveTo != unitPos) {
+                    startMovementAnimation(activeUnit, unitPos, act.moveTo)
+                } else {
+                    // 移動なしで回復
+                    startHealing(activeUnit, act.target)
                 }
             }
             is AISystem.Action.Move -> {
@@ -454,10 +484,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             battleMap.moveUnit(from, to)
             Gdx.app.log(TAG, "AI移動完了（直接）: ${unit.name}")
             val action = pendingAction?.action
-            if (action is AISystem.Action.MoveAndAttack) {
-                startCombat(unit, action.target)
-            } else {
-                enterPostAction()
+            when (action) {
+                is AISystem.Action.MoveAndAttack -> startCombat(unit, action.target)
+                is AISystem.Action.MoveAndHeal -> startHealing(unit, action.target)
+                else -> enterPostAction()
             }
         }
     }
@@ -505,12 +535,12 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         Gdx.app.log(TAG, "AI移動完了: ${activeUnit.name}")
 
-        // 攻撃がある場合は戦闘へ
+        // 攻撃がある場合は戦闘へ、回復がある場合は回復へ
         val action = pendingAction?.action
-        if (action is AISystem.Action.MoveAndAttack) {
-            startCombat(activeUnit, action.target)
-        } else {
-            enterPostAction()
+        when (action) {
+            is AISystem.Action.MoveAndAttack -> startCombat(activeUnit, action.target)
+            is AISystem.Action.MoveAndHeal -> startHealing(activeUnit, action.target)
+            else -> enterPostAction()
         }
     }
 
@@ -580,6 +610,47 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     }
 
     /**
+     * 回復行動を開始する
+     *
+     * @param healer 回復ユニット
+     * @param target 回復対象ユニット
+     */
+    private fun startHealing(healer: GameUnit, target: GameUnit) {
+        val result = battleSystem.executeHeal(healer, target)
+        pendingHealResult = result
+        Gdx.app.log(
+            TAG,
+            "AI回復: ${healer.name} → ${target.name} " +
+                "(回復量: ${result.healAmount}, HP: ${result.targetHpBefore}→${result.targetHpAfter})"
+        )
+        stateTimer = 0f
+        battleState = BattleState.HEAL_RESULT
+    }
+
+    /**
+     * 回復結果表示を処理する
+     *
+     * 表示時間経過後、経験値を付与して行動後ウェイトに遷移する。
+     *
+     * @param delta フレームデルタタイム（秒）
+     */
+    private fun processHealResult(delta: Float) {
+        stateTimer += delta
+        if (stateTimer < GameConfig.COMBAT_RESULT_DELAY) return
+
+        val result = pendingHealResult
+        if (result != null) {
+            // 経験値付与: 回復ユニットがプレイヤー陣営の場合
+            if (result.healer.faction == Faction.PLAYER) {
+                awardExpToUnit(result.healer, result.expGained)
+            }
+        }
+
+        pendingHealResult = null
+        enterPostAction()
+    }
+
+    /**
      * ユニットに経験値を付与し、レベルアップ処理を行う
      *
      * @param unit 対象ユニット
@@ -642,6 +713,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         // アニメーション状態をクリア
         pendingAction = null
         pendingBattleResult = null
+        pendingHealResult = null
         animatingUnit = null
         animationPath = emptyList()
         animationProgress = 0f
@@ -1087,6 +1159,45 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             font.draw(batch, activeText, viewCenterX - 100f, viewTop - 52f)
         }
 
+        batch.end()
+    }
+
+    /**
+     * 回復結果オーバーレイを描画する
+     *
+     * 回復対象ユニットの上に緑色の回復量テキストを表示する。
+     */
+    private fun renderHealResultOverlay() {
+        val result = pendingHealResult ?: return
+        val targetPos = battleMap.getUnitPosition(result.target) ?: return
+
+        val tileSize = GameConfig.TILE_SIZE
+        val cx = targetPos.x * tileSize + tileSize / 2f
+        val cy = targetPos.y * tileSize + tileSize / 2f
+
+        // 回復量テキストの背景
+        val healText = "+${result.healAmount} HP"
+        glyphLayout.setText(font, healText)
+        val textWidth = glyphLayout.width
+        val textHeight = glyphLayout.height
+        val bgPadding = 6f
+        val bgX = cx - textWidth / 2f - bgPadding
+        val bgY = cy + tileSize * 0.7f - bgPadding
+        val bgW = textWidth + bgPadding * 2
+        val bgH = textHeight + bgPadding * 2
+
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0f, 0.3f, 0f, 0.8f)
+        shapeRenderer.rect(bgX, bgY, bgW, bgH)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // 回復量テキスト描画
+        batch.projectionMatrix = camera.combined
+        batch.begin()
+        font.color = Color(0.3f, 1f, 0.3f, 1f)
+        font.draw(batch, healText, cx - textWidth / 2f, bgY + bgH - bgPadding)
         batch.end()
     }
 

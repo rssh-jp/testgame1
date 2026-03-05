@@ -81,6 +81,20 @@
         "weight": 1,
         "minRange": 1,
         "maxRange": 1,
+        "healPower": 10,
         "durability": 30
+    },
+    {
+        "id": "recover",
+        "name": "リカバー",
+        "type": "STAFF",
+        "might": 0,
+        "hit": 100,
+        "critical": 0,
+        "weight": 2,
+        "minRange": 1,
+        "maxRange": 1,
+        "healPower": 20,
+        "durability": 15
     }
 ]
