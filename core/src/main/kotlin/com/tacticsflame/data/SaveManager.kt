@@ -486,24 +486,21 @@ object SaveManager {
     }
 
     /**
-     * JSON から成長率を読み込む
+     * JSON から成長値を読み込む
      *
-     * v1 セーブデータでは Int パーセント値（0-100）で保存されていたため、
-     * loadingVersion < 2 の場合は 100 で割って Float 固定値加算に変換する。
+     * 各値は固定加算値としてそのまま読み込む。
      */
     private fun readGrowthRate(node: JsonValue?): GrowthRate {
         if (node == null) return GrowthRate()
-        // v1 → v2: Int%(例:70) → Float固定値(例:0.70)に変換
-        val divisor = if (loadingVersion < 2) 100f else 1f
         return GrowthRate(
-            hp = node.getFloat("hp", 0f) / divisor,
-            str = node.getFloat("str", 0f) / divisor,
-            mag = node.getFloat("mag", 0f) / divisor,
-            skl = node.getFloat("skl", 0f) / divisor,
-            spd = node.getFloat("spd", 0f) / divisor,
-            lck = node.getFloat("lck", 0f) / divisor,
-            def = node.getFloat("def", 0f) / divisor,
-            res = node.getFloat("res", 0f) / divisor
+            hp = node.getFloat("hp", 0f),
+            str = node.getFloat("str", 0f),
+            mag = node.getFloat("mag", 0f),
+            skl = node.getFloat("skl", 0f),
+            spd = node.getFloat("spd", 0f),
+            lck = node.getFloat("lck", 0f),
+            def = node.getFloat("def", 0f),
+            res = node.getFloat("res", 0f)
         )
     }
 

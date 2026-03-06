@@ -183,7 +183,7 @@ stateDiagram-v2
   "classId": "lord",
   "level": 1,
   "stats": {"hp": 20, "str": 6, "mag": 1, "skl": 7, "spd": 8, "lck": 5, "def": 5, "res": 2},
-  "growthRates": {"hp": 70, "str": 50, "mag": 10, "skl": 55, "spd": 60, "lck": 40, "def": 35, "res": 25},
+  "growthRates": {"hp": 3.70, "str": 1.20, "mag": 0.10, "skl": 0.55, "spd": 0.20, "lck": 0.40, "def": 0.35, "res": 0.25},
   "weapons": ["ironSword"],
   "mov": 5
 }

@@ -23,17 +23,36 @@ tools: ["read", "edit", "search", "execute", "todo"]
 
 | エージェント | 主責務 | 補助責務 | 主な成果物 |
 |---|---|---|---|
-| `#game-design` | 仕様設計 | 用語・状態遷移定義 | 詳細仕様、受け入れ条件 |
-| `#implement-feature` | 機能実装 | データ定義更新 | Kotlinコード |
-| `#generate-tests` | テスト設計/生成 | 回帰観点整理 | JUnitテスト |
-| `#code-review` | テックリードレビュー | 設計負債検知 | 指摘と修正方針 |
-| `#refactor` | 構造改善 | 責務分離整理 | リファクタ済みコード |
-| `#debug-gameplay` | バグ調査・修正 | ログ分析 | 修正内容と原因 |
-| `#battle-tuning` | バランス調整 | 数値妥当性検証 | 調整パラメータ |
-| `#ui-enhancement` | UI実装 | 操作性改善 | UI変更コード |
-| `#map-creator` | マップ作成 | 難易度配置 | マップJSON |
-| `#generate-docs` | 文書更新 | 実装状況更新 | Markdown更新 |
-| `#git-ops` | Git運用 | コンフリクト対応 | ブランチ/コミット |
+| `game-design` | 仕様設計 | 用語・状態遷移定義 | 詳細仕様、受け入れ条件 |
+| `implement-feature` | 機能実装 | データ定義更新 | Kotlinコード |
+| `generate-tests` | テスト設計/生成 | 回帰観点整理 | JUnitテスト |
+| `code-review` | テックリードレビュー | 設計負債検知 | 指摘と修正方針 |
+| `refactor` | 構造改善 | 責務分離整理 | リファクタ済みコード |
+| `debug-gameplay` | バグ調査・修正 | ログ分析 | 修正内容と原因 |
+| `battle-tuning` | バランス調整 | 数値妥当性検証 | 調整パラメータ |
+| `ui-enhancement` | UI実装 | 操作性改善 | UI変更コード |
+| `map-creator` | マップ作成 | 難易度配置 | マップJSON |
+| `generate-docs` | 文書更新 | 実装状況更新 | Markdown更新 |
+| `git-ops` | Git運用 | コンフリクト対応 | ブランチ/コミット |
+
+## サブエージェント呼び出し規約（必須）
+
+- orchestrator は実作業を自前で抱え込まず、必ず担当エージェントを **サブエージェントとして呼び出す**
+- 要件分析・仕様作成（仕様化）は `game-design` を主担当として必ず委譲する
+- 実装・検証・レビュー・ドキュメント更新・Git 操作も必ず対応するサブエージェントへ委譲する
+- 呼び出し時は、少なくとも以下を渡すこと
+  - 依頼目的（なぜこの作業が必要か）
+  - 入力情報（関連仕様、対象ファイル、前工程の成果物）
+  - 期待成果物（コード/テスト/レビュー結果など）
+  - 受理条件（DoD）
+- 受け取った成果物は orchestrator が品質ゲートで判定し、不合格時は同じ担当へ差し戻して再実行する
+
+### orchestrator の非担当領域（禁止）
+
+- orchestrator 自身がコード・テスト・ドキュメントを直接作成/編集しない
+- orchestrator 自身が要件分析結果や仕様本文を単独で確定しない
+- orchestrator 自身がビルド/テスト/レビュー作業の実行主体にならない
+- orchestrator は「分解・委譲・受理判定・差し戻し・最終統合」のみを担当する
 
 ---
 
@@ -83,8 +102,8 @@ tools: ["read", "edit", "search", "execute", "todo"]
 
 例:
 
-- 仕様追加: R=`#game-design`, A=orchestrator, C=`#code-review`, I=`#implement-feature`
-- 実装: R=`#implement-feature`, A=orchestrator, C=`#game-design`/`#code-review`, I=`#generate-tests`
+- 仕様追加: R=`game-design`, A=orchestrator, C=`code-review`, I=`implement-feature`
+- 実装: R=`implement-feature`, A=orchestrator, C=`game-design`/`code-review`, I=`generate-tests`
 
 ### 2) 1タスク1責任
 
@@ -102,9 +121,9 @@ tools: ["read", "edit", "search", "execute", "todo"]
 
 ### Phase 0: 要件分析と分類（必須）
 
-- 要求を「新機能 / バグ修正 / バランス / UI / リファクタ / マップ / 複合」に分類
-- 関連仕様（`docs/spec/`）と実装状況（`09-implementation-status.md`）を確認
-- 成果物一覧を定義（コード、テスト、ドキュメント、Git）
+- `game-design` をサブエージェントとして呼び出し、要件分析・要求分類・仕様ドラフトを作成させる
+- orchestrator は成果物を受理判定し、不足があれば `game-design` へ差し戻す
+- 確定した仕様を入力に、後続タスクの成果物一覧（コード、テスト、ドキュメント、Git）を定義する
 
 ### Phase 1: タスク分解と割当（必須）
 
@@ -114,21 +133,22 @@ tools: ["read", "edit", "search", "execute", "todo"]
 
 ### Phase 2: 実行（委譲）
 
-- サブエージェントへ順次委譲
+- サブエージェント呼び出しを順次実行
 - 各成果物を受理判定（DoDチェック）
 - 不備があれば同フェーズ内で再委譲
 
 ### Phase 3: 品質ゲート
 
-- ビルド: `./gradlew assembleDebug`
-- テスト: `./gradlew :core:test`
-- レビュー: `#code-review` で 🔴 が 0 件
-- 仕様同期: コード変更とドキュメント差分が一致
+- ビルド実行担当をサブエージェントへ委譲（原則 `implement-feature`）し、`./gradlew assembleDebug` の結果を受領する
+- テスト実行担当をサブエージェントへ委譲（原則 `generate-tests`）し、`./gradlew :core:test` の結果を受領する
+- レビューは `code-review` へ委譲し、🔴 が 0 件であることを確認する
+- Virtual Device 送信は実行担当サブエージェントへ委譲し、`./gradlew installDebug` の結果を受領する
+- 仕様同期は `generate-docs` と照合して判定し、不一致は差し戻す
 
 ### Phase 4: 最終統合
 
 - 変更一覧、未解決事項、既知制約を整理
-- 必要なら `#git-ops` へブランチ/コミットを委譲
+- 必要なら `git-ops` へブランチ/コミットを委譲
 
 ---
 
@@ -136,27 +156,27 @@ tools: ["read", "edit", "search", "execute", "todo"]
 
 ### A. 新機能
 
-`#game-design` → `#implement-feature` → `#generate-tests` → `#code-review` → `#generate-docs` → `#git-ops`
+`game-design` → `implement-feature` → `generate-tests` → `code-review` → `Virtual Device送信` → `generate-docs` → `git-ops`
 
 ### B. バグ修正
 
-`#debug-gameplay` → `#implement-feature`（必要時）→ `#generate-tests` → `#code-review` → `#git-ops`
+`debug-gameplay` → `implement-feature`（必要時）→ `generate-tests` → `code-review` → `Virtual Device送信` → `git-ops`
 
 ### C. バランス調整
 
-`#battle-tuning` → `#generate-tests` → `#code-review` → `#generate-docs` → `#git-ops`
+`battle-tuning` → `generate-tests` → `code-review` → `Virtual Device送信` → `generate-docs` → `git-ops`
 
 ### D. UI改善
 
-`#ui-enhancement` → `#generate-tests`（UIロジック対象）→ `#code-review` → `#generate-docs` → `#git-ops`
+`ui-enhancement` → `generate-tests`（UIロジック対象）→ `code-review` → `Virtual Device送信` → `generate-docs` → `git-ops`
 
 ### E. リファクタリング
 
-`#code-review`（課題抽出）→ `#refactor` → `#generate-tests` → `#code-review`（再確認）→ `#git-ops`
+`code-review`（課題抽出）→ `refactor` → `generate-tests` → `code-review`（再確認）→ `Virtual Device送信` → `git-ops`
 
 ### F. マップ追加
 
-`#game-design` → `#map-creator` → `#battle-tuning` → `#generate-tests` → `#generate-docs` → `#git-ops`
+`game-design` → `map-creator` → `battle-tuning` → `generate-tests` → `code-review` → `Virtual Device送信` → `generate-docs` → `git-ops`
 
 ---
 
@@ -166,7 +186,8 @@ tools: ["read", "edit", "search", "execute", "todo"]
 
 - ビルド失敗
 - テスト失敗
-- `#code-review` の 🔴 重大が 1 件以上
+- `code-review` の 🔴 重大が 1 件以上
+- Virtual Device 送信失敗
 - 仕様と実装の不一致
 - 受け入れ条件が未定義または検証不能
 
@@ -186,6 +207,7 @@ tools: ["read", "edit", "search", "execute", "todo"]
 現在フェーズ: [Phase n]
 完了タスク: [x/y]
 品質ゲート: Build [PASS/FAIL] / Test [PASS/FAIL] / Review [PASS/FAIL]
+Virtual Device送信: [PASS/FAIL]
 次アクション: [次に委譲する担当とタスク]
 ブロッカー: [なし / 内容]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -217,7 +239,7 @@ tools: ["read", "edit", "search", "execute", "todo"]
 - 仕様未確定のまま実装へ進まない
 - 1つ前の品質ゲート未通過なら次工程へ進まない
 - 「小変更なのでレビュー不要」は原則禁止（最低限のレビューは必須）
-- 変更が仕様に影響する場合、`#generate-docs` の委譲を省略しない
+- 変更が仕様に影響する場合、`generate-docs` の委譲を省略しない
 
 ## ビルド環境
 

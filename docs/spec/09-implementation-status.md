@@ -53,7 +53,7 @@
 | **BattleResultData データクラス** | **✅** | **新規追加: 戦闘結果（勝敗・ラウンド数・撃破数・生存ユニット）** |
 | **GrowthRate data class** | **✅** | **Float固定値加算方式に変更（旧: Int%確率成長）、SPD=0.20f一律** |
 | **StatGrowth data class** | **✅** | **新規追加: レベルアップ時のInt実効値変化量（UI表示用）** |
-| **セーブデータ v2 マイグレーション** | **✅** | **SAVE_VERSION=2、旧v1 GrowthRate(Int%)→Float固定値に自動変換** |
+| **GrowthRate 読み込み仕様** | **✅** | **保存値を固定加算値としてそのまま復元（%としての自動変換なし）** |
 | **成長システム仕様書** | **✅** | **新規追加: docs/spec/10-growth-system.md** |
 
 ## 3. バトルシステム

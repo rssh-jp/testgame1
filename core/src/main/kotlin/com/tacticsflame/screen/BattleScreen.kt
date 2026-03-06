@@ -10,8 +10,10 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.ExtendViewport
+import com.badlogic.gdx.utils.viewport.FitViewport
 import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.core.GameConfig
 import com.tacticsflame.model.battle.BattleResult
@@ -41,6 +43,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private val glyphLayout = GlyphLayout()
     private val camera = OrthographicCamera()
     private lateinit var viewport: ExtendViewport
+    private val uiViewport = FitViewport(GameConfig.VIRTUAL_WIDTH, GameConfig.VIRTUAL_HEIGHT)
+    private val tmpUiVec = Vector2()
 
     // ゲームシステム
     private val turnManager = TurnManager()
@@ -121,9 +125,9 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     /** 撤退確認ダイアログ表示フラグ */
     private var showRetreatConfirm: Boolean = false
 
-    // 撤退ボタンの画面座標（スクリーン座標系、renderRetreatButton で更新）
-    private var retreatButtonScreenX: Float = 0f
-    private var retreatButtonScreenY: Float = 0f
+    // 撤退ボタンのUI座標（uiViewport座標系、renderRetreatButton で更新）
+    private var retreatButtonUiX: Float = 0f
+    private var retreatButtonUiY: Float = 0f
     private var retreatButtonWidth: Float = 0f
     private var retreatButtonHeight: Float = 0f
 
@@ -139,6 +143,20 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
     /** ピンチズーム用: 前フレームの2点間距離（px） */
     private var previousPinchDistance: Float = 0f
+
+    /** カメラドラッグ判定用: タッチ追跡中フラグ */
+    private var isTouchTracking: Boolean = false
+
+    /** カメラドラッグ判定用: ドラッグ開始座標（スクリーン座標） */
+    private var touchStartScreenX: Float = 0f
+    private var touchStartScreenY: Float = 0f
+
+    /** カメラドラッグ中フラグ */
+    private var isCameraDragging: Boolean = false
+
+    /** カメラパン用: 前フレームのワールド座標 */
+    private var lastPanWorldX: Float = 0f
+    private var lastPanWorldY: Float = 0f
 
     /**
      * 画面表示時の初期化処理
@@ -158,6 +176,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         // マップサイズに基づいてビューポートを設定（マップが画面いっぱいに表示される）
         initViewport()
+        uiViewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
 
         // 初期表示をやや拡大
         camera.zoom = DEFAULT_CAMERA_ZOOM
@@ -232,14 +251,20 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         Gdx.gl.glClearColor(0.2f, 0.3f, 0.2f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
+        // マップ描画（ズーム・パン対象）
         viewport.apply()
-        centerCameraOnMap()
         shapeRenderer.projectionMatrix = camera.combined
+        batch.projectionMatrix = camera.combined
 
-        // マップ・ユニット描画
+        // マップ・ユニット描画（ワールド座標）
         renderMap()
         renderUnits()
         renderUnitNames()
+
+        // UI描画（ズーム非依存）
+        uiViewport.apply()
+        shapeRenderer.projectionMatrix = uiViewport.camera.combined
+        batch.projectionMatrix = uiViewport.camera.combined
 
         // 上部UIエリア背景（戦闘エリアを下半分に寄せて見せる）
         renderTopUiBackground()
@@ -285,19 +310,72 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * RESULT状態以外の全状態で受け付ける。
      */
     private fun handleTouchInput() {
-        if (!Gdx.input.justTouched()) return
-
-        val screenX = Gdx.input.x.toFloat()
-        val screenY = Gdx.input.y.toFloat()
-
         // 撤退確認ダイアログが表示中の場合、ダイアログのボタンのみ受け付ける
         if (showRetreatConfirm) {
-            handleRetreatConfirmInput(screenX, screenY)
+            if (!Gdx.input.justTouched()) return
+            val uiCoords = uiViewport.unproject(tmpUiVec.set(Gdx.input.x.toFloat(), Gdx.input.y.toFloat()))
+            handleRetreatConfirmInput(uiCoords.x, uiCoords.y)
             return
         }
 
-        // 撤退ボタンのタッチ判定（スクリーン座標で判定）
-        if (isRetreatButtonTouched(screenX, screenY)) {
+        val isFirstTouched = Gdx.input.isTouched(0)
+        val isSecondTouched = Gdx.input.isTouched(1)
+
+        if (isFirstTouched) {
+            val screenX = Gdx.input.getX(0).toFloat()
+            val screenY = Gdx.input.getY(0).toFloat()
+
+            if (!isTouchTracking) {
+                isTouchTracking = true
+                isCameraDragging = false
+                touchStartScreenX = screenX
+                touchStartScreenY = screenY
+                val world = viewport.unproject(Vector3(screenX, screenY, 0f))
+                lastPanWorldX = world.x
+                lastPanWorldY = world.y
+                return
+            }
+
+            if (isSecondTouched) {
+                isCameraDragging = true
+                return
+            }
+
+            val dragDx = screenX - touchStartScreenX
+            val dragDy = screenY - touchStartScreenY
+            val dragDistanceSq = dragDx * dragDx + dragDy * dragDy
+            if (!isCameraDragging && dragDistanceSq >= CAMERA_PAN_START_DISTANCE_PX * CAMERA_PAN_START_DISTANCE_PX) {
+                isCameraDragging = true
+            }
+
+            if (isCameraDragging) {
+                val world = viewport.unproject(Vector3(screenX, screenY, 0f))
+                camera.position.add(lastPanWorldX - world.x, lastPanWorldY - world.y, 0f)
+                clampCameraToMap()
+                camera.update()
+                lastPanWorldX = world.x
+                lastPanWorldY = world.y
+            }
+            return
+        }
+
+        // タッチ終了時に、ドラッグしていなければタップ処理を実行
+        if (!isTouchTracking) return
+        if (!isCameraDragging) {
+            handleTap(touchStartScreenX, touchStartScreenY)
+        }
+        isTouchTracking = false
+        isCameraDragging = false
+    }
+
+    /**
+     * タップ入力（ドラッグではないタッチ）を処理する
+     */
+    private fun handleTap(screenX: Float, screenY: Float) {
+        val uiCoords = uiViewport.unproject(tmpUiVec.set(screenX, screenY))
+
+        // 撤退ボタンのタッチ判定（UI座標で判定）
+        if (isRetreatButtonTouched(uiCoords.x, uiCoords.y)) {
             showRetreatConfirm = true
             Gdx.app.log(TAG, "撤退ボタン押下 → 確認ダイアログ表示")
             return
@@ -334,27 +412,23 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * @param screenY タッチY座標（スクリーン座標）
      * @return ボタン内をタッチした場合 true
      */
-    private fun isRetreatButtonTouched(screenX: Float, screenY: Float): Boolean {
-        return screenX >= retreatButtonScreenX &&
-            screenX <= retreatButtonScreenX + retreatButtonWidth &&
-            screenY >= retreatButtonScreenY &&
-            screenY <= retreatButtonScreenY + retreatButtonHeight
+    private fun isRetreatButtonTouched(uiX: Float, uiY: Float): Boolean {
+        return uiX >= retreatButtonUiX &&
+            uiX <= retreatButtonUiX + retreatButtonWidth &&
+            uiY >= retreatButtonUiY &&
+            uiY <= retreatButtonUiY + retreatButtonHeight
     }
 
     /**
      * 撤退確認ダイアログのタッチ入力を処理する
      *
-     * @param screenX タッチX座標（スクリーン座標）
-     * @param screenY タッチY座標（スクリーン座標）
+     * @param uiX タッチX座標（UI座標）
+     * @param uiY タッチY座標（UI座標）
      */
-    private fun handleRetreatConfirmInput(screenX: Float, screenY: Float) {
-        val worldCoords = viewport.unproject(Vector3(screenX, screenY, 0f))
-        val wx = worldCoords.x
-        val wy = worldCoords.y
-
+    private fun handleRetreatConfirmInput(uiX: Float, uiY: Float) {
         // 「はい」ボタン判定
-        if (wx >= confirmYesX && wx <= confirmYesX + confirmYesW &&
-            wy >= confirmYesY && wy <= confirmYesY + confirmYesH) {
+        if (uiX >= confirmYesX && uiX <= confirmYesX + confirmYesW &&
+            uiY >= confirmYesY && uiY <= confirmYesY + confirmYesH) {
             Gdx.app.log(TAG, "撤退を実行")
             showRetreatConfirm = false
             executeRetreat()
@@ -362,8 +436,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         }
 
         // 「いいえ」ボタン判定
-        if (wx >= confirmNoX && wx <= confirmNoX + confirmNoW &&
-            wy >= confirmNoY && wy <= confirmNoY + confirmNoH) {
+        if (uiX >= confirmNoX && uiX <= confirmNoX + confirmNoW &&
+            uiY >= confirmNoY && uiY <= confirmNoY + confirmNoH) {
             Gdx.app.log(TAG, "撤退をキャンセル")
             showRetreatConfirm = false
             return
@@ -828,6 +902,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         // 現在のウィンドウサイズで更新
         viewport.update(Gdx.graphics.width, Gdx.graphics.height)
         centerCameraOnMap()
+        clampCameraToMap()
     }
 
     /**
@@ -845,17 +920,47 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     }
 
     /**
+     * カメラ位置をマップ範囲内に制限する
+     */
+    private fun clampCameraToMap() {
+        val mapWidth = battleMap.width * GameConfig.TILE_SIZE
+        val mapHeight = battleMap.height * GameConfig.TILE_SIZE
+        val mapCenterY = mapHeight / 2f
+        val loweredY = mapCenterY + viewHalfHeight() * BATTLE_AREA_SHIFT_RATIO
+
+        val halfW = viewHalfWidth()
+        val halfH = viewHalfHeight()
+
+        val minX = halfW
+        val maxX = mapWidth - halfW
+        val minY = halfH
+        val maxY = mapHeight - halfH
+
+        camera.position.x = if (minX <= maxX) {
+            camera.position.x.coerceIn(minX, maxX)
+        } else {
+            mapWidth / 2f
+        }
+
+        camera.position.y = if (minY <= maxY) {
+            camera.position.y.coerceIn(minY, maxY)
+        } else {
+            loweredY
+        }
+    }
+
+    /**
      * 上部UIエリアの背景を描画する
      */
     private fun renderTopUiBackground() {
-        val viewLeft = camera.position.x - viewHalfWidth()
-        val viewTop = camera.position.y + viewHalfHeight()
-        val uiHeight = viewHalfHeight() * TOP_UI_RATIO
+        val uiWidth = uiViewport.worldWidth
+        val uiHeight = uiViewport.worldHeight * 0.5f * TOP_UI_RATIO
+        val uiTop = uiViewport.worldHeight
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(0f, 0f, 0f, 0.40f)
-        shapeRenderer.rect(viewLeft, viewTop - uiHeight, viewHalfWidth() * 2f, uiHeight)
+        shapeRenderer.rect(0f, uiTop - uiHeight, uiWidth, uiHeight)
         shapeRenderer.end()
         Gdx.gl.glDisable(GL20.GL_BLEND)
     }
@@ -1125,10 +1230,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun renderActionQueue() {
         if (actionQueue.isEmpty()) return
 
-        val viewLeft = camera.position.x - viewHalfWidth()
-        val viewTop = camera.position.y + viewHalfHeight()
-        val panelX = viewLeft + 16f
-        val panelY = viewTop - 60f
+        val panelX = 16f
+        val panelTop = uiViewport.worldHeight - 16f
         val entryHeight = 36f
         val panelWidth = 200f
         val panelHeight = entryHeight * actionQueue.size + 20f
@@ -1137,15 +1240,15 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         Gdx.gl.glEnable(GL20.GL_BLEND)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(0f, 0f, 0f, 0.6f)
-        shapeRenderer.rect(panelX, panelY - panelHeight, panelWidth, panelHeight)
+        shapeRenderer.rect(panelX, panelTop - panelHeight, panelWidth, panelHeight)
         shapeRenderer.end()
         Gdx.gl.glDisable(GL20.GL_BLEND)
 
         // 各エントリーの描画
-        batch.projectionMatrix = camera.combined
+        batch.projectionMatrix = uiViewport.camera.combined
         batch.begin()
 
-        var y = panelY - 10f
+        var y = panelTop - 10f
         font.color = Color.GOLD
         font.draw(batch, "ACTION", panelX + 8f, y)
         y -= entryHeight
@@ -1168,14 +1271,14 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * ターン情報を画面上部中央に描画する
      */
     private fun renderTurnInfo() {
-        batch.projectionMatrix = camera.combined
+        batch.projectionMatrix = uiViewport.camera.combined
         batch.begin()
 
         val activeUnit = turnManager.activeUnit
         val roundText = "Round ${turnManager.roundNumber}"
 
-        val viewCenterX = camera.position.x
-        val viewTop = camera.position.y + viewHalfHeight()
+        val viewCenterX = uiViewport.worldWidth / 2f
+        val viewTop = uiViewport.worldHeight
 
         font.color = Color.WHITE
         font.draw(batch, roundText, viewCenterX - 80f, viewTop - 16f)
@@ -1225,7 +1328,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         Gdx.gl.glDisable(GL20.GL_BLEND)
 
         // 回復量テキスト描画
-        batch.projectionMatrix = camera.combined
+        batch.projectionMatrix = uiViewport.camera.combined
         batch.begin()
         font.color = Color(0.3f, 1f, 0.3f, 1f)
         font.draw(batch, healText, cx - textWidth / 2f, bgY + bgH - bgPadding)
@@ -1241,18 +1344,18 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * @param unit 表示対象のユニット
      */
     private fun renderStatusPanel(unit: GameUnit) {
-        val viewLeft = camera.position.x - viewHalfWidth()
-        val viewTop = camera.position.y + viewHalfHeight()
-        val areaWidth = viewHalfWidth() * 2f
-        val areaHeight = viewHalfHeight() * TOP_UI_RATIO
+        val areaLeft = 0f
+        val areaTop = uiViewport.worldHeight
+        val areaWidth = uiViewport.worldWidth
+        val areaHeight = uiViewport.worldHeight * 0.5f * TOP_UI_RATIO
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
         UnitStatusPanelRenderer.render(
             shapeRenderer = shapeRenderer,
             batch = batch,
             unit = unit,
-            areaLeft = viewLeft,
-            areaTop = viewTop,
+            areaLeft = areaLeft,
+            areaTop = areaTop,
             areaWidth = areaWidth,
             areaHeight = areaHeight,
             slot = UnitStatusPanelRenderer.Slot.RIGHT,
@@ -1270,18 +1373,18 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * @param unit 調査対象のユニット
      */
     private fun renderInspectionPanel(unit: GameUnit) {
-        val viewLeft = camera.position.x - viewHalfWidth()
-        val viewTop = camera.position.y + viewHalfHeight()
-        val areaWidth = viewHalfWidth() * 2f
-        val areaHeight = viewHalfHeight() * TOP_UI_RATIO
+        val areaLeft = 0f
+        val areaTop = uiViewport.worldHeight
+        val areaWidth = uiViewport.worldWidth
+        val areaHeight = uiViewport.worldHeight * 0.5f * TOP_UI_RATIO
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
         UnitStatusPanelRenderer.render(
             shapeRenderer = shapeRenderer,
             batch = batch,
             unit = unit,
-            areaLeft = viewLeft,
-            areaTop = viewTop,
+            areaLeft = areaLeft,
+            areaTop = areaTop,
             areaWidth = areaWidth,
             areaHeight = areaHeight,
             slot = UnitStatusPanelRenderer.Slot.LEFT,
@@ -1386,22 +1489,20 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun renderRetreatButton() {
         val btnWidth = 160f
         val btnHeight = 56f
-        val viewRight = camera.position.x + viewHalfWidth()
-        val viewBottom = camera.position.y - viewHalfHeight()
+        val viewRight = uiViewport.worldWidth
+        val viewBottom = 0f
         val btnX = viewRight - btnWidth - 20f
         val btnY = viewBottom + 20f
 
-        // スクリーン座標に変換して保存（タッチ判定用）
-        val screenBottomRight = viewport.project(Vector3(btnX, btnY, 0f))
-        val screenTopLeft = viewport.project(Vector3(btnX + btnWidth, btnY + btnHeight, 0f))
-        retreatButtonScreenX = screenBottomRight.x
-        retreatButtonScreenY = screenTopLeft.y  // LibGDXのproject後はY上向き→スクリーン座標に変換
-        retreatButtonWidth = screenTopLeft.x - screenBottomRight.x
-        retreatButtonHeight = screenBottomRight.y - screenTopLeft.y
+        // UI座標で保存（タッチ判定用）
+        retreatButtonUiX = btnX
+        retreatButtonUiY = btnY
+        retreatButtonWidth = btnWidth
+        retreatButtonHeight = btnHeight
 
         // ボタン背景
         Gdx.gl.glEnable(GL20.GL_BLEND)
-        shapeRenderer.projectionMatrix = camera.combined
+        shapeRenderer.projectionMatrix = uiViewport.camera.combined
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(0.6f, 0.15f, 0.15f, 0.85f)
         shapeRenderer.rect(btnX, btnY, btnWidth, btnHeight)
@@ -1415,7 +1516,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         Gdx.gl.glDisable(GL20.GL_BLEND)
 
         // ボタンテキスト
-        batch.projectionMatrix = camera.combined
+        batch.projectionMatrix = uiViewport.camera.combined
         batch.begin()
         font.color = Color.WHITE
         glyphLayout.setText(font, "撤退")
@@ -1436,22 +1537,17 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun renderRetreatConfirmDialog() {
         val dialogWidth = 400f
         val dialogHeight = 200f
-        val centerX = camera.position.x
-        val centerY = camera.position.y
+        val centerX = uiViewport.worldWidth / 2f
+        val centerY = uiViewport.worldHeight / 2f
         val dialogX = centerX - dialogWidth / 2f
         val dialogY = centerY - dialogHeight / 2f
 
         // 画面全体を暗くするオーバーレイ
         Gdx.gl.glEnable(GL20.GL_BLEND)
-        shapeRenderer.projectionMatrix = camera.combined
+        shapeRenderer.projectionMatrix = uiViewport.camera.combined
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(0f, 0f, 0f, 0.5f)
-        shapeRenderer.rect(
-            camera.position.x - viewHalfWidth(),
-            camera.position.y - viewHalfHeight(),
-            viewHalfWidth() * 2f,
-            viewHalfHeight() * 2f
-        )
+        shapeRenderer.rect(0f, 0f, uiViewport.worldWidth, uiViewport.worldHeight)
 
         // ダイアログ背景
         shapeRenderer.setColor(0.12f, 0.12f, 0.18f, 0.95f)
@@ -1503,7 +1599,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         Gdx.gl.glDisable(GL20.GL_BLEND)
 
         // テキスト描画
-        batch.projectionMatrix = camera.combined
+        batch.projectionMatrix = uiViewport.camera.combined
         batch.begin()
 
         // メッセージ
@@ -1542,7 +1638,9 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     override fun resize(width: Int, height: Int) {
         if (::viewport.isInitialized) {
             viewport.update(width, height)
-            centerCameraOnMap()
+            uiViewport.update(width, height, true)
+            clampCameraToMap()
+            camera.update()
         }
     }
 
@@ -1564,7 +1662,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         if (previousPinchDistance > 0f && currentDistance > 0f) {
             val zoomFactor = previousPinchDistance / currentDistance
             camera.zoom = (camera.zoom * zoomFactor).coerceIn(MIN_CAMERA_ZOOM, MAX_CAMERA_ZOOM)
-            centerCameraOnMap()
+            clampCameraToMap()
+            camera.update()
         }
         previousPinchDistance = currentDistance
     }
@@ -1604,5 +1703,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         /** カメラ最大ズーム（これ以上は縮小しない） */
         private const val MAX_CAMERA_ZOOM = 1.8f
+
+        /** カメラパン開始とみなす最小移動量（px） */
+        private const val CAMERA_PAN_START_DISTANCE_PX = 16f
     }
 }
