@@ -24,8 +24,8 @@ object SaveManager {
     /** 一時セーブファイル名（アトミックセーブ用） */
     private const val SAVE_FILE_NAME_TMP = "save_data.json.tmp"
 
-    /** セーブデータバージョン（v2: Stats Float化、GrowthRate 固定値加算化） */
-    private const val SAVE_VERSION = 2
+    /** セーブデータバージョン（v3: Weapon.healPower の保存/復元対応） */
+    private const val SAVE_VERSION = 3
 
     /** ロード処理中のセーブデータバージョン（readGrowthRate 等でマイグレーション判定に使用） */
     private var loadingVersion = SAVE_VERSION
@@ -283,6 +283,7 @@ object SaveManager {
         writer.set("weight", weapon.weight)
         writer.set("minRange", weapon.minRange)
         writer.set("maxRange", weapon.maxRange)
+        writer.set("healPower", weapon.healPower)
     }
 
     /**
@@ -531,6 +532,16 @@ object SaveManager {
             Gdx.app.error(TAG, "不明な武器タイプ: $typeName、SWORD で代替")
             WeaponType.SWORD
         }
+
+        // v3未満のセーブは healPower 未保存のため、STAFFは互換値を補完する
+        val healPower = if (node.has("healPower")) {
+            node.getInt("healPower", 0)
+        } else if (loadingVersion < 3 && weaponType == WeaponType.STAFF) {
+            10
+        } else {
+            0
+        }
+
         return Weapon(
             id = node.getString("id", "unknown"),
             name = node.getString("name", "???"),
@@ -540,7 +551,8 @@ object SaveManager {
             critical = node.getInt("critical", 0),
             weight = node.getInt("weight", 0),
             minRange = node.getInt("minRange", 1),
-            maxRange = node.getInt("maxRange", 1)
+            maxRange = node.getInt("maxRange", 1),
+            healPower = healPower
         )
     }
 

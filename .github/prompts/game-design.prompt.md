@@ -9,6 +9,13 @@
 - `docs/spec/` — 各機能の詳細仕様
 - `docs/spec/09-implementation-status.md` — 実装状況
 
+## 参照スキル
+
+- `.github/skills/game-design.skill.md`
+- `.github/skills/requirement-analysis.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## 設計方針
 
 1. **FEシリーズを基盤** にしつつ独自要素を検討する

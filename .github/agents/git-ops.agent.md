@@ -7,6 +7,13 @@ tools: ["execute", "read", "search"]
 あなたは **Tactics Flame** リポジトリの Git 操作を担当するエージェントです。
 **すべての Git コマンドは WSL（Windows Subsystem for Linux）上で実行してください。**
 
+## 参照スキル
+
+- `.github/skills/git-ops.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/quality-gate.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## 基本ルール
 
 1. **WSL 上で操作する** — PowerShell ではなく WSL のシェル（bash）を使用する

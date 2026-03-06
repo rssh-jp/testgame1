@@ -14,6 +14,14 @@ tools: ["read", "edit", "search"]
 - `docs/spec/07-ai-system.md` — AIパターンの種類
 - `core/src/main/assets/data/chapter1.json` — 既存マップの参考
 
+## 参照スキル
+
+- `.github/skills/map-creator.skill.md`
+- `.github/skills/requirement-analysis.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/quality-gate.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## マップ設計ルール
 
 1. **グリッドサイズ**: `width` × `height`（推奨: 10×10 〜 20×15）

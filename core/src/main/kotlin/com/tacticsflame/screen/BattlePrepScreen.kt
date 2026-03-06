@@ -20,6 +20,7 @@ import com.tacticsflame.model.campaign.ChapterInfo
 import com.tacticsflame.model.map.*
 import com.tacticsflame.model.unit.*
 import com.tacticsflame.system.VictoryChecker
+import com.tacticsflame.ui.UnitStatusPanelRenderer
 import com.tacticsflame.util.FontManager
 
 /**
@@ -92,6 +93,12 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
     companion object {
         private const val TAG = "BattlePrepScreen"
+
+        /** 上部UI領域の割合 */
+        private const val TOP_UI_RATIO = 0.50f
+
+        /** 戦闘準備マップを下半分に寄せる割合 */
+        private const val BATTLE_PREP_SHIFT_RATIO = 0.50f
     }
 
     /**
@@ -196,9 +203,11 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         // マップ描画（マップビューポートを使用）
         mapViewport.apply()
+        val mapCenterY = previewMap.height * GameConfig.TILE_SIZE / 2f
+        val loweredY = mapCenterY + mapViewport.worldHeight * BATTLE_PREP_SHIFT_RATIO / 2f
         mapCamera.position.set(
             previewMap.width * GameConfig.TILE_SIZE / 2f,
-            previewMap.height * GameConfig.TILE_SIZE / 2f,
+            loweredY,
             0f
         )
         mapCamera.update()
@@ -214,10 +223,50 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         shapeRenderer.projectionMatrix = uiViewport.camera.combined
         batch.projectionMatrix = uiViewport.camera.combined
 
+        renderTopUiBackground()
         renderHeader()
+        renderSelectedUnitStatusPanel()
         renderDeploymentInfo()
         renderStartButton()
         renderBackButton()
+    }
+
+    /**
+     * 上部UIエリア背景を描画する
+     */
+    private fun renderTopUiBackground() {
+        val uiHeight = GameConfig.VIRTUAL_HEIGHT * TOP_UI_RATIO
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0f, 0f, 0f, 0.40f)
+        shapeRenderer.rect(0f, GameConfig.VIRTUAL_HEIGHT - uiHeight, GameConfig.VIRTUAL_WIDTH, uiHeight)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+    }
+
+    /**
+     * 共通コンポーネントでユニットの基本ステータスを描画する
+     */
+    private fun renderSelectedUnitStatusPanel() {
+        val unit = selectedSpawnIndex?.let { deploymentMap[it] } ?: deploymentMap.values.firstOrNull() ?: return
+        val areaLeft = 0f
+        val areaTop = GameConfig.VIRTUAL_HEIGHT
+        val areaWidth = GameConfig.VIRTUAL_WIDTH
+        val areaHeight = GameConfig.VIRTUAL_HEIGHT * TOP_UI_RATIO
+
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        UnitStatusPanelRenderer.render(
+            shapeRenderer = shapeRenderer,
+            batch = batch,
+            unit = unit,
+            areaLeft = areaLeft,
+            areaTop = areaTop,
+            areaWidth = areaWidth,
+            areaHeight = areaHeight,
+            slot = UnitStatusPanelRenderer.Slot.RIGHT,
+            title = "STATUS"
+        )
+        Gdx.gl.glDisable(GL20.GL_BLEND)
     }
 
     // ==================== 入力処理 ====================
@@ -520,10 +569,10 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      */
     private fun renderDeploymentInfo() {
         val deployedCount = deploymentMap.size
-        val panelW = 360f
-        val panelH = 340f + spawnPositions.size * 28f
-        val panelX = GameConfig.VIRTUAL_WIDTH - panelW - 30f
-        val panelY = GameConfig.VIRTUAL_HEIGHT - panelH - 80f
+        val panelW = (GameConfig.VIRTUAL_WIDTH - 16f * 2f - 20f) / 2f
+        val panelH = GameConfig.VIRTUAL_HEIGHT * TOP_UI_RATIO - 120f
+        val panelX = 16f
+        val panelY = GameConfig.VIRTUAL_HEIGHT - panelH - 16f
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)

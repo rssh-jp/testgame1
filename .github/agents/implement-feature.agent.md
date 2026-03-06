@@ -14,6 +14,14 @@ tools: ["read", "edit", "search", "execute", "todo"]
 - `docs/spec/` 配下の該当仕様書（戦闘なら `05-battle-system.md` など）
 - `docs/technical-design.md` — アーキテクチャ方針
 
+## 参照スキル
+
+- `.github/skills/feature-implementation.skill.md`
+- `.github/skills/requirement-analysis.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/quality-gate.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## 実装ルール
 
 1. **Model / System / Screen / Render の分離** を厳守する

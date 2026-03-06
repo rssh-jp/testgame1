@@ -14,6 +14,14 @@ tools: ["read", "edit", "search"]
 - `docs/spec/04-weapon-item.md` — 武器パラメータ・三すくみ
 - `core/src/main/assets/data/units.json` — テストユニットデータ
 
+## 参照スキル
+
+- `.github/skills/battle-tuning.skill.md`
+- `.github/skills/requirement-analysis.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/quality-gate.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## 調整対象パラメータ
 
 | カテゴリ | 対象 | ファイル |

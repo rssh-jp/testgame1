@@ -22,6 +22,7 @@ import com.tacticsflame.model.map.*
 import com.tacticsflame.model.unit.*
 import com.tacticsflame.render.UnitShapeRenderer
 import com.tacticsflame.system.*
+import com.tacticsflame.ui.UnitStatusPanelRenderer
 import com.tacticsflame.util.FontManager
 
 /**
@@ -136,6 +137,9 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private var confirmNoW: Float = 0f
     private var confirmNoH: Float = 0f
 
+    /** ピンチズーム用: 前フレームの2点間距離（px） */
+    private var previousPinchDistance: Float = 0f
+
     /**
      * 画面表示時の初期化処理
      */
@@ -154,6 +158,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         // マップサイズに基づいてビューポートを設定（マップが画面いっぱいに表示される）
         initViewport()
+
+        // 初期表示をやや拡大
+        camera.zoom = DEFAULT_CAMERA_ZOOM
+        centerCameraOnMap()
 
         // CT初期化
         val allUnits = battleMap.getAllUnits().map { it.second }
@@ -199,6 +207,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * フレーム描画処理
      */
     override fun render(delta: Float) {
+        updateCameraZoomByPinch()
+
         // タッチ入力処理（RESULT以外の全状態で受付）
         if (battleState != BattleState.RESULT) {
             handleTouchInput()
@@ -231,20 +241,20 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         renderUnits()
         renderUnitNames()
 
+        // 上部UIエリア背景（戦闘エリアを下半分に寄せて見せる）
+        renderTopUiBackground()
+
         // アクティブユニットのステータスパネル（右上）
         val activeUnit = turnManager.activeUnit
         if (activeUnit != null) {
             renderStatusPanel(activeUnit)
         }
 
-        // タップしたユニットの調査パネル（左下）
+        // タップしたユニットの調査パネル（左上）
         val inspected = inspectedUnit
         if (inspected != null && !inspected.isDefeated) {
             renderInspectionPanel(inspected)
         }
-
-        // 行動順キュー描画
-        renderActionQueue()
 
         // ターン情報描画
         renderTurnInfo()
@@ -406,16 +416,15 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             return
         }
 
-        // AIパターン決定: PLAYERは作戦に基づく、同盟はDEFENSIVE、敵はAGGRESSIVE
+        // AIパターン決定
         val pattern = when (activeUnit.faction) {
-            Faction.PLAYER -> when (activeUnit.tactic) {
+            Faction.PLAYER, Faction.ALLY -> when (activeUnit.tactic) {
                 UnitTactic.CHARGE -> AISystem.AIPattern.AGGRESSIVE
                 UnitTactic.CAUTIOUS -> AISystem.AIPattern.CAUTIOUS
                 UnitTactic.SUPPORT -> AISystem.AIPattern.SUPPORT
                 UnitTactic.HEAL -> AISystem.AIPattern.HEAL
                 UnitTactic.FLEE -> AISystem.AIPattern.FLEE
             }
-            Faction.ALLY -> AISystem.AIPattern.DEFENSIVE
             Faction.ENEMY -> {
                 // 敵ヒーラー（回復杖装備）は自動で回復AI
                 if (activeUnit.equippedHealingStaff() != null) {
@@ -425,6 +434,11 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                 }
             }
         }
+
+        Gdx.app.log(
+            TAG,
+            "AI思考: ${activeUnit.name} faction=${activeUnit.faction} tactic=${activeUnit.tactic} pattern=$pattern"
+        )
 
         // 行動決定
         val action = aiSystem.decideAction(activeUnit, battleMap, pattern)
@@ -820,12 +834,30 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * カメラをマップ中央に配置する
      */
     private fun centerCameraOnMap() {
+        val mapCenterY = battleMap.height * GameConfig.TILE_SIZE / 2f
+        val loweredY = mapCenterY + viewHalfHeight() * BATTLE_AREA_SHIFT_RATIO
         camera.position.set(
             battleMap.width * GameConfig.TILE_SIZE / 2f,
-            battleMap.height * GameConfig.TILE_SIZE / 2f,
+            loweredY,
             0f
         )
         camera.update()
+    }
+
+    /**
+     * 上部UIエリアの背景を描画する
+     */
+    private fun renderTopUiBackground() {
+        val viewLeft = camera.position.x - viewHalfWidth()
+        val viewTop = camera.position.y + viewHalfHeight()
+        val uiHeight = viewHalfHeight() * TOP_UI_RATIO
+
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0f, 0f, 0f, 0.40f)
+        shapeRenderer.rect(viewLeft, viewTop - uiHeight, viewHalfWidth() * 2f, uiHeight)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
     }
 
     // ==================== 描画メソッド ====================
@@ -1093,8 +1125,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun renderActionQueue() {
         if (actionQueue.isEmpty()) return
 
-        val viewLeft = camera.position.x - viewport.worldWidth / 2f
-        val viewTop = camera.position.y + viewport.worldHeight / 2f
+        val viewLeft = camera.position.x - viewHalfWidth()
+        val viewTop = camera.position.y + viewHalfHeight()
         val panelX = viewLeft + 16f
         val panelY = viewTop - 60f
         val entryHeight = 36f
@@ -1143,7 +1175,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val roundText = "Round ${turnManager.roundNumber}"
 
         val viewCenterX = camera.position.x
-        val viewTop = camera.position.y + viewport.worldHeight / 2f
+        val viewTop = camera.position.y + viewHalfHeight()
 
         font.color = Color.WHITE
         font.draw(batch, roundText, viewCenterX - 80f, viewTop - 16f)
@@ -1209,162 +1241,24 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * @param unit 表示対象のユニット
      */
     private fun renderStatusPanel(unit: GameUnit) {
-        val panelWidth = 380f
-        val panelHeight = 560f
-        val viewRight = camera.position.x + viewport.worldWidth / 2f
-        val viewTop = camera.position.y + viewport.worldHeight / 2f
-        val panelX = viewRight - panelWidth - 16f
-        val panelY = viewTop - panelHeight - 16f
-
-        // 半透明背景
-        Gdx.gl.glEnable(GL20.GL_BLEND)
-        shapeRenderer.projectionMatrix = camera.combined
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(0f, 0f, 0f, 0.75f)
-        shapeRenderer.rect(panelX, panelY, panelWidth, panelHeight)
-        shapeRenderer.end()
-
-        // 枠線
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        val borderColor = when (unit.faction) {
-            Faction.PLAYER -> Color(0.3f, 0.5f, 1f, 1f)
-            Faction.ENEMY -> Color(1f, 0.3f, 0.3f, 1f)
-            Faction.ALLY -> Color(0.3f, 1f, 0.5f, 1f)
-        }
-        shapeRenderer.color = borderColor
-        shapeRenderer.rect(panelX, panelY, panelWidth, panelHeight)
-        shapeRenderer.end()
-        Gdx.gl.glDisable(GL20.GL_BLEND)
-
-        // テキスト描画
-        batch.projectionMatrix = camera.combined
-        batch.begin()
-
-        var textY = panelY + panelHeight - 20f
-        val textX = panelX + 16f
-        val lineHeight = 32f
-
-        // ユニット名と兵種
-        font.color = borderColor
-        font.draw(batch, unit.name, textX, textY)
-        textY -= lineHeight
-
-        font.color = Color.LIGHT_GRAY
-        font.draw(batch, "Lv.${unit.level}  ${unit.unitClass.name}", textX, textY)
-        textY -= lineHeight
-
-        // 経験値テキスト（プレイヤーユニットのみ表示）
-        if (unit.faction == Faction.PLAYER) {
-            font.color = Color(0.8f, 0.7f, 0.3f, 1f)
-            font.draw(batch, "EXP  ${unit.exp} / ${GameConfig.EXP_TO_LEVEL_UP}", textX, textY)
-            textY -= lineHeight
-        }
-
-        // HPテキスト
-        textY -= 12f
-        font.color = Color.WHITE
-        font.draw(batch, "HP  ${unit.currentHp} / ${unit.maxHp}", textX, textY)
-        batch.end()
-
-        // HPバー描画（テキストの下に十分な間隔を空ける）
-        val barX = textX
-        val barWidth = panelWidth - 32f
-        val barHeight = 12f
-        textY -= (lineHeight + 8f)  // テキスト分の行送り + 追加余白
-        val hpBarY = textY
-        val hpRatio = unit.currentHp.toFloat() / unit.maxHp.toFloat()
+        val viewLeft = camera.position.x - viewHalfWidth()
+        val viewTop = camera.position.y + viewHalfHeight()
+        val areaWidth = viewHalfWidth() * 2f
+        val areaHeight = viewHalfHeight() * TOP_UI_RATIO
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f)
-        shapeRenderer.rect(barX, hpBarY, barWidth, barHeight)
-        val hpColor = when {
-            hpRatio > 0.5f -> Color(0.2f, 0.9f, 0.2f, 1f)
-            hpRatio > 0.25f -> Color(0.9f, 0.9f, 0.1f, 1f)
-            else -> Color(0.9f, 0.2f, 0.2f, 1f)
-        }
-        shapeRenderer.color = hpColor
-        shapeRenderer.rect(barX, hpBarY, barWidth * hpRatio, barHeight)
-        shapeRenderer.end()
-
-        // CTテキスト
-        textY -= (barHeight + 16f)  // バー高さ + 余白
-        batch.begin()
-        font.color = Color.WHITE
-        font.draw(batch, "CT  ${unit.ct} / ${GameConfig.CT_THRESHOLD}", textX, textY)
-        batch.end()
-
-        // CTバー描画（テキストの下に十分な間隔を空ける）
-        textY -= (lineHeight + 8f)  // テキスト分の行送り + 追加余白
-        val ctBarY = textY
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f)
-        shapeRenderer.rect(barX, ctBarY, barWidth, barHeight)
-        val ctRatio = (unit.ct.toFloat() / GameConfig.CT_THRESHOLD).coerceIn(0f, 1f)
-        when {
-            ctRatio >= 0.8f -> shapeRenderer.setColor(1f, 0.9f, 0.2f, 1f)
-            ctRatio >= 0.5f -> shapeRenderer.setColor(0.3f, 0.8f, 1f, 1f)
-            else -> shapeRenderer.setColor(0.4f, 0.4f, 0.4f, 1f)
-        }
-        shapeRenderer.rect(barX, ctBarY, barWidth * ctRatio, barHeight)
-        shapeRenderer.end()
+        UnitStatusPanelRenderer.render(
+            shapeRenderer = shapeRenderer,
+            batch = batch,
+            unit = unit,
+            areaLeft = viewLeft,
+            areaTop = viewTop,
+            areaWidth = areaWidth,
+            areaHeight = areaHeight,
+            slot = UnitStatusPanelRenderer.Slot.RIGHT,
+            title = null
+        )
         Gdx.gl.glDisable(GL20.GL_BLEND)
-
-        // ステータス値
-        textY -= (barHeight + 16f)  // バー高さ + 余白
-        batch.begin()
-        font.color = Color.WHITE
-
-        val stats = unit.stats
-        val weapon = unit.equippedWeapon()
-
-        // 2列表示
-        val col1X = textX
-        val col2X = textX + 180f
-
-        font.draw(batch, "STR  ${stats.effectiveStr}", col1X, textY)
-        font.draw(batch, "MAG  ${stats.effectiveMag}", col2X, textY)
-        textY -= lineHeight
-
-        font.draw(batch, "SKL  ${stats.effectiveSkl}", col1X, textY)
-        font.draw(batch, "SPD  ${stats.effectiveSpd}(${unit.effectiveSpeed()})", col2X, textY)
-        textY -= lineHeight
-
-        font.draw(batch, "LCK  ${stats.effectiveLck}", col1X, textY)
-        font.draw(batch, "DEF  ${stats.effectiveDef}", col2X, textY)
-        textY -= lineHeight
-
-        font.draw(batch, "RES  ${stats.effectiveRes}", col1X, textY)
-        font.draw(batch, "MOV  ${unit.mov}", col2X, textY)
-        textY -= lineHeight + 8f
-
-        // 装備武器情報
-        if (weapon != null) {
-            font.color = Color.GOLD
-            font.draw(batch, weapon.name, col1X, textY)
-            textY -= lineHeight
-            font.color = Color.LIGHT_GRAY
-            font.draw(batch, "Mt ${weapon.might}  Hit ${weapon.hit}  Wt ${weapon.weight}", col1X, textY)
-        } else {
-            font.color = Color(0.8f, 0.7f, 0.5f, 1f)
-            font.draw(batch, "素手 (射程1)", col1X, textY)
-        }
-
-        // 装備防具情報
-        val armor1 = unit.armorSlot1
-        val armor2 = unit.armorSlot2
-        if (armor1 != null || armor2 != null) {
-            textY -= lineHeight
-            font.color = Color(0.5f, 0.7f, 1f, 1f)
-            val armorNames = listOfNotNull(armor1?.name, armor2?.name).joinToString(", ")
-            font.draw(batch, armorNames, col1X, textY)
-            textY -= lineHeight
-            font.color = Color.LIGHT_GRAY
-            font.draw(batch, "DEF+${unit.totalArmorDef()}  RES+${unit.totalArmorRes()}", col1X, textY)
-        }
-
-        batch.end()
     }
 
     /**
@@ -1376,167 +1270,24 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * @param unit 調査対象のユニット
      */
     private fun renderInspectionPanel(unit: GameUnit) {
-        val panelWidth = 380f
-        val panelHeight = 480f
-        val viewLeft = camera.position.x - viewport.worldWidth / 2f
-        val viewBottom = camera.position.y - viewport.worldHeight / 2f
-        val panelX = viewLeft + 16f
-        val panelY = viewBottom + 16f
-
-        // 半透明背景
-        Gdx.gl.glEnable(GL20.GL_BLEND)
-        shapeRenderer.projectionMatrix = camera.combined
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(0f, 0f, 0f, 0.8f)
-        shapeRenderer.rect(panelX, panelY, panelWidth, panelHeight)
-        shapeRenderer.end()
-
-        // 枠線（陣営カラー）
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        val borderColor = when (unit.faction) {
-            Faction.PLAYER -> Color(0.3f, 0.5f, 1f, 1f)
-            Faction.ENEMY -> Color(1f, 0.3f, 0.3f, 1f)
-            Faction.ALLY -> Color(0.3f, 1f, 0.5f, 1f)
-        }
-        shapeRenderer.color = borderColor
-        shapeRenderer.rect(panelX, panelY, panelWidth, panelHeight)
-        shapeRenderer.end()
-        Gdx.gl.glDisable(GL20.GL_BLEND)
-
-        // テキスト描画
-        batch.projectionMatrix = camera.combined
-        batch.begin()
-
-        var textY = panelY + panelHeight - 20f
-        val textX = panelX + 16f
-        val lineHeight = 32f
-
-        // ヘッダー: 「調査」ラベル
-        font.color = Color.GOLD
-        font.draw(batch, "INSPECT", textX, textY)
-        textY -= lineHeight
-
-        // ユニット名と兵種
-        font.color = borderColor
-        font.draw(batch, unit.name, textX, textY)
-        textY -= lineHeight
-
-        font.color = Color.LIGHT_GRAY
-        font.draw(batch, "Lv.${unit.level}  ${unit.unitClass.name}", textX, textY)
-        textY -= lineHeight
-
-        // 経験値テキスト（プレイヤーユニットのみ表示）
-        if (unit.faction == Faction.PLAYER) {
-            font.color = Color(0.8f, 0.7f, 0.3f, 1f)
-            font.draw(batch, "EXP  ${unit.exp} / ${GameConfig.EXP_TO_LEVEL_UP}", textX, textY)
-            textY -= lineHeight
-        }
-
-        // HPテキスト
-        textY -= 8f
-        font.color = Color.WHITE
-        font.draw(batch, "HP  ${unit.currentHp} / ${unit.maxHp}", textX, textY)
-        batch.end()
-
-        // HPバー描画
-        val barX = textX
-        val barWidth = panelWidth - 32f
-        val barHeight = 12f
-        textY -= (lineHeight + 4f)
-        val hpBarY = textY
-        val hpRatio = unit.currentHp.toFloat() / unit.maxHp.toFloat()
+        val viewLeft = camera.position.x - viewHalfWidth()
+        val viewTop = camera.position.y + viewHalfHeight()
+        val areaWidth = viewHalfWidth() * 2f
+        val areaHeight = viewHalfHeight() * TOP_UI_RATIO
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f)
-        shapeRenderer.rect(barX, hpBarY, barWidth, barHeight)
-        val hpColor = when {
-            hpRatio > 0.5f -> Color(0.2f, 0.9f, 0.2f, 1f)
-            hpRatio > 0.25f -> Color(0.9f, 0.9f, 0.1f, 1f)
-            else -> Color(0.9f, 0.2f, 0.2f, 1f)
-        }
-        shapeRenderer.color = hpColor
-        shapeRenderer.rect(barX, hpBarY, barWidth * hpRatio, barHeight)
-        shapeRenderer.end()
-
-        // CTテキスト
-        textY -= (barHeight + 12f)
-        batch.begin()
-        font.color = Color.WHITE
-        font.draw(batch, "CT  ${unit.ct} / ${GameConfig.CT_THRESHOLD}", textX, textY)
-        batch.end()
-
-        // CTバー描画
-        textY -= (lineHeight + 4f)
-        val ctBarY = textY
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f)
-        shapeRenderer.rect(barX, ctBarY, barWidth, barHeight)
-        val ctRatio = (unit.ct.toFloat() / GameConfig.CT_THRESHOLD).coerceIn(0f, 1f)
-        when {
-            ctRatio >= 0.8f -> shapeRenderer.setColor(1f, 0.9f, 0.2f, 1f)
-            ctRatio >= 0.5f -> shapeRenderer.setColor(0.3f, 0.8f, 1f, 1f)
-            else -> shapeRenderer.setColor(0.4f, 0.4f, 0.4f, 1f)
-        }
-        shapeRenderer.rect(barX, ctBarY, barWidth * ctRatio, barHeight)
-        shapeRenderer.end()
+        UnitStatusPanelRenderer.render(
+            shapeRenderer = shapeRenderer,
+            batch = batch,
+            unit = unit,
+            areaLeft = viewLeft,
+            areaTop = viewTop,
+            areaWidth = areaWidth,
+            areaHeight = areaHeight,
+            slot = UnitStatusPanelRenderer.Slot.LEFT,
+            title = "INSPECT"
+        )
         Gdx.gl.glDisable(GL20.GL_BLEND)
-
-        // ステータス値
-        textY -= (barHeight + 12f)
-        batch.begin()
-        font.color = Color.WHITE
-
-        val stats = unit.stats
-        val weapon = unit.equippedWeapon()
-
-        // 2列表示
-        val col1X = textX
-        val col2X = textX + 180f
-
-        font.draw(batch, "STR  ${stats.effectiveStr}", col1X, textY)
-        font.draw(batch, "MAG  ${stats.effectiveMag}", col2X, textY)
-        textY -= lineHeight
-
-        font.draw(batch, "SKL  ${stats.effectiveSkl}", col1X, textY)
-        font.draw(batch, "SPD  ${stats.effectiveSpd}(${unit.effectiveSpeed()})", col2X, textY)
-        textY -= lineHeight
-
-        font.draw(batch, "LCK  ${stats.effectiveLck}", col1X, textY)
-        font.draw(batch, "DEF  ${stats.effectiveDef}", col2X, textY)
-        textY -= lineHeight
-
-        font.draw(batch, "RES  ${stats.effectiveRes}", col1X, textY)
-        font.draw(batch, "MOV  ${unit.mov}", col2X, textY)
-        textY -= lineHeight + 4f
-
-        // 装備武器情報
-        if (weapon != null) {
-            font.color = Color.GOLD
-            font.draw(batch, weapon.name, col1X, textY)
-            textY -= lineHeight
-            font.color = Color.LIGHT_GRAY
-            font.draw(batch, "Mt ${weapon.might}  Hit ${weapon.hit}  Wt ${weapon.weight}", col1X, textY)
-        } else {
-            font.color = Color(0.8f, 0.7f, 0.5f, 1f)
-            font.draw(batch, "素手 (射程1)", col1X, textY)
-        }
-
-        // 装備防具情報
-        val inspArmor1 = unit.armorSlot1
-        val inspArmor2 = unit.armorSlot2
-        if (inspArmor1 != null || inspArmor2 != null) {
-            textY -= lineHeight
-            font.color = Color(0.5f, 0.7f, 1f, 1f)
-            val armorNames = listOfNotNull(inspArmor1?.name, inspArmor2?.name).joinToString(", ")
-            font.draw(batch, armorNames, col1X, textY)
-            textY -= lineHeight
-            font.color = Color.LIGHT_GRAY
-            font.draw(batch, "DEF+${unit.totalArmorDef()}  RES+${unit.totalArmorRes()}", col1X, textY)
-        }
-
-        batch.end()
     }
 
     // ==================== テストデータ・ユーティリティ ==
@@ -1635,8 +1386,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private fun renderRetreatButton() {
         val btnWidth = 160f
         val btnHeight = 56f
-        val viewRight = camera.position.x + viewport.worldWidth / 2f
-        val viewBottom = camera.position.y - viewport.worldHeight / 2f
+        val viewRight = camera.position.x + viewHalfWidth()
+        val viewBottom = camera.position.y - viewHalfHeight()
         val btnX = viewRight - btnWidth - 20f
         val btnY = viewBottom + 20f
 
@@ -1696,10 +1447,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(0f, 0f, 0f, 0.5f)
         shapeRenderer.rect(
-            camera.position.x - viewport.worldWidth / 2f,
-            camera.position.y - viewport.worldHeight / 2f,
-            viewport.worldWidth,
-            viewport.worldHeight
+            camera.position.x - viewHalfWidth(),
+            camera.position.y - viewHalfHeight(),
+            viewHalfWidth() * 2f,
+            viewHalfHeight() * 2f
         )
 
         // ダイアログ背景
@@ -1796,6 +1547,35 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     }
 
     /**
+     * 2本指ピンチ操作でカメラズームを更新する
+     */
+    private fun updateCameraZoomByPinch() {
+        val isFirstTouched = Gdx.input.isTouched(0)
+        val isSecondTouched = Gdx.input.isTouched(1)
+        if (!isFirstTouched || !isSecondTouched) {
+            previousPinchDistance = 0f
+            return
+        }
+
+        val dx = (Gdx.input.getX(0) - Gdx.input.getX(1)).toFloat()
+        val dy = (Gdx.input.getY(0) - Gdx.input.getY(1)).toFloat()
+        val currentDistance = kotlin.math.sqrt(dx * dx + dy * dy)
+
+        if (previousPinchDistance > 0f && currentDistance > 0f) {
+            val zoomFactor = previousPinchDistance / currentDistance
+            camera.zoom = (camera.zoom * zoomFactor).coerceIn(MIN_CAMERA_ZOOM, MAX_CAMERA_ZOOM)
+            centerCameraOnMap()
+        }
+        previousPinchDistance = currentDistance
+    }
+
+    /** 表示中ワールドの半幅（zoom反映） */
+    private fun viewHalfWidth(): Float = viewport.worldWidth * camera.zoom / 2f
+
+    /** 表示中ワールドの半高さ（zoom反映） */
+    private fun viewHalfHeight(): Float = viewport.worldHeight * camera.zoom / 2f
+
+    /**
      * リソース解放
      */
     override fun dispose() {
@@ -1809,5 +1589,20 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         /** 行動順キューの表示数 */
         private const val ACTION_QUEUE_SIZE = 8
+
+        /** 上部UIの高さ割合（画面上半分想定） */
+        private const val TOP_UI_RATIO = 1.0f
+
+        /** 戦闘エリアを下半分に寄せる割合 */
+        private const val BATTLE_AREA_SHIFT_RATIO = 0.50f
+
+        /** カメラ初期ズーム（1.0より小さいと拡大表示） */
+        private const val DEFAULT_CAMERA_ZOOM = 0.85f
+
+        /** カメラ最小ズーム（これ以上は拡大しない） */
+        private const val MIN_CAMERA_ZOOM = 0.6f
+
+        /** カメラ最大ズーム（これ以上は縮小しない） */
+        private const val MAX_CAMERA_ZOOM = 1.8f
     }
 }

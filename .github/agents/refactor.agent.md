@@ -12,6 +12,14 @@ tools: ["read", "edit", "search", "execute"]
 - `docs/technical-design.md` — アーキテクチャ方針
 - `docs/spec/08-battle-ui.md` — BattleScreen の状態遷移・描画順序
 
+## 参照スキル
+
+- `.github/skills/refactor.skill.md`
+- `.github/skills/requirement-analysis.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/quality-gate.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## 主な改善候補
 
 | ファイル | 問題 | 方針 |

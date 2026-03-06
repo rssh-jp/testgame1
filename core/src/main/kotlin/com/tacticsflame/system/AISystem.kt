@@ -1,5 +1,6 @@
 ﻿package com.tacticsflame.system
 
+import com.badlogic.gdx.Gdx
 import com.tacticsflame.model.map.BattleMap
 import com.tacticsflame.model.map.Position
 import com.tacticsflame.model.unit.Faction
@@ -313,54 +314,100 @@ class AISystem(
         movablePositions: Set<Position>,
         battleMap: BattleMap
     ): AIAction {
-        // 回復杖を装備しているか確認（右手・左手両方を探索）
+        // 回復杖を装備しているか確認
         val weapon = unit.equippedHealingStaff()
         if (weapon == null) {
-            // 杖がなければ攻撃AI（AGGRESSIVE）にフォールバック
-            return decideAggressiveAction(unit, unitPos, movablePositions, battleMap)
+            Gdx.app.log("HEAL_AI", "${unit.name}: 杖なし → SUPPORTへフォールバック")
+            return decideSupportAction(unit, unitPos, movablePositions, battleMap)
         }
 
-        // 回復可能な味方を探す
-        val healTargets = findHealableTargets(unit, unitPos, movablePositions, battleMap)
-        if (healTargets.isNotEmpty()) {
-            // 自分のHPが1/3以下なら自己回復を最優先
+        // 脅威圏を計算し、安全マス／危険マスに分類する
+        val threatZone = calculateThreatZone(unit.faction, battleMap)
+        val allPositions = movablePositions + unitPos
+        val safePositions = allPositions.filter { it !in threatZone }.toSet()
+        val unsafePositions = allPositions.filter { it in threatZone }.toSet()
+
+        // マップ上の負傷した味方をログ出力
+        val injuredAllies = battleMap.getAllUnits().filter {
+            isFriendlyFaction(unit.faction, it.second.faction)
+                && it.second.id != unit.id
+                && !it.second.isDefeated
+                && it.second.currentHp < it.second.maxHp
+        }
+        Gdx.app.log("HEAL_AI", "${unit.name} at $unitPos: 杖=${weapon.name}(range ${weapon.minRange}-${weapon.maxRange}), 移動可能=${allPositions.size}マス, 安全=${safePositions.size}, 危険=${unsafePositions.size}, 負傷味方=${injuredAllies.size}")
+        injuredAllies.forEach { (pos, ally) ->
+            Gdx.app.log("HEAL_AI", "  負傷: ${ally.name} at $pos HP=${ally.currentHp}/${ally.maxHp}")
+        }
+
+        // 移動先を「ターゲットに近い順、同距離なら安全優先」でソートするヘルパー
+        // ※ 安全性よりターゲットへの近さを優先する（回復しに行けなくなるのを防ぐ）
+        fun candidatesToward(targetPos: Position): Sequence<Position> =
+            sequence {
+                yieldAll(
+                    allPositions.sortedWith(compareBy(
+                        { it.manhattanDistance(targetPos) },  // ターゲットに近い順（主軸）
+                        { it in threatZone }                   // 同距離なら安全マス優先
+                    ))
+                )
+            }
+
+        // ──────────────────────────────────────────────────
+        // ステップ1: どこかに移動して回復できるか探す
+        // ──────────────────────────────────────────────────
+        val allHealTargets = findHealableTargets(unit, unitPos, allPositions, battleMap)
+        Gdx.app.log("HEAL_AI", "${unit.name}: 回復候補数=${allHealTargets.size}")
+        if (allHealTargets.isNotEmpty()) {
             val selfHealThreshold = 1f / 3f
             val selfTarget = if (unit.currentHp.toFloat() / unit.maxHp.toFloat() <= selfHealThreshold) {
-                healTargets.firstOrNull { (_, _, ally) -> ally.id == unit.id }
+                allHealTargets.firstOrNull { (_, _, ally) -> ally.id == unit.id }
             } else null
 
-            // 自己回復対象がなければ、HP割合が最も低い味方を選択
-            val bestTarget = selfTarget ?: healTargets.minByOrNull { (_, _, ally) ->
-                ally.currentHp.toFloat() / ally.maxHp.toFloat()
-            }
-            if (bestTarget != null) {
-                return AIAction(unit, Action.MoveAndHeal(bestTarget.first, bestTarget.third))
+            val targetUnit = (selfTarget?.third)
+                ?: allHealTargets.minByOrNull { (_, _, ally) ->
+                    ally.currentHp.toFloat() / ally.maxHp.toFloat()
+                }?.third
+
+            if (targetUnit != null) {
+                val candidatesForTarget = allHealTargets
+                    .filter { (_, _, ally) -> ally.id == targetUnit.id }
+                    .sortedWith(compareBy(
+                        { it.first in threatZone },
+                        { it.second }
+                    ))
+                val best = candidatesForTarget.firstOrNull()
+                if (best != null) {
+                    Gdx.app.log("HEAL_AI", "${unit.name}: MoveAndHeal → ${best.first} target=${targetUnit.name}")
+                    return AIAction(unit, Action.MoveAndHeal(best.first, best.third))
+                }
             }
         }
 
-        // 回復対象がいない場合、ダメージを受けている味方に近づく
-        val injuredAlly = findMostInjuredAlly(unit, battleMap)
-        if (injuredAlly != null) {
-            val bestMovePos = movablePositions.minByOrNull { it.manhattanDistance(injuredAlly) }
+        // ──────────────────────────────────────────────────
+        // ステップ2: 射程に届かない → 近づく
+        // ──────────────────────────────────────────────────
+        val injuredAllyPos = findMostInjuredAlly(unit, battleMap)
+        if (injuredAllyPos != null) {
+            Gdx.app.log("HEAL_AI", "${unit.name}: 回復届かず → 負傷味方 $injuredAllyPos に接近")
+            val bestMovePos = candidatesToward(injuredAllyPos)
+                .firstOrNull { it != unitPos }
             if (bestMovePos != null) {
+                Gdx.app.log("HEAL_AI", "${unit.name}: Move → $bestMovePos")
                 return AIAction(unit, Action.Move(bestMovePos))
             }
         }
 
-        // 全員満タンの場合、最も近い味方に寄り添う（敵に近づかない）
+        // ──────────────────────────────────────────────────
+        // ステップ3: 全員満タン → 味方に寄り添う
+        // ──────────────────────────────────────────────────
         val nearestAlly = findNearestFriendly(unit, unitPos, battleMap)
         if (nearestAlly != null) {
-            val threatZone = calculateThreatZone(unit.faction, battleMap)
-            // 味方に近づきつつ、脅威圏外を優先
-            val safePositions = (movablePositions + unitPos).filter { it !in threatZone }
-            val candidatePositions = safePositions.ifEmpty { (movablePositions + unitPos).toList() }
-            val bestPos = candidatePositions.minByOrNull { it.manhattanDistance(nearestAlly) }
-            if (bestPos != null && bestPos != unitPos) {
+            val bestPos = candidatesToward(nearestAlly).firstOrNull { it != unitPos }
+            if (bestPos != null) {
                 return AIAction(unit, Action.Move(bestPos))
             }
         }
 
-        // 味方もいない場合は待機
+        Gdx.app.log("HEAL_AI", "${unit.name}: → 待機")
         return AIAction(unit, Action.Wait)
     }
 

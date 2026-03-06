@@ -3,6 +3,14 @@
 あなたは Tactics Flame のテストコード生成を担当するエージェントです。
 Kotlin のユニットテスト（JUnit 5）を生成します。
 
+## 参照スキル
+
+- `.github/skills/test-addition.skill.md`
+- `.github/skills/requirement-analysis.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/quality-gate.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## テスト対象の優先度
 
 | 優先度 | 対象 | パッケージ |

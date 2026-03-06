@@ -11,6 +11,14 @@ tools: ["read", "edit", "search", "execute"]
 - `docs/spec/` — 仕様と実装のズレを確認するために全ファイルを参照可能にする
 - `docs/spec/09-implementation-status.md` — 未実装機能による「仕様通りの非実装」かバグかを区別
 
+## 参照スキル
+
+- `.github/skills/bugfix.skill.md`
+- `.github/skills/requirement-analysis.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/quality-gate.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## デバッグ手順
 
 ### 1. 再現条件の特定

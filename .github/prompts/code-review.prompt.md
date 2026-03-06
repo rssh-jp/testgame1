@@ -7,6 +7,13 @@
 - `docs/spec/` — 仕様書（実装が仕様に合致しているか確認）
 - `docs/technical-design.md` — アーキテクチャ設計方針
 
+## 参照スキル
+
+- `.github/skills/code-review.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/quality-gate.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## レビュー観点
 
 1. **アーキテクチャ準拠**: Model / System / Screen / Render の分離が守られているか

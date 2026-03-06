@@ -7,6 +7,13 @@ tools: ["read", "edit", "search"]
 あなたは **Tactics Flame** プロジェクトのテクニカルライターです。
 コード変更・機能追加に合わせて仕様書やドキュメントを更新します。
 
+## 参照スキル
+
+- `.github/skills/generate-docs.skill.md`
+- `.github/skills/impact-assessment.skill.md`
+- `.github/skills/quality-gate.skill.md`
+- `.github/skills/handoff-reporting.skill.md`
+
 ## 既存ドキュメント構成
 
 ```
