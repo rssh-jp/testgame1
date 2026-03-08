@@ -142,8 +142,8 @@ class SaveManagerTest {
             id = "test_unit", name = "テスト",
             unitClass = UnitClass.LORD, faction = Faction.PLAYER,
             level = 1, exp = 0,
-            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
-            growthRate = GrowthRate(hp = 1.0f, str = 1.0f, mag = 1.0f, skl = 1.0f, spd = 1.0f, lck = 1.0f, def = 1.0f, res = 1.0f)
+            personalModifier = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
+            personalGrowthRate = GrowthRate(hp = 1.0f, str = 1.0f, mag = 1.0f, skl = 1.0f, spd = 1.0f, lck = 1.0f, def = 1.0f, res = 1.0f)
         )
         unit.rightHand = Weapon("testSword", "テスト剣", WeaponType.SWORD, might = 5, hit = 90)
         unit.gainExp(100) // レベルアップ

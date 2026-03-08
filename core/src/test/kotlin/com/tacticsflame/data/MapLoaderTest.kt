@@ -178,9 +178,9 @@ class MapLoaderTest {
         val result = mapLoader.loadMap("chapter_1.json")!!
 
         val (enemy, _) = result.enemies[0]
-        // chapter_1.json: enemy_01 の stats.hp = 18
-        assertEquals(18f, enemy.stats.hp)
-        assertEquals(18, enemy.currentHp) // 初期HPはmaxHP
+        // chapter_1.json: enemy_01 classId=axeFighter → AXE_FIGHTER.baseStats.hp = 21
+        assertEquals(21f, enemy.stats.hp)
+        assertEquals(21, enemy.currentHp) // 初期HPはmaxHP
     }
 
     @Test
@@ -193,6 +193,99 @@ class MapLoaderTest {
         assertEquals("ironAxe", weapon.id)
         assertEquals("鉄の斧", weapon.name)
         assertEquals(8, weapon.might)
+    }
+
+    // ==================== レベルアップステータスのテスト ====================
+
+    @Test
+    fun `parseEnemyUnitでレベル1の敵はlevelUpStatsがゼロであること`() {
+        val result = mapLoader.loadMap("chapter_1.json")!!
+
+        // enemy_01: axeFighter, level 1 → 成長0回なので stats = baseStats のみ
+        val (enemy, _) = result.enemies[0]
+        assertEquals("enemy_01", enemy.id)
+        assertEquals(1, enemy.level)
+
+        val base = enemy.unitClass.baseStats
+        assertEquals(base.hp, enemy.stats.hp, 0.0001f, "HP = baseStats.hp(21.0)")
+        assertEquals(base.str, enemy.stats.str, 0.0001f, "STR = baseStats.str(8.0)")
+        assertEquals(base.mag, enemy.stats.mag, 0.0001f, "MAG = baseStats.mag(0.0)")
+        assertEquals(base.skl, enemy.stats.skl, 0.0001f, "SKL = baseStats.skl(4.0)")
+        assertEquals(base.spd, enemy.stats.spd, 0.0001f, "SPD = baseStats.spd(4.0)")
+        assertEquals(base.lck, enemy.stats.lck, 0.0001f, "LCK = baseStats.lck(2.0)")
+        assertEquals(base.def, enemy.stats.def, 0.0001f, "DEF = baseStats.def(5.0)")
+        assertEquals(base.res, enemy.stats.res, 0.0001f, "RES = baseStats.res(0.0)")
+    }
+
+    @Test
+    fun `parseEnemyUnitでレベル6の剣士にクラス成長率に基づくlevelUpStatsが適用されること`() {
+        val result = mapLoader.loadMap("chapter_5.json")!!
+
+        // enemy_ch5_06: swordFighter, level 6 → 成長5回
+        val enemy = result.enemies.find { it.first.id == "enemy_ch5_06" }
+        assertNotNull(enemy, "渡河兵(enemy_ch5_06)が見つかること")
+        val (unit, _) = enemy
+        assertEquals(6, unit.level)
+
+        // swordFighter classGrowthRate: hp=1.55, str=0.45, skl=0.50, spd=0.40, def=0.15, res=0.05
+        // levelUpStats = classGrowthRate × (level - 1) = × 5
+        val base = unit.unitClass.baseStats   // hp=18, str=6, skl=8, spd=8, def=4, res=1
+        val growth = unit.unitClass.classGrowthRate
+        val lvUps = 5
+
+        // stats = baseStats + personalModifier(0) + levelUpStats
+        assertEquals(base.hp + growth.hp * lvUps, unit.stats.hp, 0.0001f,
+            "HP = 18.0 + 1.55×5 = 25.75")
+        assertEquals(base.str + growth.str * lvUps, unit.stats.str, 0.0001f,
+            "STR = 6.0 + 0.45×5 = 8.25")
+        assertEquals(base.mag + growth.mag * lvUps, unit.stats.mag, 0.0001f,
+            "MAG = 0.0 + 0.00×5 = 0.00")
+        assertEquals(base.skl + growth.skl * lvUps, unit.stats.skl, 0.0001f,
+            "SKL = 8.0 + 0.50×5 = 10.50")
+        assertEquals(base.spd + growth.spd * lvUps, unit.stats.spd, 0.0001f,
+            "SPD = 8.0 + 0.40×5 = 10.00")
+        assertEquals(base.lck + growth.lck * lvUps, unit.stats.lck, 0.0001f,
+            "LCK = 4.0 + 0.15×5 = 4.75")
+        assertEquals(base.def + growth.def * lvUps, unit.stats.def, 0.0001f,
+            "DEF = 4.0 + 0.15×5 = 4.75")
+        assertEquals(base.res + growth.res * lvUps, unit.stats.res, 0.0001f,
+            "RES = 1.0 + 0.05×5 = 1.25")
+    }
+
+    // ==================== ランダム敵生成のテスト ====================
+
+    @Test
+    fun `randomEnemiesは指定平均レベルに固定される`() {
+        val result = mapLoader.loadMap("another_chapter.json", partyAverageLevel = 7)!!
+
+        assertTrue(result.enemies.isNotEmpty(), "ランダム敵が生成されている")
+        assertTrue(result.enemies.all { it.first.level == 7 }, "全ランダム敵が平均Lv.7固定")
+    }
+
+    @Test
+    fun `randomEnemiesの能力上昇はGrowthRate加算方式で反映される`() {
+        val result = mapLoader.loadMap("another_chapter.json", partyAverageLevel = 10)!!
+
+        assertTrue(result.enemies.isNotEmpty(), "ランダム敵が生成されている")
+        val firstEnemy = result.enemies.first().first
+
+        // stats = unitClass.baseStats + personalModifier(0) + levelUpStats
+        // levelUpStats = classGrowthRate × (level - 1) = classGrowthRate × 9
+        val base = firstEnemy.unitClass.baseStats
+        val growth = firstEnemy.unitClass.classGrowthRate
+        val lvUps = 9 // level 10 → 9回レベルアップ
+        assertEquals(base.hp + growth.hp * lvUps, firstEnemy.stats.hp, 0.0001f, "HPはクラスベース + (classGrowthRate.hp × 9)")
+        assertEquals(base.str + growth.str * lvUps, firstEnemy.stats.str, 0.0001f, "STRはクラスベース + (classGrowthRate.str × 9)")
+        assertEquals(base.skl + growth.skl * lvUps, firstEnemy.stats.skl, 0.0001f, "SKLはクラスベース + (classGrowthRate.skl × 9)")
+    }
+
+    @Test
+    fun `randomEnemiesがfalseのマップは平均レベル指定時も固定敵を維持する`() {
+        val result = mapLoader.loadMap("chapter_1.json", partyAverageLevel = 99)!!
+
+        assertEquals(3, result.enemies.size, "固定敵の体数が維持される")
+        assertEquals("enemy_01", result.enemies[0].first.id, "固定配置の敵IDが維持される")
+        assertTrue(result.enemies.none { it.first.id.startsWith("random_enemy_") }, "ランダム敵が混入しない")
     }
 
     // ==================== エラーハンドリング ====================

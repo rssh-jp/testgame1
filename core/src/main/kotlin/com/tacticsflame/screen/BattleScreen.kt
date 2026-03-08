@@ -1420,8 +1420,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val playerUnit1 = GameUnit(
             id = "hero_01", name = "アレス",
             unitClass = UnitClass.LORD, faction = Faction.PLAYER,
-            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
-            growthRate = GrowthRate(hp = 0.70f, str = 0.50f, mag = 0.10f, skl = 0.55f, spd = 0.20f, lck = 0.40f, def = 0.35f, res = 0.25f),
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate(hp = 0.70f, str = 0.50f, mag = 0.10f, skl = 0.55f, spd = 0.20f, lck = 0.40f, def = 0.35f, res = 0.25f),
             isLord = true
         )
         playerUnit1.weapons.add(Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3))
@@ -1429,16 +1429,16 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val playerUnit2 = GameUnit(
             id = "hero_02", name = "リーナ",
             unitClass = UnitClass.LANCER, faction = Faction.PLAYER,
-            stats = Stats(hp = 18f, str = 7f, mag = 0f, skl = 5f, spd = 5f, lck = 3f, def = 7f, res = 1f),
-            growthRate = GrowthRate(hp = 0.60f, str = 0.55f, mag = 0.05f, skl = 0.45f, spd = 0.20f, lck = 0.30f, def = 0.50f, res = 0.20f)
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate(hp = 0.60f, str = 0.55f, mag = 0.05f, skl = 0.45f, spd = 0.20f, lck = 0.30f, def = 0.50f, res = 0.20f)
         )
         playerUnit2.weapons.add(Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5))
 
         val playerUnit3 = GameUnit(
             id = "hero_03", name = "マリア",
             unitClass = UnitClass.ARCHER, faction = Faction.PLAYER,
-            stats = Stats(hp = 16f, str = 5f, mag = 0f, skl = 8f, spd = 7f, lck = 4f, def = 3f, res = 3f),
-            growthRate = GrowthRate(hp = 0.55f, str = 0.45f, mag = 0.05f, skl = 0.60f, spd = 0.20f, lck = 0.40f, def = 0.25f, res = 0.30f)
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate(hp = 0.55f, str = 0.45f, mag = 0.05f, skl = 0.60f, spd = 0.20f, lck = 0.40f, def = 0.25f, res = 0.30f)
         )
         playerUnit3.weapons.add(Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2))
 
@@ -1450,24 +1450,24 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val enemy1 = GameUnit(
             id = "enemy_01", name = "山賊A",
             unitClass = UnitClass.AXE_FIGHTER, faction = Faction.ENEMY,
-            stats = Stats(hp = 18f, str = 6f, mag = 0f, skl = 3f, spd = 4f, lck = 1f, def = 3f, res = 0f),
-            growthRate = GrowthRate()
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate()
         )
         enemy1.weapons.add(Weapon("ironAxe", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6))
 
         val enemy2 = GameUnit(
             id = "enemy_02", name = "山賊B",
             unitClass = UnitClass.AXE_FIGHTER, faction = Faction.ENEMY,
-            stats = Stats(hp = 18f, str = 5f, mag = 0f, skl = 2f, spd = 3f, lck = 0f, def = 3f, res = 0f),
-            growthRate = GrowthRate()
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate()
         )
         enemy2.weapons.add(Weapon("ironAxe2", "鉄の斧", WeaponType.AXE, might = 8, hit = 75, weight = 6))
 
         val enemy3 = GameUnit(
             id = "enemy_03", name = "盗賊",
             unitClass = UnitClass.SWORD_FIGHTER, faction = Faction.ENEMY,
-            stats = Stats(hp = 16f, str = 4f, mag = 0f, skl = 6f, spd = 9f, lck = 2f, def = 2f, res = 1f),
-            growthRate = GrowthRate()
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate()
         )
         enemy3.weapons.add(Weapon("ironSword2", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3))
 

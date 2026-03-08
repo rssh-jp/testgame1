@@ -42,8 +42,8 @@ class PathFinderTest {
             name = "プレイヤー",
             unitClass = UnitClass.LORD,
             faction = Faction.PLAYER,
-            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
-            growthRate = GrowthRate()
+            personalModifier = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
+            personalGrowthRate = GrowthRate()
         )
     }
 
@@ -56,8 +56,8 @@ class PathFinderTest {
             name = "敵兵",
             unitClass = UnitClass.SWORD_FIGHTER,
             faction = Faction.ENEMY,
-            stats = Stats(hp = 18f, str = 5f, mag = 0f, skl = 5f, spd = 5f, lck = 3f, def = 4f, res = 1f),
-            growthRate = GrowthRate()
+            personalModifier = Stats(hp = 18f, str = 5f, mag = 0f, skl = 5f, spd = 5f, lck = 3f, def = 4f, res = 1f),
+            personalGrowthRate = GrowthRate()
         )
     }
 

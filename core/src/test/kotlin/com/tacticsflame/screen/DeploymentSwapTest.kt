@@ -149,8 +149,8 @@ class DeploymentSwapTest {
             name = name,
             unitClass = UnitClass.LORD,
             faction = Faction.PLAYER,
-            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
-            growthRate = GrowthRate()
+            personalModifier = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
+            personalGrowthRate = GrowthRate()
         )
     }
 }

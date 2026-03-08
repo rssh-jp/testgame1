@@ -14,9 +14,16 @@ class GameUnitEquipmentTest {
     ): GameUnit {
         return GameUnit(
             id = "test_unit", name = "テストユニット",
-            unitClass = UnitClass.LORD, faction = Faction.PLAYER,
-            stats = Stats(hp = 20f, str = 8f, mag = 3f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 2f),
-            growthRate = GrowthRate()
+            unitClass = UnitClass(
+                id = "testClass", name = "テストクラス",
+                moveType = MoveType.INFANTRY, baseMov = 5,
+                usableWeapons = listOf(WeaponType.SWORD),
+                baseStats = Stats(hp = 20f, str = 8f, mag = 3f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 2f),
+                canDualWield = true, dualWieldPenalty = 0
+            ),
+            faction = Faction.PLAYER,
+            personalModifier = Stats(hp = 20f, str = 8f, mag = 3f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 2f),
+            personalGrowthRate = GrowthRate()
         ).also { it.rightHand = rightHand }
     }
 

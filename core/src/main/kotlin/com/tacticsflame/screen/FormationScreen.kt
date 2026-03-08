@@ -66,6 +66,12 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private val deployButtonX = GameConfig.VIRTUAL_WIDTH / 2f - deployButtonW / 2f
     private val deployButtonY = 190f
 
+    /** ジョブチェンジボタンの領域（詳細パネル内・2段目左） */
+    private val classChangeButtonW = 280f
+    private val classChangeButtonH = 65f
+    private val classChangeButtonX = GameConfig.VIRTUAL_WIDTH / 2f - 480f + 20f
+    private val classChangeButtonY = 270f
+
     companion object {
         private const val TAG = "FormationScreen"
 
@@ -170,6 +176,17 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             val unit = selectedUnit!!
             unit.tactic = unit.tactic.next()
             Gdx.app.log(TAG, "${unit.name}: 作戦変更 → ${unit.tactic.displayName}")
+            return
+        }
+
+        // ジョブチェンジボタン判定（ユニット選択中かつ非ロードのみ有効）
+        if (selectedUnit != null && !selectedUnit!!.isLord &&
+            touchX in classChangeButtonX..(classChangeButtonX + classChangeButtonW) &&
+            touchY in classChangeButtonY..(classChangeButtonY + classChangeButtonH)
+        ) {
+            val unit = selectedUnit!!
+            Gdx.app.log(TAG, "クラスチェンジ画面へ: ${unit.name}")
+            game.screenManager.navigateToClassChange(unit)
             return
         }
 
@@ -459,6 +476,9 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         // 作戦変更ボタン
         renderTacticButton(unit)
+
+        // ジョブチェンジボタン
+        renderClassChangeButton(unit)
     }
 
     /**
@@ -575,6 +595,43 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             batch, tacticLabel,
             tacticButtonX + tacticButtonW / 2f - glyphLayout.width / 2f,
             tacticButtonY + tacticButtonH / 2f + 12f
+        )
+        batch.end()
+    }
+
+    /**
+     * ジョブチェンジボタンを描画する
+     *
+     * @param unit 選択中のユニット
+     */
+    private fun renderClassChangeButton(unit: GameUnit) {
+        val canChange = !unit.isLord
+
+        shapeRenderer.projectionMatrix = viewport.camera.combined
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        if (canChange) {
+            shapeRenderer.setColor(0.35f, 0.2f, 0.5f, 0.9f)
+        } else {
+            shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.6f)
+        }
+        shapeRenderer.rect(classChangeButtonX, classChangeButtonY, classChangeButtonW, classChangeButtonH)
+        shapeRenderer.end()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.color = if (canChange) Color(0.7f, 0.4f, 1f, 1f) else Color.DARK_GRAY
+        shapeRenderer.rect(classChangeButtonX, classChangeButtonY, classChangeButtonW, classChangeButtonH)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        batch.projectionMatrix = viewport.camera.combined
+        batch.begin()
+        font.color = if (canChange) Color.WHITE else Color.DARK_GRAY
+        val label = "ジョブチェンジ"
+        glyphLayout.setText(font, label)
+        font.draw(
+            batch, label,
+            classChangeButtonX + classChangeButtonW / 2f - glyphLayout.width / 2f,
+            classChangeButtonY + classChangeButtonH / 2f + 12f
         )
         batch.end()
     }

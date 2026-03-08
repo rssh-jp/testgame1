@@ -91,6 +91,17 @@ class ScreenManager(private val game: TacticsFlameGame) {
     }
 
     /**
+     * ジョブチェンジ画面へ遷移する
+     *
+     * @param unit ジョブチェンジ対象のユニット
+     */
+    fun navigateToClassChange(unit: GameUnit) {
+        Gdx.app.log(TAG, "画面遷移: → ClassChange (${unit.name})")
+        game.classChangeTarget = unit
+        game.setScreen(createScreen(ScreenType.CLASS_CHANGE))
+    }
+
+    /**
      * Screen インスタンスを生成する
      *
      * コンパニオンで Screen クラスを直接参照せず、
@@ -108,6 +119,10 @@ class ScreenManager(private val game: TacticsFlameGame) {
                 game,
                 requireNotNull(game.weaponEquipTarget) { "weaponEquipTarget が null です" }
             )
+            ScreenType.CLASS_CHANGE -> com.tacticsflame.screen.ClassChangeScreen(
+                game,
+                requireNotNull(game.classChangeTarget) { "classChangeTarget が null です" }
+            )
         }
     }
 
@@ -121,7 +136,8 @@ class ScreenManager(private val game: TacticsFlameGame) {
         BATTLE_PREP,
         BATTLE,
         BATTLE_RESULT,
-        WEAPON_EQUIP
+        WEAPON_EQUIP,
+        CLASS_CHANGE
     }
 
     companion object {

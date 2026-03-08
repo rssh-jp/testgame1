@@ -22,10 +22,17 @@ class BattleSystemExpTest {
     ): GameUnit {
         val unit = GameUnit(
             id = id, name = name,
-            unitClass = UnitClass.LORD, faction = faction,
+            unitClass = UnitClass(
+                id = "testClass", name = "テストクラス",
+                moveType = MoveType.INFANTRY, baseMov = 5,
+                usableWeapons = listOf(WeaponType.SWORD),
+                baseStats = Stats(hp = hp.toFloat(), str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
+                canDualWield = true, dualWieldPenalty = 0
+            ),
+            faction = faction,
             level = level,
-            stats = Stats(hp = hp.toFloat(), str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
-            growthRate = GrowthRate()
+            personalModifier = Stats(hp = hp.toFloat(), str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
+            personalGrowthRate = GrowthRate()
         )
         if (isDefeated) {
             unit.takeDamage(hp) // HPを0にする

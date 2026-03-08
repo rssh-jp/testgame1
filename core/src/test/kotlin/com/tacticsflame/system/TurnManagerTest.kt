@@ -15,9 +15,16 @@ class TurnManagerTest {
     private fun createUnit(id: String, name: String, spd: Int, faction: Faction = Faction.PLAYER): GameUnit {
         return GameUnit(
             id = id, name = name,
-            unitClass = UnitClass.LORD, faction = faction,
-            stats = Stats(hp = 20f, str = 5f, mag = 0f, skl = 5f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 5f),
-            growthRate = GrowthRate()
+            unitClass = UnitClass(
+                id = "testClass", name = "テストクラス",
+                moveType = MoveType.INFANTRY, baseMov = 5,
+                usableWeapons = listOf(WeaponType.SWORD),
+                baseStats = Stats(hp = 20f, str = 5f, mag = 0f, skl = 5f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 5f),
+                canDualWield = true, dualWieldPenalty = 0
+            ),
+            faction = faction,
+            personalModifier = Stats(hp = 20f, str = 5f, mag = 0f, skl = 5f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 5f),
+            personalGrowthRate = GrowthRate()
         )
     }
 

@@ -40,8 +40,8 @@ class BattleSystemCounterTest {
         val unit = GameUnit(
             id = id, name = "テスト$id",
             unitClass = UnitClass.LORD, faction = faction,
-            stats = Stats(hp = hp.toFloat(), str = str.toFloat(), mag = 1f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = def.toFloat(), res = 2f),
-            growthRate = GrowthRate(),
+            personalModifier = Stats(hp = hp.toFloat(), str = str.toFloat(), mag = 1f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = def.toFloat(), res = 2f),
+            personalGrowthRate = GrowthRate(),
             weapons = weapons
         )
         unit.rightHand = weapons.firstOrNull()

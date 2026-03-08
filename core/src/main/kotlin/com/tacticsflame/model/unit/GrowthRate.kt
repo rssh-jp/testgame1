@@ -26,4 +26,21 @@ data class GrowthRate(
     val lck: Float = 0f,
     val def: Float = 0f,
     val res: Float = 0f
-)
+) {
+    /**
+     * 2つの [GrowthRate] を成分ごとに加算した新しい [GrowthRate] を返す
+     *
+     * @param other 加算する成長率
+     * @return 各フィールドを成分ごとに加算した [GrowthRate]
+     */
+    operator fun plus(other: GrowthRate): GrowthRate = GrowthRate(
+        hp = hp + other.hp,
+        str = str + other.str,
+        mag = mag + other.mag,
+        skl = skl + other.skl,
+        spd = spd + other.spd,
+        lck = lck + other.lck,
+        def = def + other.def,
+        res = res + other.res
+    )
+}

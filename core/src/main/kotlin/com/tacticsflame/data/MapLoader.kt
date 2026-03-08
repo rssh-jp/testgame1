@@ -25,7 +25,6 @@ import com.tacticsflame.system.VictoryChecker
  *     "id":"enemy_01", "classId":"axeFighter", "name":"山賊A",
  *     "level":1, "x":11, "y":3, "ai":"aggressive",
  *     "weaponId":"ironAxe",
- *     "stats": {"hp":18,"str":6,...},
  *     "isLord": false
  *   }, ...],
  *   "victoryCondition": {"type":"DEFEAT_ALL"},
@@ -120,7 +119,7 @@ class MapLoader {
      * マップJSONファイルを読み込み、MapLoadResult を返す
      *
      * @param mapFileName マップファイル名（例: "chapter_1.json"）
-     * @param partyAverageLevel パーティの平均レベル（ランダム敵生成用、デフォルト0＝未指定）
+     * @param partyAverageLevel 出撃中味方ユニットの平均レベル（ランダム敵生成用、デフォルト0＝未指定）
      * @return 読み込み結果。読み込み失敗時は null
      */
     fun loadMap(mapFileName: String, partyAverageLevel: Int = 0): MapLoadResult? {
@@ -345,8 +344,8 @@ class MapLoader {
             return null
         }
 
-        // statsのパース（JSONに含まれていなければデフォルトステータスを使用）
-        val stats = parseStats(json.get("stats"))
+        // レベルに応じたレベルアップ累積ステータスを生成（クラス成長率を使用）
+        val enemyLevelUpStats = generateLevelUpStats(level, unitClass.classGrowthRate)
 
         val unit = GameUnit(
             id = id,
@@ -354,8 +353,9 @@ class MapLoader {
             unitClass = unitClass,
             faction = Faction.ENEMY,
             level = level,
-            stats = stats,
-            growthRate = GrowthRate(), // 敵は成長率なし
+            personalModifier = Stats(), // 敵はジョブのbaseStatsをそのまま使用
+            levelUpStats = enemyLevelUpStats,
+            personalGrowthRate = GrowthRate(), // 敵は成長率なし
             isLord = isLord
         )
 
@@ -377,25 +377,6 @@ class MapLoader {
         }
 
         return unit
-    }
-
-    /**
-     * JSONからステータスをパースする
-     */
-    private fun parseStats(statsJson: JsonValue?): Stats {
-        if (statsJson == null) {
-            return Stats(hp = 18f, str = 5f, mag = 0f, skl = 3f, spd = 4f, lck = 1f, def = 3f, res = 0f)
-        }
-        return Stats(
-            hp = statsJson.getFloat("hp", 18f),
-            str = statsJson.getFloat("str", 5f),
-            mag = statsJson.getFloat("mag", 0f),
-            skl = statsJson.getFloat("skl", 3f),
-            spd = statsJson.getFloat("spd", 4f),
-            lck = statsJson.getFloat("lck", 1f),
-            def = statsJson.getFloat("def", 3f),
-            res = statsJson.getFloat("res", 0f)
-        )
     }
 
     /**
@@ -486,12 +467,12 @@ class MapLoader {
     /**
      * ランダムマップ用に敵ユニットを動的生成する
      *
-     * パーティ平均レベルに応じた敵を4〜6体、マップ右側のランダム位置に配置する。
-     * 敵のステータスはベースステータス + レベルに応じた成長分で計算される。
+     * 出撃中味方ユニット平均レベルに応じた敵を4〜6体、マップ右側のランダム位置に配置する。
+     * 敵のレベルは平均レベルに固定し、ステータスは味方と同じく GrowthRate の確定加算方式で算出する。
      *
      * @param battleMap バトルマップ
      * @param playerSpawns プレイヤースポーン位置（敵と重複しないよう除外する）
-     * @param averageLevel パーティの平均レベル
+     * @param averageLevel 出撃中味方ユニットの平均レベル
      * @return 敵ユニットと配置位置のペアリスト
      */
     private fun generateRandomEnemies(
@@ -523,11 +504,11 @@ class MapLoader {
             val weaponId = template.second
             val nameBase = template.third
 
-            // レベルを平均レベル ± 1 の範囲でランダム（最低1）
-            val level = maxOf(1, averageLevel + random.nextInt(3) - 1)
+            // レベルは出撃中味方ユニット平均レベルに固定（最低1）
+            val level = maxOf(1, averageLevel)
 
-            // ベースステータスにレベル分を上乗せ
-            val stats = generateStatsForLevel(level, random)
+            // レベルアップ分の累積ステータスを計算（クラス成長率を使用）
+            val enemyLevelUpStats = generateLevelUpStats(level, unitClass.classGrowthRate)
 
             val unit = GameUnit(
                 id = "random_enemy_${i + 1}",
@@ -535,8 +516,9 @@ class MapLoader {
                 unitClass = unitClass,
                 faction = Faction.ENEMY,
                 level = level,
-                stats = stats,
-                growthRate = GrowthRate()
+                personalModifier = Stats(), // 敵はジョブのbaseStatsをそのまま使用
+                levelUpStats = enemyLevelUpStats,
+                personalGrowthRate = GrowthRate()
             )
 
             // 武器を装備
@@ -558,32 +540,28 @@ class MapLoader {
     }
 
     /**
-     * 指定レベルに応じた敵ステータスを生成する
+     * 指定レベルに応じた敵のレベルアップ累積ステータスを生成する
      *
-     * Lv.1のベースステータスに、レベルごとに固定成長値を加算する。
-     * 確定成長システム（FFT方式）に基づく決定論的な計算。
+     * GrowthRate をレベルアップ回数分だけ確定加算し、累積分のみを返す。
+     * baseStats は含まない。
      *
      * @param level 敵のレベル
-     * @param random 乱数生成器（互換性のため引数に残すが未使用）
-     * @return 生成されたステータス
+     * @param classGrowthRate クラス固有の成長率
+     * @return レベルアップ累積ステータス
      */
-    private fun generateStatsForLevel(level: Int, random: java.util.Random): Stats {
-        // Lv.1 ベースステータス
-        var hp = 18f; var str = 5f; var mag = 0f; var skl = 3f
-        var spd = 4f; var lck = 1f; var def = 3f; var res = 0f
-
-        // 敵用デフォルト成長値（確定加算）
-        val levelsGrown = level - 1
-        hp += 0.60f * levelsGrown
-        str += 0.40f * levelsGrown
-        mag += 0.20f * levelsGrown
-        skl += 0.35f * levelsGrown
-        spd += 0.20f * levelsGrown  // SPDは全ユニット共通 0.20
-        lck += 0.25f * levelsGrown
-        def += 0.30f * levelsGrown
-        res += 0.20f * levelsGrown
-
-        return Stats(hp = hp, str = str, mag = mag, skl = skl, spd = spd, lck = lck, def = def, res = res)
+    private fun generateLevelUpStats(level: Int, classGrowthRate: GrowthRate): Stats {
+        val growthRate = classGrowthRate
+        val growthCount = maxOf(0, level - 1)
+        return Stats(
+            hp = growthRate.hp * growthCount,
+            str = growthRate.str * growthCount,
+            mag = growthRate.mag * growthCount,
+            skl = growthRate.skl * growthCount,
+            spd = growthRate.spd * growthCount,
+            lck = growthRate.lck * growthCount,
+            def = growthRate.def * growthCount,
+            res = growthRate.res * growthCount
+        )
     }
 
     /**

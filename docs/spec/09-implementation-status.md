@@ -1,6 +1,6 @@
 # 09. 実装状況
 
-最終更新: 2026年3月6日
+最終更新: 2026年3月8日
 
 ## 凡例
 
@@ -28,7 +28,7 @@
 
 | 項目 | 状況 | 備考 |
 |------|------|------|
-| GameUnit クラス | ✅ | 全ステータス・武器・経験値・CT |
+| GameUnit クラス | ✅ | 全ステータス・武器・経験値・CT — **ジョブベースステータス（stats = unitClass.baseStats + personalModifier + levelUpStats）** |
 | Weapon クラス | ✅ | 武器タイプ・攻撃力・命中・射程・重さ・**healPowerプロパティ追加（isHealingStaff判定）** |
 | **Armor クラス** | **✅** | **防具タイプ・DEF/RESボーナス・重さ** |
 | **ArmorType enum** | **✅** | **LIGHT_ARMOR/HEAVY_ARMOR/SHIELD/MAGIC_ROBE/ACCESSORY/HEAD/FEET** |
@@ -50,10 +50,15 @@
 | **UnitTactic enum** | **✅** | **新規追加: ユニット作戦（CHARGE/CAUTIOUS/SUPPORT/HEAL/FLEE）— 部隊編成で設定** |
 | **BattleConfig データクラス** | **✅** | **新規追加: バトル設定（マップ・ユニット配置・勝利条件）** |
 | **MapLoader（JSONマップローダー）** | **✅** | **新規追加: JSON→BattleMap/敵/スポーン/勝利条件の一括読み込み** |
+| **敵ユニットレベルアップ能力値補正** | **✅** | **バグ修正: parseEnemyUnit/generateRandomEnemies でクラス固有成長率(classGrowthRate)による levelUpStats を適用。generateLevelUpStats()を引数必須化・乗算方式に改善。デッドコード(ENEMY_BASE_STATS/parseStats)削除** |
+| **UnitClassLoader baseStats パース** | **✅** | **バグ修正: baseStats未パースにより全クラスHP=0→敵非表示の不具合を修正。parseStats()メソッド追加、classes.json全10クラスにbaseStatsデータ追加、HP=0警告ログ付き妥当性チェック** |
 | **BattleResultData データクラス** | **✅** | **新規追加: 戦闘結果（勝敗・ラウンド数・撃破数・生存ユニット）** |
 | **GrowthRate data class** | **✅** | **Float固定値加算方式に変更（旧: Int%確率成長）、SPD=0.20f一律** |
+| **ジョブベースステータスシステム** | **✅** | **stats = unitClass.baseStats + personalModifier + levelUpStats、転職HP差分調整** |
+| **セーブデータ v5** | **✅** | **personalModifier 対応（旧v4データの baseStats/stats フォールバック互換あり）** |
 | **StatGrowth data class** | **✅** | **新規追加: レベルアップ時のInt実効値変化量（UI表示用）** |
 | **GrowthRate 読み込み仕様** | **✅** | **保存値を固定加算値としてそのまま復元（%としての自動変換なし）** |
+| **personalGrowthRate 二重加算バグ修正** | **✅** | **バグ修正: setupInitialParty()で personalGrowthRate に仕様10の「合計成長率」が設定されていたため、levelUp()の personalGrowthRate + classGrowthRate 合算で classGrowthRate が二重加算され成長速度が仕様の約1.7〜3.3倍に。全5キャラの personalGrowthRate を「仕様10合計 − classGrowthRate」の正しい値に修正** |
 | **成長システム仕様書** | **✅** | **新規追加: docs/spec/10-growth-system.md** |
 
 ## 3. バトルシステム
@@ -184,7 +189,7 @@
 | **ワールドマップ画面 (WorldMapScreen)** | **✅** | **新規追加: チャプターノード選択・編成ボタン** |
 | **部隊編成画面 (FormationScreen)** | **✅** | **ユニット一覧・出撃/非出撃ボタン・詳細パネル（装備後ステータス括弧表示）・作戦設定・装備変更遷移** |
 | **戦闘準備画面 (BattlePrepScreen)** | **✅** | **マッププレビュー・ユニット配置・配置入れ替え・出撃開始・ランダム敵生成対応** |
-| **ランダムマップ (another_chapter)** | **✅** | **新規追加: パーティ平均Lvの敵が出現・何度でも挑戦可能・ワールドマップに紫ノードで表示** |
+| **ランダムマップ (another_chapter)** | **✅** | **新規追加: 出撃中ユニット平均Lv（整数除算）基準の敵が出現・何度でも挑戦可能・ワールドマップに紫ノードで表示** |
 | バトル画面 (BattleScreen) | ✅ | BattleConfig対応・CTベースターン制 |
 | **バトルリザルト画面 (BattleResultScreen)** | **✅** | **新規追加: 勝敗表示・生存ユニット・撃破数・チャプタークリア処理** |
 | リザルト画面 (ResultScreen) | ⚠️ | レガシー互換用に残存 |
@@ -213,8 +218,8 @@ TitleScreen →(タップ)→ WorldMapScreen
 | エッジケーステスト | ✅ | 空リスト・1体・戦闘不能 |
 | **GameUnitExpTest** | **✅** | **新規追加: 経験値加算・レベルアップ・レベル上限・成長テスト** |
 | **BattleSystemExpTest** | **✅** | **新規追加: 経験値計算・クランプ・撃破ボーナステスト** |
-| **LevelUpSystemTest** | **✅** | **新規追加: 経験値付与・レベルアップフローテスト** |
-| **MapLoaderTest** | **✅** | **新規追加: 15テストケース — 全チャプター読み込み・地形・敵・武器・勝利条件** |
+| **LevelUpSystemTest** | **✅** | **新規追加: 経験値付与・レベルアップフローテスト、アレスLv5シミュレーション検算テスト追加（personalGrowthRate二重加算バグ修正の検証）** |
+| **MapLoaderTest** | **✅** | **新規追加: 21テストケース — 全チャプター読み込み・地形・敵・武器・勝利条件・敵レベルアップ能力値検証（Lv1基本値/Lv6クラス成長率/ランダム敵成長率）** |
 | **SaveManagerTest** | **✅** | **新規追加: 16テストケース — シリアライズ/デシリアライズ・ファイルi/O・エッジケース** |
 | **DeploymentSwapTest** | **✅** | **新規追加: 8テストケース — ユニット入れ替え・空スポーンへの移動・連続入れ替え** |
 | **UnitTacticTest** | **✅** | **新規追加: 9テストケース — next()サイクル・デフォルト値・displayName/description検証** |
@@ -223,6 +228,8 @@ TitleScreen →(タップ)→ WorldMapScreen
 | **BattleSystemCounterTest** | **✅** | **新規追加: 素手反撃・射程判定テスト** |
 | **AITacticTest** | **✅** | **新規追加: 9テストケース — CAUTIOUS/SUPPORT/FLEE各パターンの行動検証、MoveAndHeal分岐対応** |
 | **VictoryCheckerTest** | **✅** | **14テストケース — 勝利/敗北/ロード不在許容・ボス撃破・ターン防衛** |
+| **ClassChangeTest** | **✅** | **新規追加: 転職テスト — stats変化・HP差分調整・転職制限** |
+| **UnitClassLoaderTest** | **✅** | **新規追加: 2テストケース — baseStats正常パース検証・baseStats欠如時のデフォルト値検証** |
 
 ## 11. サウンド / アセット
 

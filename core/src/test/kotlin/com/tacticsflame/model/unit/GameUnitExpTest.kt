@@ -20,10 +20,18 @@ class GameUnitExpTest {
     ): GameUnit {
         return GameUnit(
             id = "test_unit", name = "テストユニット",
-            unitClass = UnitClass.LORD, faction = Faction.PLAYER,
+            unitClass = UnitClass(
+                id = "testClass", name = "テストクラス",
+                moveType = MoveType.INFANTRY, baseMov = 5,
+                usableWeapons = listOf(WeaponType.SWORD),
+                baseStats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 2f),
+                canDualWield = true, dualWieldPenalty = 0,
+                classGrowthRate = growthRate
+            ),
+            faction = Faction.PLAYER,
             level = level, exp = exp,
-            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 2f),
-            growthRate = growthRate
+            personalModifier = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = spd.toFloat(), lck = 5f, def = 5f, res = 2f),
+            personalGrowthRate = growthRate
         )
     }
 

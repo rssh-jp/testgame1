@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.assets.AssetManager
 import com.tacticsflame.core.ScreenManager
 import com.tacticsflame.data.SaveManager
+import com.tacticsflame.data.UnitClassLoader
 import com.tacticsflame.model.campaign.BattleConfig
 import com.tacticsflame.model.campaign.BattleResultData
 import com.tacticsflame.model.campaign.GameProgress
@@ -41,6 +42,9 @@ class TacticsFlameGame : Game() {
     /** 武器装備変更対象ユニット（FormationScreen → WeaponEquipScreen 間の受け渡し） */
     var weaponEquipTarget: GameUnit? = null
 
+    /** ジョブチェンジ対象ユニット（FormationScreen → ClassChangeScreen 間の受け渡し） */
+    var classChangeTarget: GameUnit? = null
+
     /**
      * ゲーム初期化処理
      */
@@ -48,6 +52,14 @@ class TacticsFlameGame : Game() {
         Gdx.app.log(TAG, "ゲーム初期化開始")
         assetManager = AssetManager()
         screenManager = ScreenManager(this)
+
+        // マスターデータのロード（クラスデータを外部JSONから読み込み）
+        val loadedClasses = UnitClassLoader.loadAll()
+        if (loadedClasses.isNotEmpty()) {
+            com.tacticsflame.model.unit.UnitClass.initialize(loadedClasses)
+            Gdx.app.log(TAG, "クラスデータ初期化完了: ${loadedClasses.size}件")
+        }
+
         gameProgress = GameProgress()
         gameProgress.initialize()
 

@@ -25,12 +25,13 @@ enum class Faction {
  *
  * @property id ユニットID
  * @property name ユニット名
- * @property unitClass 兵種
+ * @property unitClass 兵種（ジョブ。baseStats・成長率・装備可能武器・移動タイプを決定する）
  * @property faction 所属陣営
  * @property level レベル
  * @property exp 現在の経験値（0〜99）
- * @property stats 現在のステータス
- * @property growthRate 成長率
+ * @property personalModifier 互換維持のため保持する個人補正値（現行仕様の実行時計算では未使用）
+ * @property levelUpStats レベルアップ累積ステータス（レベルアップ時の成長値が蓄積される）
+ * @property personalGrowthRate 互換維持のため保持する個人成長率（現行仕様の実行時計算では未使用）
  * @property weapons 予備武器リスト（装備スロット外の所持武器）
  * @property isLord ロード（主人公）かどうか
  */
@@ -41,11 +42,27 @@ class GameUnit(
     val faction: Faction,
     var level: Int = 1,
     var exp: Int = 0,
-    val stats: Stats,
-    val growthRate: GrowthRate,
+    personalModifier: Stats = Stats(),
+    val levelUpStats: Stats = Stats(),
+    personalGrowthRate: GrowthRate,
     val weapons: MutableList<Weapon> = mutableListOf(),
     val isLord: Boolean = false
 ) {
+    /**
+     * 現在の総合ステータス（ジョブ基礎値 + レベルアップ累積）
+     *
+     * ジョブ（unitClass）が基礎ステータスの「形」を決定し、
+     * levelUpStats で成長分が加算される。
+     */
+    val stats: Stats
+        get() = unitClass.baseStats + levelUpStats
+
+    /** 互換維持のため保持する個人補正値（実行時計算では未使用） */
+    val personalModifier: Stats = personalModifier
+
+    /** 互換維持のため保持する個人成長率（実行時計算では未使用） */
+    val personalGrowthRate: GrowthRate = personalGrowthRate
+
     // ==================== 装備スロット ====================
 
     /** 右手装備（主武器） */
@@ -241,7 +258,7 @@ class GameUnit(
      * 経験値を加算し、レベルアップ判定を行う
      *
      * 経験値が [GameConfig.EXP_TO_LEVEL_UP] (100) に達するとレベルアップし、
-     * 成長値（Float）が確定加算される。レベル上限はなく、どこまでも成長可能。
+        * 成長値（クラス成長率）が確定加算される。レベル上限はなく、どこまでも成長可能。
      *
      * @param amount 獲得経験値（0以上）
      * @return レベルアップした場合は実効値の変化量（StatGrowth）、しなかった場合はnull
@@ -260,7 +277,7 @@ class GameUnit(
     /**
      * レベルアップ時のステータス成長を確定加算する
      *
-     * 各ステータスに GrowthRate の値（Float）を加算し、
+        * 実効成長率（クラス成長率）をレベルアップ累積ステータスに加算し、
      * 実効値（小数点切り捨て整数）の変化量を StatGrowth として返す。
      *
      * @return 実効値の変化量（UI表示用）
@@ -276,15 +293,18 @@ class GameUnit(
         val beforeDef = stats.effectiveDef
         val beforeRes = stats.effectiveRes
 
-        // 成長値を確定加算
-        stats.hp += growthRate.hp
-        stats.str += growthRate.str
-        stats.mag += growthRate.mag
-        stats.skl += growthRate.skl
-        stats.spd += growthRate.spd
-        stats.lck += growthRate.lck
-        stats.def += growthRate.def
-        stats.res += growthRate.res
+        // 実効成長率 = クラス成長率
+        val effectiveGrowth = unitClass.classGrowthRate
+
+        // 成長値をレベルアップ累積ステータスに加算
+        levelUpStats.hp += effectiveGrowth.hp
+        levelUpStats.str += effectiveGrowth.str
+        levelUpStats.mag += effectiveGrowth.mag
+        levelUpStats.skl += effectiveGrowth.skl
+        levelUpStats.spd += effectiveGrowth.spd
+        levelUpStats.lck += effectiveGrowth.lck
+        levelUpStats.def += effectiveGrowth.def
+        levelUpStats.res += effectiveGrowth.res
 
         // 実効値の差分を計算
         val growth = StatGrowth(
@@ -301,6 +321,50 @@ class GameUnit(
         // HP成長分だけ currentHp も加算
         currentHp += growth.hp
         return growth
+    }
+
+    /**
+     * ユニットのクラス（職業）を変更する
+     *
+     * ジョブ変更によりステータスの「形」が変わる。
+    * - 新クラスの baseStats が適用される（levelUpStats は維持）
+     * - currentHp はクラス変更によるmaxHp差分を反映（最低1を保証）
+     * - 変更後は次回レベルアップから新クラスの成長率補正が適用される
+     * - 現在の武器が新クラスで装備不可の場合、自動的に外して予備武器に移動する
+     *
+     * @param newClass 変更先のクラス
+     */
+    fun changeClass(newClass: UnitClass) {
+        val oldMaxHp = maxHp
+        unitClass = newClass
+        val newMaxHp = maxHp
+
+        // クラス変更によるHP上限の差分をcurrentHpに反映（最低1を保証）
+        if (newMaxHp != oldMaxHp) {
+            currentHp = (currentHp + (newMaxHp - oldMaxHp)).coerceIn(1, newMaxHp)
+        }
+
+        // 右手武器が装備不可なら外す
+        rightHand?.let { weapon ->
+            if (weapon.type !in newClass.usableWeapons) {
+                weapons.add(0, weapon)
+                rightHand = null
+            }
+        }
+
+        // 左手武器が装備不可なら外す
+        leftHand?.let { weapon ->
+            if (weapon.type !in newClass.usableWeapons) {
+                weapons.add(0, weapon)
+                leftHand = null
+            }
+        }
+
+        // 二刀流非対応クラスに変更した場合、左手を外す
+        if (!newClass.canDualWield && leftHand != null) {
+            weapons.add(0, leftHand!!)
+            leftHand = null
+        }
     }
 
     /**

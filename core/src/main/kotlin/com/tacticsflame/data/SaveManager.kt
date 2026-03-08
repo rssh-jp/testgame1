@@ -24,8 +24,8 @@ object SaveManager {
     /** 一時セーブファイル名（アトミックセーブ用） */
     private const val SAVE_FILE_NAME_TMP = "save_data.json.tmp"
 
-    /** セーブデータバージョン（v3: Weapon.healPower の保存/復元対応） */
-    private const val SAVE_VERSION = 3
+    /** セーブデータバージョン（v5: baseStats → personalModifier 変更対応） */
+    private const val SAVE_VERSION = 5
 
     /** ロード処理中のセーブデータバージョン（readGrowthRate 等でマイグレーション判定に使用） */
     private var loadingVersion = SAVE_VERSION
@@ -181,14 +181,19 @@ object SaveManager {
         writer.set("isLord", unit.isLord)
         writer.set("tactic", unit.tactic.name)
 
-        // ステータス
-        writer.`object`("stats")
-        writeStats(writer, unit.stats)
+        // キャラクター固有ステータス補正
+        writer.`object`("personalModifier")
+        writeStats(writer, unit.personalModifier)
         writer.pop()
 
-        // 成長率
-        writer.`object`("growthRate")
-        writeGrowthRate(writer, unit.growthRate)
+        // レベルアップ累積ステータス
+        writer.`object`("levelUpStats")
+        writeStats(writer, unit.levelUpStats)
+        writer.pop()
+
+        // 個人成長率
+        writer.`object`("personalGrowthRate")
+        writeGrowthRate(writer, unit.personalGrowthRate)
         writer.pop()
 
         // 武器リスト（予備武器）
@@ -410,8 +415,26 @@ object SaveManager {
                 Faction.PLAYER
             }
 
-            val stats = readStats(node.get("stats"))
-            val growthRate = readGrowthRate(node.get("growthRate"))
+            // v5以降: personalModifier（旧baseStatsキーにも互換対応）
+            val personalModifier = if (node.has("personalModifier")) {
+                readStats(node.get("personalModifier"))
+            } else if (node.has("baseStats")) {
+                // v4以前の互換: baseStats を personalModifier として読み込み
+                readStats(node.get("baseStats"))
+            } else {
+                // v3以前の互換: stats を personalModifier として読み込み
+                readStats(node.get("stats"))
+            }
+            val levelUpStats = if (node.has("levelUpStats")) {
+                readStats(node.get("levelUpStats"))
+            } else {
+                Stats() // v3以前はレベルアップ累積なし
+            }
+            val personalGrowthRate = if (node.has("personalGrowthRate")) {
+                readGrowthRate(node.get("personalGrowthRate"))
+            } else {
+                readGrowthRate(node.get("growthRate"))
+            }
             val weapons = readWeapons(node.get("weapons"))
 
             val unit = GameUnit(
@@ -421,8 +444,9 @@ object SaveManager {
                 faction = faction,
                 level = level,
                 exp = exp,
-                stats = stats,
-                growthRate = growthRate,
+                personalModifier = personalModifier,
+                levelUpStats = levelUpStats,
+                personalGrowthRate = personalGrowthRate,
                 weapons = weapons.toMutableList(),
                 isLord = isLord
             )

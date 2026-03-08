@@ -158,8 +158,8 @@ class GameProgress {
         val ares = GameUnit(
             id = "hero_01", name = "アレス",
             unitClass = UnitClass.LORD, faction = Faction.PLAYER,
-            stats = Stats(hp = 20f, str = 6f, mag = 1f, skl = 7f, spd = 8f, lck = 5f, def = 5f, res = 2f),
-            growthRate = GrowthRate(hp = 0.70f, str = 0.50f, mag = 0.10f, skl = 0.55f, spd = 0.20f, lck = 0.40f, def = 0.35f, res = 0.25f),
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate(),
             isLord = true
         )
         ares.rightHand = Weapon("ironSword", "鉄の剣", WeaponType.SWORD, might = 5, hit = 90, weight = 3)
@@ -168,8 +168,8 @@ class GameProgress {
         val leena = GameUnit(
             id = "hero_02", name = "リーナ",
             unitClass = UnitClass.LANCER, faction = Faction.PLAYER,
-            stats = Stats(hp = 18f, str = 7f, mag = 0f, skl = 5f, spd = 5f, lck = 3f, def = 7f, res = 1f),
-            growthRate = GrowthRate(hp = 0.60f, str = 0.55f, mag = 0.05f, skl = 0.45f, spd = 0.20f, lck = 0.30f, def = 0.50f, res = 0.20f)
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate()
         )
         leena.rightHand = Weapon("ironLance", "鉄の槍", WeaponType.LANCE, might = 7, hit = 80, weight = 5)
         leena.armorSlot1 = Armor("chainMail", "鎖帷子", ArmorType.LIGHT_ARMOR, defBonus = 2, resBonus = 0, weight = 2)
@@ -177,8 +177,8 @@ class GameProgress {
         val maria = GameUnit(
             id = "hero_03", name = "マリア",
             unitClass = UnitClass.ARCHER, faction = Faction.PLAYER,
-            stats = Stats(hp = 16f, str = 5f, mag = 0f, skl = 8f, spd = 7f, lck = 4f, def = 3f, res = 3f),
-            growthRate = GrowthRate(hp = 0.55f, str = 0.45f, mag = 0.05f, skl = 0.60f, spd = 0.20f, lck = 0.40f, def = 0.25f, res = 0.30f)
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate()
         )
         maria.rightHand = Weapon("ironBow", "鉄の弓", WeaponType.BOW, might = 6, hit = 85, weight = 3, minRange = 2, maxRange = 2)
         maria.armorSlot1 = Armor("leatherArmor", "革の鎧", ArmorType.LIGHT_ARMOR, defBonus = 1, resBonus = 0, weight = 1)
@@ -186,8 +186,8 @@ class GameProgress {
         val eric = GameUnit(
             id = "hero_04", name = "エリック",
             unitClass = UnitClass.MAGE, faction = Faction.PLAYER,
-            stats = Stats(hp = 15f, str = 1f, mag = 7f, skl = 6f, spd = 6f, lck = 4f, def = 2f, res = 6f),
-            growthRate = GrowthRate(hp = 0.45f, str = 0.10f, mag = 0.60f, skl = 0.50f, spd = 0.20f, lck = 0.35f, def = 0.15f, res = 0.50f)
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate()
         )
         eric.rightHand = Weapon("fire", "ファイアー", WeaponType.MAGIC, might = 5, hit = 90, weight = 2, minRange = 1, maxRange = 2)
         eric.leftHand = Weapon("heal", "ライブ", WeaponType.STAFF, might = 0, hit = 100, weight = 1, healPower = 10)
@@ -196,8 +196,8 @@ class GameProgress {
         val cecilia = GameUnit(
             id = "hero_05", name = "セシリア",
             unitClass = UnitClass.HEALER, faction = Faction.PLAYER,
-            stats = Stats(hp = 16f, str = 1f, mag = 8f, skl = 5f, spd = 6f, lck = 7f, def = 2f, res = 7f),
-            growthRate = GrowthRate(hp = 0.50f, str = 0.05f, mag = 0.65f, skl = 0.40f, spd = 0.20f, lck = 0.50f, def = 0.10f, res = 0.55f)
+            personalModifier = Stats(),
+            personalGrowthRate = GrowthRate()
         )
         cecilia.rightHand = Weapon("heal", "ライブ", WeaponType.STAFF, might = 0, hit = 100, weight = 1, healPower = 10)
         cecilia.tactic = UnitTactic.HEAL

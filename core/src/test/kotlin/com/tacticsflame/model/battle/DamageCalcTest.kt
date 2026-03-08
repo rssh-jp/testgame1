@@ -33,9 +33,16 @@ class DamageCalcTest {
     ): GameUnit {
         val unit = GameUnit(
             id = id, name = "テスト$id",
-            unitClass = UnitClass.LORD, faction = Faction.PLAYER,
-            stats = Stats(hp = hp.toFloat(), str = str.toFloat(), mag = mag.toFloat(), skl = skl.toFloat(), spd = spd.toFloat(), lck = lck.toFloat(), def = def.toFloat(), res = res.toFloat()),
-            growthRate = GrowthRate(),
+            unitClass = UnitClass(
+                id = "testClass", name = "テストクラス",
+                moveType = MoveType.INFANTRY, baseMov = 5,
+                usableWeapons = listOf(WeaponType.SWORD, WeaponType.LANCE, WeaponType.AXE, WeaponType.BOW, WeaponType.MAGIC, WeaponType.STAFF),
+                baseStats = Stats(hp = hp.toFloat(), str = str.toFloat(), mag = mag.toFloat(), skl = skl.toFloat(), spd = spd.toFloat(), lck = lck.toFloat(), def = def.toFloat(), res = res.toFloat()),
+                canDualWield = true, dualWieldPenalty = 0
+            ),
+            faction = Faction.PLAYER,
+            personalModifier = Stats(hp = hp.toFloat(), str = str.toFloat(), mag = mag.toFloat(), skl = skl.toFloat(), spd = spd.toFloat(), lck = lck.toFloat(), def = def.toFloat(), res = res.toFloat()),
+            personalGrowthRate = GrowthRate(),
             weapons = weapons
         )
         unit.rightHand = weapons.firstOrNull()

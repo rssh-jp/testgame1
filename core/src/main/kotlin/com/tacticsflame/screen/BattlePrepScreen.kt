@@ -134,10 +134,10 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * マップ・敵ユニット・スポーン位置・勝利条件を読み込む。
      */
     private fun setupBattlePreview() {
-        // パーティの平均レベルを計算（ランダム敵生成用）
-        val roster = game.gameProgress.party.roster
-        val partyAverageLevel = if (roster.isNotEmpty()) {
-            roster.sumOf { it.level } / roster.size
+        // 出撃中味方ユニットの平均レベルを計算（ランダム敵生成用）
+        val deployedUnits = game.gameProgress.party.getDeployedUnits()
+        val partyAverageLevel = if (deployedUnits.isNotEmpty()) {
+            deployedUnits.sumOf { it.level } / deployedUnits.size
         } else {
             1
         }
@@ -684,7 +684,9 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * ウィンドウリサイズ処理
      */
     override fun resize(width: Int, height: Int) {
-        mapViewport.update(width, height)
+        if (isInitialized) {
+            mapViewport.update(width, height)
+        }
         uiViewport.update(width, height, true)
     }
 
