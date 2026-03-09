@@ -22,5 +22,8 @@ data class BattleResultData(
     val defeatedEnemies: Int = 0,
     val totalEnemies: Int = 0,
     val survivingUnits: List<GameUnit> = emptyList(),
-    val expGained: Map<String, Int> = emptyMap()
+    val expGained: Map<String, Int> = emptyMap(),
+    val isCampaignMode: Boolean = false,
+    val wavesCleared: Int = 0,
+    val totalWaves: Int = 0
 )

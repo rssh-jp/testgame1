@@ -81,4 +81,18 @@ object GameConfig {
 
     /** FPS */
     const val TARGET_FPS = 60
+
+    // ==================== Campaign Mode ====================
+
+    /** ウェーブクリア演出時間（秒） */
+    const val WAVE_CLEAR_DURATION = 1.5f
+
+    /** カメラパン所要時間（秒） */
+    const val WAVE_CAMERA_PAN_DURATION = 2.0f
+
+    /** ウェーブ開始演出時間（秒） */
+    const val WAVE_START_DURATION = 1.5f
+
+    /** ウェーブ間のデフォルト回復率（%） */
+    const val WAVE_DEFAULT_HEAL_PERCENT = 30
 }

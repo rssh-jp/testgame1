@@ -26,5 +26,7 @@ data class BattleConfig(
     val playerPositions: Map<String, Position>,
     val enemyUnits: List<GameUnit>,
     val enemyPositions: Map<String, Position>,
-    val victoryCondition: VictoryChecker.VictoryConditionType = VictoryChecker.VictoryConditionType.DEFEAT_ALL
+    val victoryCondition: VictoryChecker.VictoryConditionType = VictoryChecker.VictoryConditionType.DEFEAT_ALL,
+    val isCampaignMode: Boolean = false,
+    val waves: List<WaveConfig> = emptyList()
 )

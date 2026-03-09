@@ -18,8 +18,11 @@ import com.tacticsflame.TacticsFlameGame
 import com.tacticsflame.core.GameConfig
 import com.tacticsflame.model.battle.BattleResult
 import com.tacticsflame.model.battle.HealResult
+import com.tacticsflame.data.MapLoader
 import com.tacticsflame.model.campaign.BattleConfig
 import com.tacticsflame.model.campaign.BattleResultData
+import com.tacticsflame.model.campaign.WaveConfig
+import com.tacticsflame.model.campaign.WaveEnemy
 import com.tacticsflame.model.map.*
 import com.tacticsflame.model.unit.*
 import com.tacticsflame.render.UnitShapeRenderer
@@ -83,7 +86,13 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         /** 行動後ウェイト中 */
         POST_ACTION,
         /** 勝利/敗北 */
-        RESULT
+        RESULT,
+        /** ウェーブクリア演出中 */
+        WAVE_CLEAR,
+        /** カメラパン + 次ウェーブ準備中 */
+        WAVE_TRANSITION,
+        /** 新ウェーブ開始演出中 */
+        WAVE_START
     }
 
     // 選択中のユニットと移動範囲
@@ -124,6 +133,25 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
     /** 撤退確認ダイアログ表示フラグ */
     private var showRetreatConfirm: Boolean = false
+
+    // ==================== Campaign Mode ====================
+
+    /** Campaign Mode のウェーブ管理 */
+    private val waveManager = WaveManager()
+
+    /** Campaign Mode かどうか */
+    private var isCampaignMode: Boolean = false
+
+    /** カメラパンアニメーション: 開始位置 */
+    private var cameraPanStartX: Float = 0f
+    private var cameraPanStartY: Float = 0f
+
+    /** カメラパンアニメーション: 目標位置 */
+    private var cameraPanTargetX: Float = 0f
+    private var cameraPanTargetY: Float = 0f
+
+    /** ウェーブ間回復結果の一時保持 */
+    private var waveHealResults: List<Pair<GameUnit, Int>> = emptyList()
 
     // 撤退ボタンのUI座標（uiViewport座標系、renderRetreatButton で更新）
     private var retreatButtonUiX: Float = 0f
@@ -189,6 +217,24 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         // 行動順予測を更新
         updateActionQueue()
 
+        // Campaign Mode の初期化
+        val config = battleConfig
+        if (config != null && config.isCampaignMode && config.waves.isNotEmpty()) {
+            isCampaignMode = true
+            waveManager.initialize(config.waves)
+            // キャンペーンモードは先にisCampaignModeを設定してからビューポートを再初期化
+            initViewport()
+            // Wave1のカメラフォーカス位置に移動
+            val firstWave = waveManager.currentWave
+            if (firstWave != null) {
+                val focusX = firstWave.cameraFocusX * GameConfig.TILE_SIZE.toFloat()
+                val focusY = firstWave.cameraFocusY * GameConfig.TILE_SIZE.toFloat()
+                camera.position.set(focusX, focusY, 0f)
+                camera.update()
+            }
+            Gdx.app.log(TAG, "Campaign Mode 開始: ${config.waves.size} ウェーブ")
+        }
+
         battleState = BattleState.CT_ADVANCING
         Gdx.app.log(TAG, "バトル画面初期化完了（CTベースターン制）")
     }
@@ -244,6 +290,9 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                 BattleState.HEAL_RESULT -> processHealResult(delta)
                 BattleState.POST_ACTION -> processPostAction(delta)
                 BattleState.RESULT -> handleResultInput()
+                BattleState.WAVE_CLEAR -> processWaveClear(delta)
+                BattleState.WAVE_TRANSITION -> processWaveTransition(delta)
+                BattleState.WAVE_START -> processWaveStart(delta)
             }
         }
 
@@ -284,6 +333,18 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         // ターン情報描画
         renderTurnInfo()
 
+        // Campaign Mode: ウェーブ進捗UI
+        if (isCampaignMode) {
+            renderWaveProgress()
+        }
+
+        // ウェーブクリア/開始演出のオーバーレイ
+        when (battleState) {
+            BattleState.WAVE_CLEAR -> renderWaveClearOverlay()
+            BattleState.WAVE_START -> renderWaveStartOverlay()
+            else -> {}
+        }
+
         // 回復結果表示（HEAL_RESULT状態のとき）
         if (battleState == BattleState.HEAL_RESULT) {
             renderHealResultOverlay()
@@ -310,6 +371,9 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * RESULT状態以外の全状態で受け付ける。
      */
     private fun handleTouchInput() {
+        // ウェーブ演出中は入力を受け付けない
+        if (battleState in listOf(BattleState.WAVE_CLEAR, BattleState.WAVE_TRANSITION, BattleState.WAVE_START)) return
+
         // 撤退確認ダイアログが表示中の場合、ダイアログのボタンのみ受け付ける
         if (showRetreatConfirm) {
             if (!Gdx.input.justTouched()) return
@@ -353,8 +417,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                 camera.position.add(lastPanWorldX - world.x, lastPanWorldY - world.y, 0f)
                 clampCameraToMap()
                 camera.update()
-                lastPanWorldX = world.x
-                lastPanWorldY = world.y
+                // カメラ移動後の座標系で再unprojectし、次フレーム用の基準座標を正しく取得
+                val updatedWorld = viewport.unproject(Vector3(screenX, screenY, 0f))
+                lastPanWorldX = updatedWorld.x
+                lastPanWorldY = updatedWorld.y
             }
             return
         }
@@ -810,28 +876,33 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         val allUnits = battleMap.getAllUnits().map { it.second }
         turnManager.completeAction(unit, allUnits)
 
-        // 勝敗判定（BattleConfig の勝利条件を使用）
-        val conditionType = battleConfig?.victoryCondition ?: VictoryChecker.VictoryConditionType.DEFEAT_ALL
-        val outcome = victoryChecker.checkOutcome(
-            battleMap, conditionType,
-            turnNumber = turnManager.roundNumber,
-            bossId = battleConfig?.enemyUnits?.find { it.isLord }?.id
-        )
-        when (outcome) {
-            VictoryChecker.BattleOutcome.VICTORY -> {
-                Gdx.app.log(TAG, "勝利！")
-                isVictory = true
-                battleState = BattleState.RESULT
-            }
-            VictoryChecker.BattleOutcome.DEFEAT -> {
-                Gdx.app.log(TAG, "敗北...")
-                isVictory = false
-                battleState = BattleState.RESULT
-            }
-            VictoryChecker.BattleOutcome.ONGOING -> {
-                // 行動順予測を更新して次のCT進行へ
-                updateActionQueue()
-                battleState = BattleState.CT_ADVANCING
+        if (isCampaignMode) {
+            // Campaign Mode: ウェーブ単位の判定
+            checkCampaignOutcome()
+        } else {
+            // 通常モード: 従来通り
+            val conditionType = battleConfig?.victoryCondition ?: VictoryChecker.VictoryConditionType.DEFEAT_ALL
+            val outcome = victoryChecker.checkOutcome(
+                battleMap, conditionType,
+                turnNumber = turnManager.roundNumber,
+                bossId = battleConfig?.enemyUnits?.find { it.isLord }?.id
+            )
+            when (outcome) {
+                VictoryChecker.BattleOutcome.VICTORY -> {
+                    Gdx.app.log(TAG, "勝利！")
+                    isVictory = true
+                    battleState = BattleState.RESULT
+                }
+                VictoryChecker.BattleOutcome.DEFEAT -> {
+                    Gdx.app.log(TAG, "敗北...")
+                    isVictory = false
+                    battleState = BattleState.RESULT
+                }
+                VictoryChecker.BattleOutcome.ONGOING -> {
+                    // 行動順予測を更新して次のCT進行へ
+                    updateActionQueue()
+                    battleState = BattleState.CT_ADVANCING
+                }
             }
         }
     }
@@ -864,7 +935,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                 roundCount = turnManager.roundNumber,
                 defeatedEnemies = defeatedEnemies,
                 totalEnemies = initialEnemyCount,
-                survivingUnits = survivingPlayers
+                survivingUnits = survivingPlayers,
+                isCampaignMode = isCampaignMode,
+                wavesCleared = if (isCampaignMode) waveManager.currentWaveIndex + (if (isVictory && waveManager.isLastWave) 1 else 0) else 0,
+                totalWaves = if (isCampaignMode) waveManager.totalWaves else 0
             )
             game.screenManager.navigateToBattleResult(resultData)
         } else {
@@ -881,6 +955,200 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         actionQueue = turnManager.predictActionOrder(allUnits, ACTION_QUEUE_SIZE)
     }
 
+    // ==================== Campaign Mode ====================
+
+    /**
+     * Campaign Mode の勝敗・ウェーブクリア判定
+     */
+    private fun checkCampaignOutcome() {
+        val allUnits = battleMap.getAllUnits()
+
+        // 敗北判定（最優先）
+        val playerUnits = allUnits.filter { it.second.faction == Faction.PLAYER }
+        val lordDefeated = playerUnits.any { it.second.isLord && it.second.isDefeated }
+        val allPlayersEliminated = playerUnits.isEmpty() || playerUnits.all { it.second.isDefeated }
+        if (lordDefeated || allPlayersEliminated) {
+            Gdx.app.log(TAG, "Campaign 敗北 - Wave ${waveManager.currentWaveIndex + 1}")
+            isVictory = false
+            battleState = BattleState.RESULT
+            return
+        }
+
+        // ウェーブクリア判定
+        if (waveManager.isCurrentWaveCleared(battleMap)) {
+            if (waveManager.isLastWave) {
+                Gdx.app.log(TAG, "Campaign Complete!")
+                isVictory = true
+                battleState = BattleState.RESULT
+            } else {
+                Gdx.app.log(TAG, "Wave ${waveManager.currentWaveIndex + 1} クリア!")
+                stateTimer = 0f
+                battleState = BattleState.WAVE_CLEAR
+            }
+            return
+        }
+
+        // 継続
+        updateActionQueue()
+        battleState = BattleState.CT_ADVANCING
+    }
+
+    /**
+     * ウェーブクリア演出を処理する
+     *
+     * クリアテキスト表示 → 回復実行 → カメラパンに遷移
+     */
+    private fun processWaveClear(delta: Float) {
+        stateTimer += delta
+
+        // スキップ判定（タップでスキップ）
+        if (stateTimer > 0.3f && Gdx.input.justTouched()) {
+            startWaveTransition()
+            return
+        }
+
+        if (stateTimer >= GameConfig.WAVE_CLEAR_DURATION) {
+            startWaveTransition()
+        }
+    }
+
+    /**
+     * ウェーブ遷移（カメラパン + 回復 + 敵配置）を開始する
+     */
+    private fun startWaveTransition() {
+        // ウェーブ間回復を実行
+        val healPercent = waveManager.currentWave?.healPercent ?: GameConfig.WAVE_DEFAULT_HEAL_PERCENT
+        val playerUnits = battleMap.getAllUnits()
+            .filter { it.second.faction == Faction.PLAYER }
+            .map { it.second }
+        waveHealResults = waveManager.healBetweenWaves(playerUnits, healPercent)
+
+        if (waveHealResults.isNotEmpty()) {
+            Gdx.app.log(TAG, "ウェーブ間回復: ${waveHealResults.size}体")
+        }
+
+        // 次のウェーブに進む
+        val nextWave = waveManager.advanceToNextWave() ?: return
+
+        // 次ウェーブの敵をマップに配置
+        spawnWaveEnemies(nextWave)
+
+        // カメラパンの開始・目標位置を設定
+        cameraPanStartX = camera.position.x
+        cameraPanStartY = camera.position.y
+        cameraPanTargetX = nextWave.cameraFocusX * GameConfig.TILE_SIZE
+        cameraPanTargetY = nextWave.cameraFocusY * GameConfig.TILE_SIZE
+
+        stateTimer = 0f
+        battleState = BattleState.WAVE_TRANSITION
+    }
+
+    /**
+     * ウェーブの敵をマップ上に配置する
+     *
+     * MapLoader の公開メソッドを使用して WaveEnemy から GameUnit を構築し、
+     * マップ上に配置する。配置位置が既に埋まっている場合は隣接する空きマスを探す。
+     *
+     * @param wave 配置対象のウェーブ設定
+     */
+    private fun spawnWaveEnemies(wave: WaveConfig) {
+        val mapLoader = MapLoader()
+
+        for (waveEnemy in wave.enemies) {
+            val unit = mapLoader.createUnitFromWaveEnemy(waveEnemy) ?: continue
+            val pos = Position(waveEnemy.x, waveEnemy.y)
+
+            // 既存ユニットと重複しないか確認
+            if (battleMap.getUnitAt(pos) != null) {
+                val altPos = findEmptyAdjacentPosition(pos)
+                if (altPos != null) {
+                    battleMap.placeUnit(unit, altPos)
+                }
+            } else {
+                battleMap.placeUnit(unit, pos)
+            }
+        }
+
+        // 初期敵数を更新（リザルト表示用）
+        initialEnemyCount += wave.enemies.size
+
+        Gdx.app.log(TAG, "Wave ${wave.waveId} の敵を配置: ${wave.enemies.size}体")
+    }
+
+    /**
+     * 隣接する空きマスを探す
+     *
+     * @param pos 基準座標
+     * @return 配置可能な隣接座標。見つからなければ null
+     */
+    private fun findEmptyAdjacentPosition(pos: Position): Position? {
+        for (neighbor in pos.neighbors()) {
+            if (battleMap.isInBounds(neighbor.x, neighbor.y) && battleMap.getUnitAt(neighbor) == null) {
+                val tile = battleMap.getTile(neighbor)
+                if (tile != null && tile.terrainType.moveCost > 0) {
+                    return neighbor
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * カメラパンを処理する（EaseInOutCubic補間）
+     *
+     * @param delta フレームデルタタイム（秒）
+     */
+    private fun processWaveTransition(delta: Float) {
+        stateTimer += delta
+        val duration = GameConfig.WAVE_CAMERA_PAN_DURATION
+        val t = (stateTimer / duration).coerceIn(0f, 1f)
+
+        // EaseInOutCubic 補間
+        val eased = if (t < 0.5f) {
+            4f * t * t * t
+        } else {
+            1f - (-2f * t + 2f).let { it * it * it } / 2f
+        }
+
+        camera.position.x = cameraPanStartX + (cameraPanTargetX - cameraPanStartX) * eased
+        camera.position.y = cameraPanStartY + (cameraPanTargetY - cameraPanStartY) * eased
+        camera.update()
+
+        if (t >= 1f) {
+            stateTimer = 0f
+            battleState = BattleState.WAVE_START
+        }
+    }
+
+    /**
+     * ウェーブ開始演出を処理する
+     *
+     * @param delta フレームデルタタイム（秒）
+     */
+    private fun processWaveStart(delta: Float) {
+        stateTimer += delta
+
+        // スキップ判定
+        if (stateTimer > 0.3f && Gdx.input.justTouched()) {
+            startNextWaveBattle()
+            return
+        }
+
+        if (stateTimer >= GameConfig.WAVE_START_DURATION) {
+            startNextWaveBattle()
+        }
+    }
+
+    /**
+     * 次のウェーブのバトルを開始する
+     */
+    private fun startNextWaveBattle() {
+        waveHealResults = emptyList()
+        updateActionQueue()
+        stateTimer = 0f
+        battleState = BattleState.CT_ADVANCING
+    }
+
     // ==================== ビューポート・カメラ ====================
 
     /**
@@ -891,14 +1159,25 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * レターボックス（黒帯）が発生せず画面いっぱいにマップが表示される。
      */
     private fun initViewport() {
-        val mapPixelW = battleMap.width * GameConfig.TILE_SIZE
-        val mapPixelH = battleMap.height * GameConfig.TILE_SIZE
         val padding = GameConfig.TILE_SIZE * GameConfig.BATTLE_MAP_PADDING_TILES
-        viewport = ExtendViewport(
-            mapPixelW + padding * 2,
-            mapPixelH + padding * 2,
-            camera
-        )
+        if (isCampaignMode) {
+            // キャンペーンモード: 15×15タイルが収まるサイズ
+            val visibleTiles = 15f
+            val viewSize = visibleTiles * GameConfig.TILE_SIZE
+            viewport = ExtendViewport(
+                viewSize + padding * 2,
+                viewSize + padding * 2,
+                camera
+            )
+        } else {
+            val mapPixelW = battleMap.width * GameConfig.TILE_SIZE
+            val mapPixelH = battleMap.height * GameConfig.TILE_SIZE
+            viewport = ExtendViewport(
+                mapPixelW + padding * 2,
+                mapPixelH + padding * 2,
+                camera
+            )
+        }
         // 現在のウィンドウサイズで更新
         viewport.update(Gdx.graphics.width, Gdx.graphics.height)
         centerCameraOnMap()
@@ -909,43 +1188,71 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * カメラをマップ中央に配置する
      */
     private fun centerCameraOnMap() {
+        val mapCenterX = battleMap.width * GameConfig.TILE_SIZE / 2f
         val mapCenterY = battleMap.height * GameConfig.TILE_SIZE / 2f
-        val loweredY = mapCenterY + viewHalfHeight() * BATTLE_AREA_SHIFT_RATIO
-        camera.position.set(
-            battleMap.width * GameConfig.TILE_SIZE / 2f,
-            loweredY,
-            0f
-        )
+        if (isCampaignMode) {
+            // キャンペーンモードではシフトなし
+            camera.position.set(mapCenterX, mapCenterY, 0f)
+        } else {
+            val loweredY = mapCenterY + viewHalfHeight() * BATTLE_AREA_SHIFT_RATIO
+            camera.position.set(mapCenterX, loweredY, 0f)
+        }
         camera.update()
     }
 
     /**
      * カメラ位置をマップ範囲内に制限する
+     *
+     * キャンペーンモードでは BATTLE_AREA_SHIFT_RATIO を適用せず、
+     * マップ全タイルが確実に画面内に表示できるようにする。
+     * ビューポートがマップより大きい場合はマップ中央に固定する。
      */
     private fun clampCameraToMap() {
         val mapWidth = battleMap.width * GameConfig.TILE_SIZE
         val mapHeight = battleMap.height * GameConfig.TILE_SIZE
-        val mapCenterY = mapHeight / 2f
-        val loweredY = mapCenterY + viewHalfHeight() * BATTLE_AREA_SHIFT_RATIO
 
         val halfW = viewHalfWidth()
         val halfH = viewHalfHeight()
 
-        val minX = halfW
-        val maxX = mapWidth - halfW
-        val minY = halfH
-        val maxY = mapHeight - halfH
+        if (isCampaignMode) {
+            // キャンペーンモード: シフトなし、マップ端が画面端に来る位置まで移動可能
+            val minX = halfW
+            val maxX = mapWidth - halfW
+            val minY = halfH
+            val maxY = mapHeight - halfH
 
-        camera.position.x = if (minX <= maxX) {
-            camera.position.x.coerceIn(minX, maxX)
-        } else {
-            mapWidth / 2f
-        }
+            camera.position.x = if (minX <= maxX) {
+                camera.position.x.coerceIn(minX, maxX)
+            } else {
+                mapWidth / 2f
+            }
 
-        camera.position.y = if (minY <= maxY) {
-            camera.position.y.coerceIn(minY, maxY)
+            camera.position.y = if (minY <= maxY) {
+                camera.position.y.coerceIn(minY, maxY)
+            } else {
+                // ビューポートがマップ高さを超える場合はマップ中央（シフトなし）
+                mapHeight / 2f
+            }
         } else {
-            loweredY
+            val mapCenterY = mapHeight / 2f
+            val loweredY = mapCenterY + halfH * BATTLE_AREA_SHIFT_RATIO
+
+            val minX = halfW
+            val maxX = mapWidth - halfW
+            val minY = halfH
+            val maxY = mapHeight - halfH
+
+            camera.position.x = if (minX <= maxX) {
+                camera.position.x.coerceIn(minX, maxX)
+            } else {
+                mapWidth / 2f
+            }
+
+            camera.position.y = if (minY <= maxY) {
+                camera.position.y.coerceIn(minY, maxY)
+            } else {
+                loweredY
+            }
         }
     }
 
@@ -971,9 +1278,19 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * マップを描画する（プロトタイプ：ShapeRendererで色分け）
      */
     private fun renderMap() {
+        val tileSize = GameConfig.TILE_SIZE
+
+        // カメラの可視範囲をタイル座標に変換（カリング）
+        val halfW = viewHalfWidth()
+        val halfH = viewHalfHeight()
+        val minTileX = MathUtils.floor((camera.position.x - halfW) / tileSize).coerceAtLeast(0)
+        val maxTileX = MathUtils.ceil((camera.position.x + halfW) / tileSize).coerceAtMost(battleMap.width - 1)
+        val minTileY = MathUtils.floor((camera.position.y - halfH) / tileSize).coerceAtLeast(0)
+        val maxTileY = MathUtils.ceil((camera.position.y + halfH) / tileSize).coerceAtMost(battleMap.height - 1)
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        for (y in 0 until battleMap.height) {
-            for (x in 0 until battleMap.width) {
+        for (y in minTileY..maxTileY) {
+            for (x in minTileX..maxTileX) {
                 val tile = battleMap.getTile(x, y) ?: continue
                 when (tile.terrainType) {
                     TerrainType.PLAIN -> shapeRenderer.setColor(0.5f, 0.8f, 0.3f, 1f)
@@ -985,7 +1302,6 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                     TerrainType.VILLAGE -> shapeRenderer.setColor(0.8f, 0.6f, 0.3f, 1f)
                     TerrainType.BRIDGE -> shapeRenderer.setColor(0.6f, 0.5f, 0.4f, 1f)
                 }
-                val tileSize = GameConfig.TILE_SIZE
                 shapeRenderer.rect(
                     x * tileSize, y * tileSize,
                     tileSize - 1, tileSize - 1
@@ -1326,6 +1642,80 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         Gdx.gl.glDisable(GL20.GL_BLEND)
     }
 
+    // ==================== Campaign Mode 描画 ====================
+
+    /**
+     * ウェーブ進捗UIを描画する（画面上部中央、ターン情報の下）
+     */
+    private fun renderWaveProgress() {
+        batch.projectionMatrix = uiViewport.camera.combined
+        batch.begin()
+
+        val waveText = "Wave ${waveManager.currentWaveIndex + 1} / ${waveManager.totalWaves}"
+        font.color = Color(1f, 0.85f, 0.2f, 1f)
+        val viewCenterX = uiViewport.worldWidth / 2f
+        val viewTop = uiViewport.worldHeight
+        glyphLayout.setText(font, waveText)
+        font.draw(batch, waveText, viewCenterX - glyphLayout.width / 2f, viewTop - 88f)
+
+        batch.end()
+    }
+
+    /**
+     * ウェーブクリア演出のオーバーレイを描画する
+     */
+    private fun renderWaveClearOverlay() {
+        // 半透明黒オーバーレイ
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.projectionMatrix = uiViewport.camera.combined
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0f, 0f, 0f, 0.5f)
+        shapeRenderer.rect(0f, 0f, uiViewport.worldWidth, uiViewport.worldHeight)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // テキスト
+        batch.projectionMatrix = uiViewport.camera.combined
+        batch.begin()
+        val clearText = "Wave ${waveManager.currentWaveIndex + 1} Complete!"
+        font.color = Color(1f, 0.9f, 0.2f, 1f)
+        glyphLayout.setText(font, clearText)
+        font.draw(
+            batch, clearText,
+            uiViewport.worldWidth / 2f - glyphLayout.width / 2f,
+            uiViewport.worldHeight / 2f + glyphLayout.height / 2f
+        )
+        batch.end()
+    }
+
+    /**
+     * ウェーブ開始演出のオーバーレイを描画する
+     */
+    private fun renderWaveStartOverlay() {
+        val wave = waveManager.currentWave ?: return
+
+        // 半透明黒オーバーレイ
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.projectionMatrix = uiViewport.camera.combined
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0f, 0f, 0f, 0.5f)
+        shapeRenderer.rect(0f, 0f, uiViewport.worldWidth, uiViewport.worldHeight)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // テキスト
+        batch.projectionMatrix = uiViewport.camera.combined
+        batch.begin()
+        font.color = Color(1f, 0.85f, 0.2f, 1f)
+        glyphLayout.setText(font, wave.name)
+        font.draw(
+            batch, wave.name,
+            uiViewport.worldWidth / 2f - glyphLayout.width / 2f,
+            uiViewport.worldHeight / 2f + glyphLayout.height / 2f
+        )
+        batch.end()
+    }
+
     // ==================== テストデータ・ユーティリティ ==
 
     /**
@@ -1634,8 +2024,8 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         /** カメラ最小ズーム（これ以上は拡大しない） */
         private const val MIN_CAMERA_ZOOM = 0.6f
 
-        /** カメラ最大ズーム（これ以上は縮小しない） */
-        private const val MAX_CAMERA_ZOOM = 1.8f
+        /** カメラ最大ズーム（これ以上は縮小しない。Campaign Mode の大マップ対応で拡張） */
+        private const val MAX_CAMERA_ZOOM = 3.0f
 
         /** カメラパン開始とみなす最小移動量（px） */
         private const val CAMERA_PAN_START_DISTANCE_PX = 16f

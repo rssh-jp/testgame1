@@ -15,6 +15,8 @@
 | 9 | [実装状況](09-implementation-status.md) | 各機能の実装済み/未実装の一覧 |
 | 10 | [成長システム](10-growth-system.md) | 能力値Float化・決定論的成長・effectiveXxx |
 | 11 | [ジョブチェンジ](11-class-change.md) | クラスチェンジ機能の制約・UI・画面フロー |
+| 12 | [ジョブシステム](12-job-system.md) | ジョブ定義・兵種データ・成長パラメータ |
+| 13 | [連続マップ進行（Campaign Map）](13-campaign-map.md) | Campaign Mode・ウェーブ進行・大マップ設計 |
 
 ## 策定方針
 

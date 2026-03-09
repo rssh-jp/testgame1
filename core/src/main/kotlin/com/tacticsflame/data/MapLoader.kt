@@ -4,6 +4,9 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.utils.JsonReader
 import com.badlogic.gdx.utils.JsonValue
 import com.tacticsflame.core.AssetPaths
+import com.tacticsflame.model.campaign.WaveConfig
+import com.tacticsflame.model.campaign.WaveEnemy
+import com.tacticsflame.model.campaign.WaveRegion
 import com.tacticsflame.model.map.*
 import com.tacticsflame.model.unit.*
 import com.tacticsflame.system.VictoryChecker
@@ -116,6 +119,21 @@ class MapLoader {
     )
 
     /**
+     * キャンペーンマップ読み込み結果を格納するデータクラス
+     *
+     * @property battleMap 構築されたバトルマップ（ユニット未配置）
+     * @property playerSpawns プレイヤーの出撃位置リスト
+     * @property waves ウェーブ設定リスト
+     * @property firstWaveEnemies 最初のウェーブの敵ユニットと配置位置のペアリスト
+     */
+    data class CampaignLoadResult(
+        val battleMap: BattleMap,
+        val playerSpawns: List<Position>,
+        val waves: List<WaveConfig>,
+        val firstWaveEnemies: List<Pair<GameUnit, Position>>
+    )
+
+    /**
      * マップJSONファイルを読み込み、MapLoadResult を返す
      *
      * @param mapFileName マップファイル名（例: "chapter_1.json"）
@@ -157,6 +175,54 @@ class MapLoader {
             MapLoadResult(battleMap, playerSpawns, enemies, victoryConditionType)
         } catch (e: Exception) {
             Gdx.app.error(TAG, "マップ読み込みエラー: $mapFileName", e)
+            null
+        }
+    }
+
+    /**
+     * キャンペーンマップJSONファイルを読み込み、CampaignLoadResult を返す
+     *
+     * Campaign Map JSON には waves 配列が含まれ、各ウェーブごとに敵配置・勝利条件が定義される。
+     * waves が空配列の場合は null を返す。
+     *
+     * @param mapFileName マップファイル名（例: "campaign_1.json"）
+     * @return 読み込み結果。読み込み失敗時または waves が空の場合は null
+     */
+    fun loadCampaignMap(mapFileName: String): CampaignLoadResult? {
+        return try {
+            ensureWeaponDataLoaded()
+            ensureArmorDataLoaded()
+
+            val filePath = "${AssetPaths.MAP_DIR}$mapFileName"
+            val fileHandle = Gdx.files.internal(filePath)
+            if (!fileHandle.exists()) {
+                Gdx.app.error(TAG, "キャンペーンマップファイルが見つかりません: $filePath")
+                return null
+            }
+
+            val jsonText = fileHandle.readString("UTF-8")
+            val json = JsonReader().parse(jsonText)
+
+            val battleMap = parseBattleMap(json)
+            val playerSpawns = parsePlayerSpawns(json)
+            val waves = parseWaves(json)
+
+            // waves が空の場合は null を返す
+            if (waves.isEmpty()) {
+                Gdx.app.error(TAG, "キャンペーンマップに waves が定義されていません: $mapFileName")
+                return null
+            }
+
+            // 最初のウェーブの敵を生成
+            val firstWaveEnemies = parseWaveEnemies(waves.first().enemies)
+
+            Gdx.app.log(TAG, "キャンペーンマップ読み込み完了: $mapFileName " +
+                "(${battleMap.width}x${battleMap.height}, ウェーブ数: ${waves.size}, " +
+                "初期敵: ${firstWaveEnemies.size})")
+
+            CampaignLoadResult(battleMap, playerSpawns, waves, firstWaveEnemies)
+        } catch (e: Exception) {
+            Gdx.app.error(TAG, "キャンペーンマップ読み込みエラー: $mapFileName", e)
             null
         }
     }
@@ -594,6 +660,189 @@ class MapLoader {
         }
         if (candidates.isEmpty()) return null
         return candidates[random.nextInt(candidates.size)]
+    }
+
+    // ==================== ウェーブパース ====================
+
+    /**
+     * JSONから waves 配列をパースし、WaveConfig リストを構築する
+     *
+     * @param json マップJSON全体
+     * @return ウェーブ設定リスト（waves が存在しない場合は空リスト）
+     */
+    private fun parseWaves(json: JsonValue): List<WaveConfig> {
+        val wavesJson = json.get("waves") ?: return emptyList()
+        val waves = mutableListOf<WaveConfig>()
+
+        for (i in 0 until wavesJson.size) {
+            val w = wavesJson[i]
+
+            // region のパース
+            val regionJson = w.get("region")
+            val region = if (regionJson != null) {
+                WaveRegion(
+                    offsetX = regionJson.getInt("offsetX", 0),
+                    offsetY = regionJson.getInt("offsetY", 0),
+                    width = regionJson.getInt("width", 0),
+                    height = regionJson.getInt("height", 0)
+                )
+            } else {
+                WaveRegion(0, 0, 0, 0)
+            }
+
+            // enemies のパース
+            val enemiesJson = w.get("enemies")
+            val enemies = mutableListOf<WaveEnemy>()
+            if (enemiesJson != null) {
+                for (j in 0 until enemiesJson.size) {
+                    val e = enemiesJson[j]
+                    enemies.add(
+                        WaveEnemy(
+                            id = e.getString("id"),
+                            classId = e.getString("classId"),
+                            name = e.getString("name"),
+                            level = e.getInt("level", 1),
+                            x = e.getInt("x"),
+                            y = e.getInt("y"),
+                            ai = e.getString("ai", "aggressive"),
+                            weaponId = e.getString("weaponId", ""),
+                            armorId = e.getString("armorId", ""),
+                            isLord = e.getBoolean("isLord", false)
+                        )
+                    )
+                }
+            }
+
+            // victoryCondition のパース
+            val victoryConditionType = parseVictoryCondition(w)
+
+            waves.add(
+                WaveConfig(
+                    waveId = w.getInt("waveId"),
+                    name = w.getString("name", "Wave $i"),
+                    sourceChapter = w.getString("sourceChapter", ""),
+                    region = region,
+                    enemies = enemies,
+                    victoryConditionType = victoryConditionType,
+                    cameraFocusX = w.getInt("cameraFocusX", 0),
+                    cameraFocusY = w.getInt("cameraFocusY", 0),
+                    healPercent = w.getInt("healPercent", 30),
+                    isLast = w.getBoolean("isLast", false)
+                )
+            )
+        }
+
+        return waves
+    }
+
+    /**
+     * ウェーブの敵データ（WaveEnemy リスト）から実際の GameUnit を生成する
+     *
+     * parseEnemyUnit と同様のロジックで classId → UnitClass の解決、武器・防具の装備、
+     * レベルアップステータスの生成を行う。座標は WaveEnemy の大マップ座標をそのまま使用する。
+     *
+     * @param waveEnemies ウェーブ内の敵配置データリスト
+     * @return GameUnit と配置位置のペアリスト
+     */
+    private fun parseWaveEnemies(waveEnemies: List<WaveEnemy>): List<Pair<GameUnit, Position>> {
+        val result = mutableListOf<Pair<GameUnit, Position>>()
+
+        for (enemy in waveEnemies) {
+            val unitClass = UnitClass.ALL[enemy.classId]
+            if (unitClass == null) {
+                Gdx.app.error(TAG, "不明なクラスID: ${enemy.classId} (ウェーブ敵: ${enemy.name})")
+                continue
+            }
+
+            // レベルに応じたレベルアップ累積ステータスを生成（クラス成長率を使用）
+            val enemyLevelUpStats = generateLevelUpStats(enemy.level, unitClass.classGrowthRate)
+
+            val unit = GameUnit(
+                id = enemy.id,
+                name = enemy.name,
+                unitClass = unitClass,
+                faction = Faction.ENEMY,
+                level = enemy.level,
+                personalModifier = Stats(),
+                levelUpStats = enemyLevelUpStats,
+                personalGrowthRate = GrowthRate(),
+                isLord = enemy.isLord
+            )
+
+            // 武器の装備
+            if (enemy.weaponId.isNotEmpty()) {
+                val weapon = createWeapon(enemy.weaponId, enemy.id)
+                if (weapon != null) {
+                    unit.rightHand = weapon
+                }
+            }
+
+            // 防具の装備
+            if (enemy.armorId.isNotEmpty()) {
+                val armor = createArmor(enemy.armorId, enemy.id)
+                if (armor != null) {
+                    unit.armorSlot1 = armor
+                }
+            }
+
+            val pos = Position(enemy.x, enemy.y)
+            result.add(unit to pos)
+        }
+
+        return result
+    }
+
+    /**
+     * WaveEnemy データから GameUnit を生成する（公開API）
+     *
+     * BattleScreen のウェーブ遷移時に次ウェーブの敵を動的生成するために使用する。
+     * 武器・防具マスターデータの読み込みを保証した上で、
+     * クラス解決・レベルアップステータス計算・装備を行う。
+     *
+     * @param waveEnemy ウェーブ内の敵配置データ
+     * @return 生成された GameUnit。クラスIDが不明な場合は null
+     */
+    fun createUnitFromWaveEnemy(waveEnemy: WaveEnemy): GameUnit? {
+        ensureWeaponDataLoaded()
+        ensureArmorDataLoaded()
+
+        val unitClass = UnitClass.ALL[waveEnemy.classId]
+        if (unitClass == null) {
+            Gdx.app.error(TAG, "不明なクラスID: ${waveEnemy.classId} (ウェーブ敵: ${waveEnemy.name})")
+            return null
+        }
+
+        val enemyLevelUpStats = generateLevelUpStats(waveEnemy.level, unitClass.classGrowthRate)
+
+        val unit = GameUnit(
+            id = waveEnemy.id,
+            name = waveEnemy.name,
+            unitClass = unitClass,
+            faction = Faction.ENEMY,
+            level = waveEnemy.level,
+            personalModifier = Stats(),
+            levelUpStats = enemyLevelUpStats,
+            personalGrowthRate = GrowthRate(),
+            isLord = waveEnemy.isLord
+        )
+
+        // 武器の装備
+        if (waveEnemy.weaponId.isNotEmpty()) {
+            val weapon = createWeapon(waveEnemy.weaponId, waveEnemy.id)
+            if (weapon != null) {
+                unit.rightHand = weapon
+            }
+        }
+
+        // 防具の装備
+        if (waveEnemy.armorId.isNotEmpty()) {
+            val armor = createArmor(waveEnemy.armorId, waveEnemy.id)
+            if (armor != null) {
+                unit.armorSlot1 = armor
+            }
+        }
+
+        return unit
     }
 
     // ==================== 条件パース ====================

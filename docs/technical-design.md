@@ -120,8 +120,7 @@ com.tacticsflame/
 ### 4.1 ステートマシン（画面遷移）
 ```mermaid
 stateDiagram-v2
-    [*] --> Title
-    Title --> WorldMap: ゲーム開始
+    [*] --> WorldMap: 起動直後
     WorldMap --> Prepare: ステージ選択
     Prepare --> Battle: 出撃
     Battle --> Result: 勝利

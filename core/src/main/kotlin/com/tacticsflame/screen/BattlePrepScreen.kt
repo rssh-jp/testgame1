@@ -17,6 +17,7 @@ import com.tacticsflame.core.GameConfig
 import com.tacticsflame.data.MapLoader
 import com.tacticsflame.model.campaign.BattleConfig
 import com.tacticsflame.model.campaign.ChapterInfo
+import com.tacticsflame.model.campaign.WaveConfig
 import com.tacticsflame.model.map.*
 import com.tacticsflame.model.unit.*
 import com.tacticsflame.system.VictoryChecker
@@ -73,6 +74,12 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
     /** 入れ替え元として選択中のスポーンインデックス（null = 未選択） */
     private var selectedSpawnIndex: Int? = null
+
+    /** キャンペーンモードフラグ */
+    private var isCampaignMode: Boolean = false
+
+    /** キャンペーンモードのウェーブ設定 */
+    private var campaignWaves: List<WaveConfig> = emptyList()
 
     /** 初期化完了フラグ（setupBattlePreview 成功時に true） */
     private var isInitialized: Boolean = false
@@ -134,44 +141,89 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * マップ・敵ユニット・スポーン位置・勝利条件を読み込む。
      */
     private fun setupBattlePreview() {
-        // 出撃中味方ユニットの平均レベルを計算（ランダム敵生成用）
-        val deployedUnits = game.gameProgress.party.getDeployedUnits()
-        val partyAverageLevel = if (deployedUnits.isNotEmpty()) {
-            deployedUnits.sumOf { it.level } / deployedUnits.size
+        // キャンペーンモード判定
+        val isCampaign = chapter.id == "campaign_1" || chapter.mapFileName == "campaign_map.json"
+
+        if (isCampaign) {
+            // キャンペーンマップ読み込み
+            val result = mapLoader.loadCampaignMap(chapter.mapFileName)
+
+            if (result == null) {
+                Gdx.app.error(TAG, "キャンペーンマップ読み込み失敗: ${chapter.mapFileName}、ワールドマップに戻る")
+                game.screenManager.navigateToWorldMap()
+                return
+            }
+
+            previewMap = result.battleMap
+            spawnPositions = result.playerSpawns
+            campaignWaves = result.waves
+            isCampaignMode = true
+            enemyUnits = result.firstWaveEnemies
+            // キャンペーンマップではWave1の勝利条件を使用
+            victoryConditionType = campaignWaves.first().victoryConditionType
+            isInitialized = true
+
+            Gdx.app.log(TAG, "キャンペーンマップ読み込み完了: ${chapter.mapFileName} " +
+                "(${previewMap.width}x${previewMap.height}, ウェーブ数: ${campaignWaves.size}, " +
+                "初期敵: ${enemyUnits.size})")
+
+            // マップビューポート初期化（15×15タイルが画面に収まるサイズ）
+            val visibleTiles = 15f
+            val viewSize = visibleTiles * GameConfig.TILE_SIZE
+            mapViewport = ExtendViewport(
+                viewSize,
+                viewSize,
+                mapCamera
+            )
+            mapViewport.update(Gdx.graphics.width, Gdx.graphics.height)
+            // Wave1領域にカメラフォーカス（下寄り配置）
+            val firstWave = campaignWaves.first()
+            val focusX = firstWave.cameraFocusX * GameConfig.TILE_SIZE.toFloat()
+            val focusY = firstWave.cameraFocusY * GameConfig.TILE_SIZE.toFloat()
+            val loweredY = focusY + mapViewport.worldHeight * BATTLE_PREP_SHIFT_RATIO / 2f
+            mapCamera.position.set(focusX, loweredY, 0f)
+            mapCamera.update()
         } else {
-            1
+            // 通常マップ読み込み
+            // 出撃中味方ユニットの平均レベルを計算（ランダム敵生成用）
+            val deployedUnits = game.gameProgress.party.getDeployedUnits()
+            val partyAverageLevel = if (deployedUnits.isNotEmpty()) {
+                deployedUnits.sumOf { it.level } / deployedUnits.size
+            } else {
+                1
+            }
+
+            val result = mapLoader.loadMap(chapter.mapFileName, partyAverageLevel)
+
+            if (result == null) {
+                Gdx.app.error(TAG, "マップ読み込み失敗: ${chapter.mapFileName}、ワールドマップに戻る")
+                game.screenManager.navigateToWorldMap()
+                return
+            }
+
+            previewMap = result.battleMap
+            spawnPositions = result.playerSpawns
+            enemyUnits = result.enemies
+            victoryConditionType = result.victoryConditionType
+            isInitialized = true
+
+            Gdx.app.log(TAG, "マップ読み込み完了: ${chapter.mapFileName} " +
+                "(${previewMap.width}x${previewMap.height}, スポーン: ${spawnPositions.size}, " +
+                "敵: ${enemyUnits.size}, 勝利条件: $victoryConditionType)")
+
+            // マップビューポート初期化
+            val mapPixelW = previewMap.width * GameConfig.TILE_SIZE
+            val mapPixelH = previewMap.height * GameConfig.TILE_SIZE
+            val padding = GameConfig.TILE_SIZE * GameConfig.BATTLE_MAP_PADDING_TILES
+            mapViewport = ExtendViewport(
+                mapPixelW + padding * 2,
+                mapPixelH + padding * 2,
+                mapCamera
+            )
+            mapViewport.update(Gdx.graphics.width, Gdx.graphics.height)
+            mapCamera.position.set(mapPixelW / 2f, mapPixelH / 2f, 0f)
+            mapCamera.update()
         }
-
-        val result = mapLoader.loadMap(chapter.mapFileName, partyAverageLevel)
-
-        if (result == null) {
-            Gdx.app.error(TAG, "マップ読み込み失敗: ${chapter.mapFileName}、ワールドマップに戻る")
-            game.screenManager.navigateToWorldMap()
-            return
-        }
-
-        previewMap = result.battleMap
-        spawnPositions = result.playerSpawns
-        enemyUnits = result.enemies
-        victoryConditionType = result.victoryConditionType
-        isInitialized = true
-
-        Gdx.app.log(TAG, "マップ読み込み完了: ${chapter.mapFileName} " +
-            "(${previewMap.width}x${previewMap.height}, スポーン: ${spawnPositions.size}, " +
-            "敵: ${enemyUnits.size}, 勝利条件: $victoryConditionType)")
-
-        // マップビューポート初期化
-        val mapPixelW = previewMap.width * GameConfig.TILE_SIZE
-        val mapPixelH = previewMap.height * GameConfig.TILE_SIZE
-        val padding = GameConfig.TILE_SIZE * GameConfig.BATTLE_MAP_PADDING_TILES
-        mapViewport = ExtendViewport(
-            mapPixelW + padding * 2,
-            mapPixelH + padding * 2,
-            mapCamera
-        )
-        mapViewport.update(Gdx.graphics.width, Gdx.graphics.height)
-        mapCamera.position.set(mapPixelW / 2f, mapPixelH / 2f, 0f)
-        mapCamera.update()
     }
 
     /**
@@ -203,13 +255,21 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         // マップ描画（マップビューポートを使用）
         mapViewport.apply()
-        val mapCenterY = previewMap.height * GameConfig.TILE_SIZE / 2f
-        val loweredY = mapCenterY + mapViewport.worldHeight * BATTLE_PREP_SHIFT_RATIO / 2f
-        mapCamera.position.set(
-            previewMap.width * GameConfig.TILE_SIZE / 2f,
-            loweredY,
-            0f
-        )
+        if (isCampaignMode && campaignWaves.isNotEmpty()) {
+            val firstWave = campaignWaves.first()
+            val focusX = firstWave.cameraFocusX * GameConfig.TILE_SIZE.toFloat()
+            val focusY = firstWave.cameraFocusY * GameConfig.TILE_SIZE.toFloat()
+            val loweredY = focusY + mapViewport.worldHeight * BATTLE_PREP_SHIFT_RATIO / 2f
+            mapCamera.position.set(focusX, loweredY, 0f)
+        } else {
+            val mapCenterY = previewMap.height * GameConfig.TILE_SIZE / 2f
+            val loweredY = mapCenterY + mapViewport.worldHeight * BATTLE_PREP_SHIFT_RATIO / 2f
+            mapCamera.position.set(
+                previewMap.width * GameConfig.TILE_SIZE / 2f,
+                loweredY,
+                0f
+            )
+        }
         mapCamera.update()
         shapeRenderer.projectionMatrix = mapCamera.combined
         batch.projectionMatrix = mapCamera.combined
@@ -408,7 +468,9 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             playerPositions = playerPositions,
             enemyUnits = enemies,
             enemyPositions = enemyPositionMap,
-            victoryCondition = victoryConditionType
+            victoryCondition = victoryConditionType,
+            isCampaignMode = isCampaignMode,
+            waves = campaignWaves
         )
 
         Gdx.app.log(TAG, "バトル開始: ${chapter.name} (出撃: ${playerUnits.size}人)")

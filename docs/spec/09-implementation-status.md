@@ -1,6 +1,6 @@
 # 09. 実装状況
 
-最終更新: 2026年3月8日
+最終更新: 2026年3月9日
 
 ## 凡例
 
@@ -185,12 +185,12 @@
 |------|------|------|
 | TacticsFlameGame メインクラス | ✅ | GameProgress・ScreenManager 統合 |
 | **ScreenManager（画面遷移管理）** | **✅** | **新規追加: 画面間の疎結合遷移を一元管理** |
-| タイトル画面 (TitleScreen) | ✅ | タップでWorldMapScreenへ遷移 |
+| タイトル画面 (TitleScreen) | ✅ | 実装済み（起動時は経由せず、必要時のみ遷移） |
 | **ワールドマップ画面 (WorldMapScreen)** | **✅** | **新規追加: チャプターノード選択・編成ボタン** |
 | **部隊編成画面 (FormationScreen)** | **✅** | **ユニット一覧・出撃/非出撃ボタン・詳細パネル（装備後ステータス括弧表示）・作戦設定・装備変更遷移** |
 | **戦闘準備画面 (BattlePrepScreen)** | **✅** | **マッププレビュー・ユニット配置・配置入れ替え・出撃開始・ランダム敵生成対応** |
 | **ランダムマップ (another_chapter)** | **✅** | **新規追加: 出撃中ユニット平均Lv（整数除算）基準の敵が出現・何度でも挑戦可能・ワールドマップに紫ノードで表示** |
-| バトル画面 (BattleScreen) | ✅ | BattleConfig対応・CTベースターン制 |
+| バトル画面 (BattleScreen) | ✅ | BattleConfig対応・CTベースターン制・**Campaign Modeウェーブ進行対応** |
 | **バトルリザルト画面 (BattleResultScreen)** | **✅** | **新規追加: 勝敗表示・生存ユニット・撃破数・チャプタークリア処理** |
 | リザルト画面 (ResultScreen) | ⚠️ | レガシー互換用に残存 |
 | **武器装備変更画面 (WeaponEquipScreen)** | **✅** | **4スロット装備パネル・パーティ在庫・右手/左手/防具1/防具2装備・二刀流対応・スクロール修正済み** |
@@ -200,12 +200,12 @@
 ### 画面フロー
 
 ```
-TitleScreen →(タップ)→ WorldMapScreen
-                          ├── 部隊編成ボタン → FormationScreen → WorldMapScreen
-                          │                        └── 装備変更ボタン → WeaponEquipScreen → FormationScreen
-                          └── チャプター選択 → BattlePrepScreen →(出撃)→ BattleScreen
-                                                                               ↓
-                              WorldMapScreen ←── BattleResultScreen ←── BattleScreen(勝敗)
+起動 → WorldMapScreen
+   ├── 部隊編成ボタン → FormationScreen → WorldMapScreen
+   │                        └── 装備変更ボタン → WeaponEquipScreen → FormationScreen
+   └── チャプター選択 → BattlePrepScreen →(出撃)→ BattleScreen
+                           ↓
+        WorldMapScreen ←── BattleResultScreen ←── BattleScreen(勝敗)
 ```
 
 ## 10. テスト
@@ -240,6 +240,25 @@ TitleScreen →(タップ)→ WorldMapScreen
 | フォント | ✅ | FreeType + NotoSansJP.ttf（漢字ホワイトリスト方式、4サイズ: 24/32/48/64） |
 | テクスチャ / スプライト | ❌ | |
 | アニメーション | ❌ | |
+
+---
+
+## 12. Campaign Mode（連続マップ進行）
+
+| 項目 | 状況 | 備考 |
+|------|------|------|
+| **Campaign Map データモデル（WaveConfig, WaveRegion, WaveEnemy）** | **✅** | **新規追加: model/campaign パッケージに3クラス。WaveEnemy に armorId フィールド追加** |
+| **WaveManager（ウェーブ進行管理）** | **✅** | **新規追加: system/WaveManager — ウェーブクリア判定・次ウェーブ遷移・敵出現管理** |
+| **MapLoader.loadCampaignMap()** | **✅** | **新規追加: campaign_map.json のパース、WaveConfig リスト生成** |
+| **BattleScreen ウェーブ状態遷移** | **✅** | **WAVE_CLEAR / WAVE_TRANSITION / WAVE_START の3ステート追加** |
+| **BattleScreen 可視範囲カリング** | **✅** | **大マップ最適化: カメラ可視範囲外のタイル・ユニットを描画スキップ** |
+| **campaign_map.json** | **✅** | **150×30 タイル、6ウェーブ構成** |
+| **WorldMapScreen Campaign ボタン** | **✅** | **新規追加: Campaign Mode 開始ボタン** |
+| **BattlePrepScreen Campaign 読み込み対応** | **✅** | **Campaign Map JSON の読み込み・ウェーブ情報付き BattleConfig 生成** |
+| **BattleResultScreen Campaign 結果表示** | **✅** | **Campaign 勝利/敗北・ウェーブ進捗・累計撃破数の表示** |
+| **BattleConfig isCampaignMode + waves** | **✅** | **BattleConfig に isCampaignMode フラグと waves リストを追加（CampaignConfig は不採用）** |
+| 中間セーブ（ウェーブ間のオートセーブ） | ❌ | ウェーブクリア後の自動保存は未実装 |
+| VictoryChecker.checkWaveOutcome() の統合 | ❌ | WaveManager と VictoryChecker で二重管理状態。統合が必要 |
 
 ---
 

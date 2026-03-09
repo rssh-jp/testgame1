@@ -65,7 +65,14 @@ class BattleResultScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         // 勝利時はチャプタークリア処理
         if (resultData.isVictory) {
-            game.gameProgress.completeChapter(resultData.chapterInfo.id)
+            // キャンペーンモードの場合は全ウェーブクリア時のみ completeChapter を呼ぶ
+            if (resultData.isCampaignMode) {
+                if (resultData.wavesCleared >= resultData.totalWaves) {
+                    game.gameProgress.completeChapter(resultData.chapterInfo.id)
+                }
+            } else {
+                game.gameProgress.completeChapter(resultData.chapterInfo.id)
+            }
             game.gameProgress.healAllUnits()
             // チャプタークリア時に自動セーブ
             game.saveGame()
@@ -122,7 +129,7 @@ class BattleResultScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         if (resultData.isVictory) {
             titleFont.color = Color.GOLD
-            val victoryText = "勝 利 ！"
+            val victoryText = if (resultData.isCampaignMode) "Campaign 完全制覇！" else "勝 利 ！"
             glyphLayout.setText(titleFont, victoryText)
             titleFont.draw(
                 batch, victoryText,
@@ -187,7 +194,15 @@ class BattleResultScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         textY -= lineH
 
         font.draw(batch, "撃破した敵: ${resultData.defeatedEnemies} / ${resultData.totalEnemies}", textX, textY)
-        textY -= lineH + 16f
+        textY -= lineH
+
+        // キャンペーンモードのウェーブ進行表示
+        if (resultData.isCampaignMode) {
+            font.color = Color(1f, 0.6f, 0.1f, 1f)
+            font.draw(batch, "ウェーブ進行: ${resultData.wavesCleared} / ${resultData.totalWaves}", textX, textY)
+            textY -= lineH
+        }
+        textY -= 16f
 
         // 生存ユニット一覧
         font.color = Color.CYAN

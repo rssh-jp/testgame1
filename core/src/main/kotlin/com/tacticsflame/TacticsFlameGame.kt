@@ -10,7 +10,6 @@ import com.tacticsflame.model.campaign.BattleConfig
 import com.tacticsflame.model.campaign.BattleResultData
 import com.tacticsflame.model.campaign.GameProgress
 import com.tacticsflame.model.unit.GameUnit
-import com.tacticsflame.screen.TitleScreen
 import com.tacticsflame.util.FontManager
 
 /**
@@ -69,8 +68,8 @@ class TacticsFlameGame : Game() {
             Gdx.app.log(TAG, "セーブデータロード: ${if (loaded) "成功" else "失敗（新規データで開始）"}")
         }
 
-        // タイトル画面を表示
-        setScreen(TitleScreen(this))
+        // 起動直後はワールドマップへ直接遷移
+        screenManager.navigateToWorldMap()
     }
 
     /**

@@ -43,6 +43,12 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private val formationButtonW = 280f
     private val formationButtonH = 80f
 
+    /** Campaign Mode ボタンの領域 */
+    private val campaignButtonX = 420f
+    private val campaignButtonY = 80f
+    private val campaignButtonW = 340f
+    private val campaignButtonH = 80f
+
     companion object {
         private const val TAG = "WorldMapScreen"
 
@@ -91,6 +97,9 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         // 編成ボタン
         renderFormationButton()
 
+        // Campaign Mode ボタン
+        renderCampaignButton()
+
         // 選択中チャプターの詳細パネル
         renderChapterDetail()
     }
@@ -117,6 +126,18 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             Gdx.app.log(TAG, "編成画面へ遷移")
             game.screenManager.navigateToFormation()
             return
+        }
+
+        // Campaign Mode ボタンのタップ判定
+        if (touchX in campaignButtonX..(campaignButtonX + campaignButtonW) &&
+            touchY in campaignButtonY..(campaignButtonY + campaignButtonH)
+        ) {
+            val campaignChapter = game.gameProgress.chapters.find { it.id == "campaign_1" }
+            if (campaignChapter != null) {
+                Gdx.app.log(TAG, "Campaign Mode 戦闘準備画面へ遷移")
+                game.screenManager.navigateToBattlePrep(campaignChapter)
+                return
+            }
         }
 
         // チャプターノードのタップ判定
@@ -177,8 +198,9 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         for (i in 0 until chapters.size - 1) {
             val from = chapters[i]
             val to = chapters[i + 1]
-            // ランダムマップ（another_chapter）は独立ノードなので接続線を引かない
+            // ランダムマップ・キャンペーンマップは独立ノードなので接続線を引かない
             if (from.id == "another_chapter" || to.id == "another_chapter") continue
+            if (from.id == "campaign_1" || to.id == "campaign_1") continue
             shapeRenderer.line(
                 from.worldMapX * GameConfig.VIRTUAL_WIDTH,
                 from.worldMapY * GameConfig.VIRTUAL_HEIGHT,
@@ -216,6 +238,7 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             when {
                 !chapter.unlocked -> shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1f)
                 chapter.id == "another_chapter" -> shapeRenderer.setColor(0.7f, 0.3f, 0.9f, 1f) // ランダムマップは紫
+                chapter.id == "campaign_1" -> shapeRenderer.setColor(1f, 0.6f, 0.1f, 1f) // キャンペーンマップはオレンジ
                 chapter.completed -> shapeRenderer.setColor(0.2f, 0.8f, 0.3f, 1f)
                 else -> shapeRenderer.setColor(0.3f, 0.5f, 1f, 1f)
             }
@@ -269,6 +292,40 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             batch, "部隊編成",
             formationButtonX + 60f,
             formationButtonY + formationButtonH / 2f + 12f
+        )
+        batch.end()
+    }
+
+    /**
+     * Campaign Mode ボタンを描画する
+     *
+     * chapter_1 がクリア済みの場合のみ表示する。
+     */
+    private fun renderCampaignButton() {
+        shapeRenderer.projectionMatrix = viewport.camera.combined
+
+        // ボタン背景（オレンジ系）
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0.8f, 0.4f, 0.05f, 0.9f)
+        shapeRenderer.rect(campaignButtonX, campaignButtonY, campaignButtonW, campaignButtonH)
+        shapeRenderer.end()
+
+        // ボタン枠線
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.color = Color(1f, 0.6f, 0.1f, 1f)
+        shapeRenderer.rect(campaignButtonX, campaignButtonY, campaignButtonW, campaignButtonH)
+        shapeRenderer.end()
+        Gdx.gl.glDisable(GL20.GL_BLEND)
+
+        // ボタンテキスト
+        batch.projectionMatrix = viewport.camera.combined
+        batch.begin()
+        font.color = Color.WHITE
+        font.draw(
+            batch, "連続マップ進行",
+            campaignButtonX + 60f,
+            campaignButtonY + campaignButtonH / 2f + 12f
         )
         batch.end()
     }

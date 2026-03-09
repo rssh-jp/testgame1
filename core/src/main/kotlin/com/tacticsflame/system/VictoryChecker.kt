@@ -89,4 +89,33 @@ class VictoryChecker {
             }
         }
     }
+
+    /**
+     * ウェーブ単位のクリア判定を行う
+     *
+     * 指定された敵IDのうち、マップ上に生存しているものが0体ならクリアとみなす。
+     * 敗北判定は従来と同一（ロード死亡/全滅）で先に行う。
+     *
+     * @param battleMap バトルマップ
+     * @param waveEnemyIds ウェーブに属する敵ユニットIDセット
+     * @return 判定結果
+     */
+    fun checkWaveOutcome(
+        battleMap: BattleMap,
+        waveEnemyIds: Set<String>
+    ): BattleOutcome {
+        val allUnits = battleMap.getAllUnits()
+
+        // 敗北判定（従来と同一）
+        val playerUnits = allUnits.filter { it.second.faction == Faction.PLAYER }
+        val lordDefeated = playerUnits.any { it.second.isLord && it.second.isDefeated }
+        val allPlayersEliminated = playerUnits.isEmpty() || playerUnits.all { it.second.isDefeated }
+        if (lordDefeated || allPlayersEliminated) return BattleOutcome.DEFEAT
+
+        // ウェーブクリア判定
+        val waveEnemiesAlive = allUnits.any { (_, unit) ->
+            unit.id in waveEnemyIds && unit.faction == Faction.ENEMY && !unit.isDefeated
+        }
+        return if (!waveEnemiesAlive) BattleOutcome.VICTORY else BattleOutcome.ONGOING
+    }
 }

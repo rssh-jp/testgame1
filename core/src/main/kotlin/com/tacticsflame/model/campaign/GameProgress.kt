@@ -46,8 +46,12 @@ class GameProgress {
             if (chapter.id != "another_chapter") {
                 chapter.completed = true
             }
-            // 次のチャプターを開放（ランダムマップの次は開放しない）
-            if (chapter.id != "another_chapter" && index + 1 < _chapters.size) {
+            // chapter_1クリア時にcampaign_1も解放
+            if (chapterId == "chapter_1") {
+                _chapters.find { it.id == "campaign_1" }?.unlocked = true
+            }
+            // 次のチャプターを開放（ランダムマップ・キャンペーンマップの次は開放しない）
+            if (chapter.id != "another_chapter" && chapter.id != "campaign_1" && index + 1 < _chapters.size) {
                 _chapters[index + 1].unlocked = true
             }
             Gdx.app.log(TAG, "チャプター完了: ${chapter.name}")
@@ -146,6 +150,17 @@ class GameProgress {
                     unlocked = true,
                     maxDeployCount = 4,
                     requiredUnits = emptyList()
+                ),
+                ChapterInfo(
+                    id = "campaign_1",
+                    name = "連続マップ進行",
+                    description = "全6チャプターを一つの大マップで連続攻略する。HP引き継ぎ＋ウェーブ間30%回復。",
+                    mapFileName = "campaign_map.json",
+                    worldMapX = 0.5f,
+                    worldMapY = 0.9f,
+                    unlocked = true,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
                 )
             )
         )
