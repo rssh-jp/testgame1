@@ -1,0 +1,158 @@
+{
+    "id": "chapter_10",
+    "name": "第10章 - 裏切りの密林",
+    "width": 18,
+    "height": 14,
+    "terrain": [
+        [1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+        [1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1],
+        [1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1],
+        [1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1],
+        [1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1],
+        [1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+        [1, 0, 0, 1, 0, 0, 1, 1, 3, 1, 1, 0, 0, 1, 1, 0, 1, 1],
+        [1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1],
+        [1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1],
+        [1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1],
+        [1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1],
+        [1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1],
+        [1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1],
+        [1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1]
+    ],
+    "terrainKey": {
+        "0": "PLAIN",
+        "1": "FOREST",
+        "2": "MOUNTAIN",
+        "3": "FORT",
+        "4": "WATER",
+        "5": "WALL",
+        "6": "VILLAGE",
+        "7": "BRIDGE"
+    },
+    "playerSpawns": [
+        {"x": 3, "y": 12},
+        {"x": 4, "y": 12},
+        {"x": 5, "y": 12},
+        {"x": 4, "y": 13},
+        {"x": 5, "y": 13},
+        {"x": 6, "y": 13}
+    ],
+    "enemies": [
+        {
+            "id": "enemy_ch10_01",
+            "classId": "swordFighter",
+            "name": "密林の剣士A",
+            "level": 10,
+            "x": 8,
+            "y": 4,
+            "ai": "aggressive",
+            "weaponId": "ironSword",
+            "stats": {"hp": 36, "str": 16, "mag": 0, "skl": 16, "spd": 17, "lck": 0, "def": 3, "res": 1}
+        },
+        {
+            "id": "enemy_ch10_02",
+            "classId": "swordFighter",
+            "name": "密林の剣士B",
+            "level": 10,
+            "x": 8,
+            "y": 7,
+            "ai": "aggressive",
+            "weaponId": "ironSword",
+            "stats": {"hp": 36, "str": 16, "mag": 0, "skl": 16, "spd": 17, "lck": 0, "def": 3, "res": 1}
+        },
+        {
+            "id": "enemy_ch10_03",
+            "classId": "axeFighter",
+            "name": "山賊A",
+            "level": 10,
+            "x": 3,
+            "y": 5,
+            "ai": "aggressive",
+            "weaponId": "ironAxe",
+            "stats": {"hp": 47, "str": 18, "mag": 0, "skl": 4, "spd": 4, "lck": 0, "def": 13, "res": 0}
+        },
+        {
+            "id": "enemy_ch10_04",
+            "classId": "axeFighter",
+            "name": "山賊B",
+            "level": 10,
+            "x": 11,
+            "y": 7,
+            "ai": "aggressive",
+            "weaponId": "ironAxe",
+            "stats": {"hp": 47, "str": 18, "mag": 0, "skl": 4, "spd": 4, "lck": 0, "def": 13, "res": 0}
+        },
+        {
+            "id": "enemy_ch10_05",
+            "classId": "archer",
+            "name": "密林の弓兵A",
+            "level": 11,
+            "x": 13,
+            "y": 3,
+            "ai": "guard",
+            "weaponId": "ironBow",
+            "stats": {"hp": 38, "str": 17, "mag": 0, "skl": 19, "spd": 17, "lck": 0, "def": 3, "res": 2}
+        },
+        {
+            "id": "enemy_ch10_06",
+            "classId": "archer",
+            "name": "密林の弓兵B",
+            "level": 11,
+            "x": 14,
+            "y": 8,
+            "ai": "guard",
+            "weaponId": "ironBow",
+            "stats": {"hp": 38, "str": 17, "mag": 0, "skl": 19, "spd": 17, "lck": 0, "def": 3, "res": 2}
+        },
+        {
+            "id": "enemy_ch10_07",
+            "classId": "mage",
+            "name": "闇魔導師",
+            "level": 11,
+            "x": 8,
+            "y": 6,
+            "ai": "defensive",
+            "weaponId": "fire",
+            "stats": {"hp": 36, "str": 1, "mag": 18, "skl": 17, "spd": 6, "lck": 0, "def": 2, "res": 17}
+        },
+        {
+            "id": "enemy_ch10_08",
+            "classId": "healer",
+            "name": "密林の僧侶",
+            "level": 10,
+            "x": 9,
+            "y": 3,
+            "ai": "defensive",
+            "weaponId": "heal",
+            "stats": {"hp": 34, "str": 1, "mag": 15, "skl": 14, "spd": 5, "lck": 0, "def": 2, "res": 15}
+        }
+    ],
+    "victoryCondition": {
+        "type": "DEFEAT_ALL"
+    },
+    "defeatCondition": {
+        "type": "LORD_DEFEATED"
+    },
+    "dialogue": {
+        "opening": [
+            {
+                "speaker": "リーナ",
+                "text": "この森は深い…視界が悪いわ。待ち伏せに注意して。"
+            },
+            {
+                "speaker": "マリア",
+                "text": "森の中に山賊が潜んでいるようです。"
+            },
+            {
+                "speaker": "アレス",
+                "text": "斧使いの攻撃は重い。森を利用して回避に徹しよう。"
+            }
+        ],
+        "ending": [
+            {
+                "speaker": "アレス",
+                "text": "密林を抜けた…だが、裏切りの黒幕はまだ健在だ。"
+            }
+        ]
+    }
+}

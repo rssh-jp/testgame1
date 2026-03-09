@@ -1,0 +1,147 @@
+{
+    "id": "chapter_8",
+    "name": "第8章 - 魔導塔の攻防",
+    "width": 16,
+    "height": 14,
+    "terrain": [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 0, 5, 5, 5, 0, 0, 5, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 0, 5, 3, 5, 0, 0, 5, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 5, 0, 5, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 0, 5, 0, 5, 0, 0, 5, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 0, 5, 3, 5, 0, 0, 5, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 0, 5, 5, 5, 0, 0, 5, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 5, 5, 0, 5, 5, 5, 5, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ],
+    "terrainKey": {
+        "0": "PLAIN",
+        "1": "FOREST",
+        "2": "MOUNTAIN",
+        "3": "FORT",
+        "4": "WATER",
+        "5": "WALL",
+        "6": "VILLAGE",
+        "7": "BRIDGE"
+    },
+    "playerSpawns": [
+        {"x": 5, "y": 13},
+        {"x": 6, "y": 13},
+        {"x": 7, "y": 13},
+        {"x": 8, "y": 13},
+        {"x": 9, "y": 13},
+        {"x": 10, "y": 13}
+    ],
+    "enemies": [
+        {
+            "id": "enemy_ch8_01",
+            "classId": "armorKnight",
+            "name": "塔門守衛A",
+            "level": 8,
+            "x": 7,
+            "y": 10,
+            "ai": "guard",
+            "weaponId": "ironLance",
+            "stats": {"hp": 43, "str": 16, "mag": 0, "skl": 4, "spd": 2, "lck": 0, "def": 17, "res": 0}
+        },
+        {
+            "id": "enemy_ch8_02",
+            "classId": "armorKnight",
+            "name": "塔門守衛B",
+            "level": 8,
+            "x": 4,
+            "y": 5,
+            "ai": "guard",
+            "weaponId": "ironLance",
+            "stats": {"hp": 43, "str": 16, "mag": 0, "skl": 4, "spd": 2, "lck": 0, "def": 17, "res": 0}
+        },
+        {
+            "id": "enemy_ch8_03",
+            "classId": "mage",
+            "name": "魔導師A",
+            "level": 8,
+            "x": 7,
+            "y": 5,
+            "ai": "defensive",
+            "weaponId": "fire",
+            "stats": {"hp": 30, "str": 1, "mag": 15, "skl": 14, "spd": 6, "lck": 0, "def": 2, "res": 14}
+        },
+        {
+            "id": "enemy_ch8_04",
+            "classId": "mage",
+            "name": "魔導師B",
+            "level": 8,
+            "x": 10,
+            "y": 2,
+            "ai": "aggressive",
+            "weaponId": "fire",
+            "stats": {"hp": 30, "str": 1, "mag": 15, "skl": 14, "spd": 6, "lck": 0, "def": 2, "res": 14}
+        },
+        {
+            "id": "enemy_ch8_05",
+            "classId": "mage",
+            "name": "上級魔導師",
+            "level": 9,
+            "x": 7,
+            "y": 4,
+            "ai": "guard",
+            "weaponId": "fire",
+            "stats": {"hp": 32, "str": 1, "mag": 16, "skl": 15, "spd": 6, "lck": 0, "def": 2, "res": 15}
+        },
+        {
+            "id": "enemy_ch8_06",
+            "classId": "swordFighter",
+            "name": "塔の剣士",
+            "level": 8,
+            "x": 5,
+            "y": 9,
+            "ai": "aggressive",
+            "weaponId": "ironSword",
+            "stats": {"hp": 32, "str": 14, "mag": 0, "skl": 14, "spd": 15, "lck": 0, "def": 3, "res": 1}
+        },
+        {
+            "id": "enemy_ch8_07",
+            "classId": "healer",
+            "name": "魔導僧",
+            "level": 9,
+            "x": 7,
+            "y": 7,
+            "ai": "defensive",
+            "weaponId": "heal",
+            "stats": {"hp": 32, "str": 1, "mag": 14, "skl": 13, "spd": 5, "lck": 0, "def": 2, "res": 14}
+        }
+    ],
+    "victoryCondition": {
+        "type": "DEFEAT_ALL"
+    },
+    "defeatCondition": {
+        "type": "LORD_DEFEATED"
+    },
+    "dialogue": {
+        "opening": [
+            {
+                "speaker": "エリック",
+                "text": "この塔から強い魔力を感じます…警戒してください。"
+            },
+            {
+                "speaker": "リーナ",
+                "text": "壁に囲まれた構造ね。入り口は限られているわ。"
+            },
+            {
+                "speaker": "アレス",
+                "text": "重装兵が入口を固めている。突破口を探そう。"
+            }
+        ],
+        "ending": [
+            {
+                "speaker": "エリック",
+                "text": "塔の魔導師たちを制圧しました。貴重な魔道書が残っています。"
+            }
+        ]
+    }
+}

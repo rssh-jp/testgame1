@@ -174,7 +174,8 @@ class WorldMapScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
         batch.projectionMatrix = viewport.camera.combined
         batch.begin()
         titleFont.color = Color.WHITE
-        val headerText = "— ワールドマップ —"
+        val cycleText = if (game.gameProgress.cycle > 0) " [${game.gameProgress.cycle + 1}周目]" else ""
+        val headerText = "— ワールドマップ —$cycleText"
         glyphLayout.setText(titleFont, headerText)
         titleFont.draw(
             batch, headerText,

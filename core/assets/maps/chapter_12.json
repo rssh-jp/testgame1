@@ -1,0 +1,197 @@
+{
+    "id": "chapter_12",
+    "name": "第12章 - 皇帝の玉座",
+    "width": 22,
+    "height": 16,
+    "terrain": [
+        [0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 5, 5, 5, 5, 0, 5, 5, 0, 0, 5, 5, 0, 5, 5, 5, 5, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 3, 0, 5, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5, 5, 5, 5, 0, 5, 5, 0, 0, 5, 5, 0, 5, 5, 5, 5, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0, 5, 0, 0, 0, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0]
+    ],
+    "terrainKey": {
+        "0": "PLAIN",
+        "1": "FOREST",
+        "2": "MOUNTAIN",
+        "3": "FORT",
+        "4": "WATER",
+        "5": "WALL",
+        "6": "VILLAGE",
+        "7": "BRIDGE"
+    },
+    "playerSpawns": [
+        {"x": 0, "y": 4},
+        {"x": 0, "y": 6},
+        {"x": 0, "y": 8},
+        {"x": 0, "y": 10},
+        {"x": 1, "y": 5},
+        {"x": 1, "y": 7},
+        {"x": 1, "y": 9},
+        {"x": 1, "y": 11}
+    ],
+    "enemies": [
+        {
+            "id": "enemy_ch12_01",
+            "classId": "armorKnight",
+            "name": "城門守護A",
+            "level": 12,
+            "x": 8,
+            "y": 6,
+            "ai": "guard",
+            "weaponId": "ironLance",
+            "stats": {"hp": 55, "str": 20, "mag": 0, "skl": 4, "spd": 2, "lck": 0, "def": 21, "res": 0}
+        },
+        {
+            "id": "enemy_ch12_02",
+            "classId": "armorKnight",
+            "name": "城門守護B",
+            "level": 12,
+            "x": 8,
+            "y": 7,
+            "ai": "guard",
+            "weaponId": "ironLance",
+            "stats": {"hp": 55, "str": 20, "mag": 0, "skl": 4, "spd": 2, "lck": 0, "def": 21, "res": 0}
+        },
+        {
+            "id": "enemy_ch12_03",
+            "classId": "knight",
+            "name": "近衛騎士A",
+            "level": 12,
+            "x": 6,
+            "y": 2,
+            "ai": "aggressive",
+            "weaponId": "steelSword",
+            "stats": {"hp": 42, "str": 19, "mag": 0, "skl": 18, "spd": 19, "lck": 0, "def": 16, "res": 2}
+        },
+        {
+            "id": "enemy_ch12_04",
+            "classId": "knight",
+            "name": "近衛騎士B",
+            "level": 12,
+            "x": 6,
+            "y": 13,
+            "ai": "aggressive",
+            "weaponId": "ironLance",
+            "stats": {"hp": 42, "str": 19, "mag": 0, "skl": 18, "spd": 19, "lck": 0, "def": 16, "res": 2}
+        },
+        {
+            "id": "enemy_ch12_05",
+            "classId": "mage",
+            "name": "宮廷魔導師A",
+            "level": 13,
+            "x": 15,
+            "y": 2,
+            "ai": "defensive",
+            "weaponId": "fire",
+            "stats": {"hp": 40, "str": 1, "mag": 20, "skl": 19, "spd": 6, "lck": 0, "def": 2, "res": 19}
+        },
+        {
+            "id": "enemy_ch12_06",
+            "classId": "mage",
+            "name": "宮廷魔導師B",
+            "level": 13,
+            "x": 15,
+            "y": 13,
+            "ai": "defensive",
+            "weaponId": "fire",
+            "stats": {"hp": 40, "str": 1, "mag": 20, "skl": 19, "spd": 6, "lck": 0, "def": 2, "res": 19}
+        },
+        {
+            "id": "enemy_ch12_07",
+            "classId": "pegasusKnight",
+            "name": "天馬衛兵",
+            "level": 13,
+            "x": 11,
+            "y": 7,
+            "ai": "aggressive",
+            "weaponId": "ironLance",
+            "stats": {"hp": 42, "str": 6, "mag": 0, "skl": 20, "spd": 22, "lck": 0, "def": 3, "res": 19}
+        },
+        {
+            "id": "enemy_ch12_08",
+            "classId": "swordFighter",
+            "name": "皇帝親衛隊",
+            "level": 13,
+            "x": 14,
+            "y": 6,
+            "ai": "aggressive",
+            "weaponId": "steelSword",
+            "stats": {"hp": 42, "str": 19, "mag": 0, "skl": 19, "spd": 20, "lck": 0, "def": 3, "res": 1}
+        },
+        {
+            "id": "enemy_ch12_09",
+            "classId": "healer",
+            "name": "宮廷僧侶",
+            "level": 12,
+            "x": 11,
+            "y": 9,
+            "ai": "defensive",
+            "weaponId": "heal",
+            "stats": {"hp": 38, "str": 1, "mag": 17, "skl": 16, "spd": 5, "lck": 0, "def": 2, "res": 17}
+        },
+        {
+            "id": "enemy_ch12_10",
+            "classId": "lancer",
+            "name": "皇帝ガルドール",
+            "level": 14,
+            "x": 12,
+            "y": 9,
+            "ai": "guard",
+            "weaponId": "ironLance",
+            "isLord": true,
+            "stats": {"hp": 45, "str": 21, "mag": 0, "skl": 19, "spd": 6, "lck": 0, "def": 18, "res": 2}
+        }
+    ],
+    "victoryCondition": {
+        "type": "DEFEAT_ALL"
+    },
+    "defeatCondition": {
+        "type": "LORD_DEFEATED"
+    },
+    "dialogue": {
+        "opening": [
+            {
+                "speaker": "アレス",
+                "text": "ついにガルドールの城に辿り着いた…最終決戦だ！"
+            },
+            {
+                "speaker": "リーナ",
+                "text": "城郭は巨大よ。回廊を利用して各個撃破しましょう。"
+            },
+            {
+                "speaker": "エリック",
+                "text": "玉座の間に強大な力を感じます。皇帝は奥に控えているようです。"
+            },
+            {
+                "speaker": "マリア",
+                "text": "全員、ここまで来られたのはみんなの力です。最後まで諦めないで！"
+            }
+        ],
+        "ending": [
+            {
+                "speaker": "アレス",
+                "text": "ガルドール…お前の野望はここで終わりだ！"
+            },
+            {
+                "speaker": "リーナ",
+                "text": "長い戦いだったわ。でも、これでようやく平和が訪れる。"
+            },
+            {
+                "speaker": "エリック",
+                "text": "皆さんの勇気が、この大陸を救ったのです。"
+            }
+        ]
+    }
+}

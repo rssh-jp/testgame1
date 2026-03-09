@@ -138,9 +138,10 @@ class MapLoader {
      *
      * @param mapFileName マップファイル名（例: "chapter_1.json"）
      * @param partyAverageLevel 出撃中味方ユニットの平均レベル（ランダム敵生成用、デフォルト0＝未指定）
+     * @param levelBonus 敵レベルに加算するボーナス（周回補正用、デフォルト0）
      * @return 読み込み結果。読み込み失敗時は null
      */
-    fun loadMap(mapFileName: String, partyAverageLevel: Int = 0): MapLoadResult? {
+    fun loadMap(mapFileName: String, partyAverageLevel: Int = 0, levelBonus: Int = 0): MapLoadResult? {
         return try {
             ensureWeaponDataLoaded()
             ensureArmorDataLoaded()
@@ -161,9 +162,9 @@ class MapLoader {
             // ランダム敵生成フラグが true の場合、敵を動的生成する
             val isRandomEnemies = json.getBoolean("randomEnemies", false)
             val enemies = if (isRandomEnemies && partyAverageLevel > 0) {
-                generateRandomEnemies(battleMap, playerSpawns, partyAverageLevel)
+                generateRandomEnemies(battleMap, playerSpawns, partyAverageLevel, levelBonus)
             } else {
-                parseEnemies(json)
+                parseEnemies(json, levelBonus)
             }
 
             val victoryConditionType = parseVictoryCondition(json)
@@ -186,9 +187,10 @@ class MapLoader {
      * waves が空配列の場合は null を返す。
      *
      * @param mapFileName マップファイル名（例: "campaign_1.json"）
+     * @param levelBonus 敵レベルに加算するボーナス（周回補正用、デフォルト0）
      * @return 読み込み結果。読み込み失敗時または waves が空の場合は null
      */
-    fun loadCampaignMap(mapFileName: String): CampaignLoadResult? {
+    fun loadCampaignMap(mapFileName: String, levelBonus: Int = 0): CampaignLoadResult? {
         return try {
             ensureWeaponDataLoaded()
             ensureArmorDataLoaded()
@@ -214,7 +216,7 @@ class MapLoader {
             }
 
             // 最初のウェーブの敵を生成
-            val firstWaveEnemies = parseWaveEnemies(waves.first().enemies)
+            val firstWaveEnemies = parseWaveEnemies(waves.first().enemies, levelBonus)
 
             Gdx.app.log(TAG, "キャンペーンマップ読み込み完了: $mapFileName " +
                 "(${battleMap.width}x${battleMap.height}, ウェーブ数: ${waves.size}, " +
@@ -375,14 +377,17 @@ class MapLoader {
 
     /**
      * JSONから敵ユニットリストをパースする
+     *
+     * @param json マップJSON全体
+     * @param levelBonus 敵レベルに加算するボーナス（周回補正用）
      */
-    private fun parseEnemies(json: JsonValue): List<Pair<GameUnit, Position>> {
+    private fun parseEnemies(json: JsonValue, levelBonus: Int = 0): List<Pair<GameUnit, Position>> {
         val enemiesJson = json.get("enemies") ?: return emptyList()
         val enemies = mutableListOf<Pair<GameUnit, Position>>()
 
         for (i in 0 until enemiesJson.size) {
             val e = enemiesJson[i]
-            val enemy = parseEnemyUnit(e)
+            val enemy = parseEnemyUnit(e, levelBonus)
             if (enemy != null) {
                 val pos = Position(e.getInt("x"), e.getInt("y"))
                 enemies.add(enemy to pos)
@@ -394,12 +399,15 @@ class MapLoader {
 
     /**
      * JSONから敵ユニット1体をパースする
+     *
+     * @param json 敵ユニットのJSONノード
+     * @param levelBonus 敵レベルに加算するボーナス（周回補正用）
      */
-    private fun parseEnemyUnit(json: JsonValue): GameUnit? {
+    private fun parseEnemyUnit(json: JsonValue, levelBonus: Int = 0): GameUnit? {
         val id = json.getString("id")
         val classId = json.getString("classId")
         val name = json.getString("name")
-        val level = json.getInt("level", 1)
+        val level = maxOf(1, json.getInt("level", 1) + levelBonus)
         val weaponId = json.getString("weaponId", null)
         val aiPatternStr = json.getString("ai", "aggressive")
         val isLord = json.getBoolean("isLord", false)
@@ -544,7 +552,8 @@ class MapLoader {
     private fun generateRandomEnemies(
         battleMap: BattleMap,
         playerSpawns: List<Position>,
-        averageLevel: Int
+        averageLevel: Int,
+        levelBonus: Int = 0
     ): List<Pair<GameUnit, Position>> {
         val random = java.util.Random()
         val enemies = mutableListOf<Pair<GameUnit, Position>>()
@@ -570,8 +579,8 @@ class MapLoader {
             val weaponId = template.second
             val nameBase = template.third
 
-            // レベルは出撃中味方ユニット平均レベルに固定（最低1）
-            val level = maxOf(1, averageLevel)
+            // レベルは出撃中味方ユニット平均レベル + 周回ボーナス（最低1）
+            val level = maxOf(1, averageLevel + levelBonus)
 
             // レベルアップ分の累積ステータスを計算（クラス成長率を使用）
             val enemyLevelUpStats = generateLevelUpStats(level, unitClass.classGrowthRate)
@@ -742,9 +751,10 @@ class MapLoader {
      * レベルアップステータスの生成を行う。座標は WaveEnemy の大マップ座標をそのまま使用する。
      *
      * @param waveEnemies ウェーブ内の敵配置データリスト
+     * @param levelBonus 敵レベルに加算するボーナス（周回補正用）
      * @return GameUnit と配置位置のペアリスト
      */
-    private fun parseWaveEnemies(waveEnemies: List<WaveEnemy>): List<Pair<GameUnit, Position>> {
+    private fun parseWaveEnemies(waveEnemies: List<WaveEnemy>, levelBonus: Int = 0): List<Pair<GameUnit, Position>> {
         val result = mutableListOf<Pair<GameUnit, Position>>()
 
         for (enemy in waveEnemies) {
@@ -755,14 +765,15 @@ class MapLoader {
             }
 
             // レベルに応じたレベルアップ累積ステータスを生成（クラス成長率を使用）
-            val enemyLevelUpStats = generateLevelUpStats(enemy.level, unitClass.classGrowthRate)
+            val effectiveLevel = maxOf(1, enemy.level + levelBonus)
+            val enemyLevelUpStats = generateLevelUpStats(effectiveLevel, unitClass.classGrowthRate)
 
             val unit = GameUnit(
                 id = enemy.id,
                 name = enemy.name,
                 unitClass = unitClass,
                 faction = Faction.ENEMY,
-                level = enemy.level,
+                level = effectiveLevel,
                 personalModifier = Stats(),
                 levelUpStats = enemyLevelUpStats,
                 personalGrowthRate = GrowthRate(),
@@ -800,9 +811,10 @@ class MapLoader {
      * クラス解決・レベルアップステータス計算・装備を行う。
      *
      * @param waveEnemy ウェーブ内の敵配置データ
+     * @param levelBonus 敵レベルに加算するボーナス（周回補正用、デフォルト0）
      * @return 生成された GameUnit。クラスIDが不明な場合は null
      */
-    fun createUnitFromWaveEnemy(waveEnemy: WaveEnemy): GameUnit? {
+    fun createUnitFromWaveEnemy(waveEnemy: WaveEnemy, levelBonus: Int = 0): GameUnit? {
         ensureWeaponDataLoaded()
         ensureArmorDataLoaded()
 
@@ -812,14 +824,15 @@ class MapLoader {
             return null
         }
 
-        val enemyLevelUpStats = generateLevelUpStats(waveEnemy.level, unitClass.classGrowthRate)
+        val effectiveLevel = maxOf(1, waveEnemy.level + levelBonus)
+        val enemyLevelUpStats = generateLevelUpStats(effectiveLevel, unitClass.classGrowthRate)
 
         val unit = GameUnit(
             id = waveEnemy.id,
             name = waveEnemy.name,
             unitClass = unitClass,
             faction = Faction.ENEMY,
-            level = waveEnemy.level,
+            level = effectiveLevel,
             personalModifier = Stats(),
             levelUpStats = enemyLevelUpStats,
             personalGrowthRate = GrowthRate(),

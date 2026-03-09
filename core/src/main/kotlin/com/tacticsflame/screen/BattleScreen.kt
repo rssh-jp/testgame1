@@ -56,6 +56,7 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
     private val aiSystem = AISystem(pathFinder, battleSystem)
     private val victoryChecker = VictoryChecker()
     private val levelUpSystem = LevelUpSystem()
+    private val mapLoader = MapLoader()
 
     // バトル設定（BattlePrepScreen から渡されるデータ）
     private var battleConfig: BattleConfig? = null
@@ -1052,10 +1053,10 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
      * @param wave 配置対象のウェーブ設定
      */
     private fun spawnWaveEnemies(wave: WaveConfig) {
-        val mapLoader = MapLoader()
+        val levelBonus = game.gameProgress.cycle * 10
 
         for (waveEnemy in wave.enemies) {
-            val unit = mapLoader.createUnitFromWaveEnemy(waveEnemy) ?: continue
+            val unit = mapLoader.createUnitFromWaveEnemy(waveEnemy, levelBonus) ?: continue
             val pos = Position(waveEnemy.x, waveEnemy.y)
 
             // 既存ユニットと重複しないか確認

@@ -19,6 +19,9 @@ class GameProgress {
     private val _chapters: MutableList<ChapterInfo> = mutableListOf()
     val chapters: List<ChapterInfo> get() = _chapters
 
+    /** 現在の周回数（0=初回、1=2周目...） */
+    var cycle: Int = 0
+
     /** 現在選択中のチャプター */
     var selectedChapter: ChapterInfo? = null
 
@@ -42,6 +45,11 @@ class GameProgress {
         val index = _chapters.indexOfFirst { it.id == chapterId }
         if (index >= 0) {
             val chapter = _chapters[index]
+            // chapter_12 クリア時は周回開始（completedは設定せずリセットに入る）
+            if (chapterId == "chapter_12") {
+                startNewCycle()
+                return
+            }
             // ランダムマップは何度でも挑戦可能なので完了状態にしない
             if (chapter.id != "another_chapter") {
                 chapter.completed = true
@@ -136,6 +144,66 @@ class GameProgress {
                     mapFileName = "chapter_6.json",
                     worldMapX = 0.8f,
                     worldMapY = 0.15f,
+                    unlocked = false,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "chapter_7",
+                    name = "第7章 - 辺境伯の反乱",
+                    description = "反乱を起こした辺境伯の軍を鎮圧せよ。",
+                    mapFileName = "chapter_7.json",
+                    worldMapX = 0.85f, worldMapY = 0.75f,
+                    unlocked = false,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "chapter_8",
+                    name = "第8章 - 魔導塔の攻防",
+                    description = "魔導塔を占拠する魔道士集団を排除せよ。",
+                    mapFileName = "chapter_8.json",
+                    worldMapX = 0.7f, worldMapY = 0.85f,
+                    unlocked = false,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "chapter_9",
+                    name = "第9章 - 氷原の死闘",
+                    description = "凍てつく氷原を突破し、敵の補給線を断て。",
+                    mapFileName = "chapter_9.json",
+                    worldMapX = 0.55f, worldMapY = 0.75f,
+                    unlocked = false,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "chapter_10",
+                    name = "第10章 - 裏切りの密林",
+                    description = "密林に潜む裏切り者を追い詰めよ。",
+                    mapFileName = "chapter_10.json",
+                    worldMapX = 0.4f, worldMapY = 0.85f,
+                    unlocked = false,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "chapter_11",
+                    name = "第11章 - 竜の峡谷",
+                    description = "峡谷の先にある敵の本拠地への道を切り開け。",
+                    mapFileName = "chapter_11.json",
+                    worldMapX = 0.25f, worldMapY = 0.75f,
+                    unlocked = false,
+                    maxDeployCount = 4,
+                    requiredUnits = listOf("hero_01")
+                ),
+                ChapterInfo(
+                    id = "chapter_12",
+                    name = "第12章 - 皇帝の玉座",
+                    description = "皇帝ガルドールを倒し、大陸に平和を取り戻せ。",
+                    mapFileName = "chapter_12.json",
+                    worldMapX = 0.1f, worldMapY = 0.85f,
                     unlocked = false,
                     maxDeployCount = 4,
                     requiredUnits = listOf("hero_01")
@@ -257,6 +325,31 @@ class GameProgress {
         )
 
         Gdx.app.log(TAG, "初期在庫配布完了（武器: ${party.weaponInventory.size}, 防具: ${party.armorInventory.size}）")
+    }
+
+    /**
+     * 新しい周回を開始する
+     *
+     * 全チャプター（1〜12）のunlocked/completedをリセットし、
+     * chapter_1を解放して周回数を+1する。
+     * パーティ（ユニット・装備・レベル）は引き継ぐ。
+     */
+    fun startNewCycle() {
+        cycle++
+        for (chapter in _chapters) {
+            when (chapter.id) {
+                "another_chapter", "campaign_1" -> {
+                    // ランダムマップ・キャンペーンはそのまま
+                }
+                else -> {
+                    chapter.unlocked = false
+                    chapter.completed = false
+                }
+            }
+        }
+        // chapter_1を解放
+        _chapters.find { it.id == "chapter_1" }?.unlocked = true
+        Gdx.app.log(TAG, "新しい周回を開始: cycle=$cycle")
     }
 
     companion object {

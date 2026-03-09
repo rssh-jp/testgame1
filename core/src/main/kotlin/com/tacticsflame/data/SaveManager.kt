@@ -24,8 +24,8 @@ object SaveManager {
     /** 一時セーブファイル名（アトミックセーブ用） */
     private const val SAVE_FILE_NAME_TMP = "save_data.json.tmp"
 
-    /** セーブデータバージョン（v5: baseStats → personalModifier 変更対応） */
-    private const val SAVE_VERSION = 5
+    /** セーブデータバージョン（v6: 周回システム対応） */
+    private const val SAVE_VERSION = 6
 
     /** ロード処理中のセーブデータバージョン（readGrowthRate 等でマイグレーション判定に使用） */
     private var loadingVersion = SAVE_VERSION
@@ -137,6 +137,9 @@ object SaveManager {
             writer.pop()
         }
         writer.pop()
+
+        // 周回数
+        writer.set("cycle", gameProgress.cycle)
 
         // パーティ情報
         writer.`object`("party")
@@ -333,6 +336,9 @@ object SaveManager {
                 }
             }
         }
+
+        // 周回数の復元
+        gameProgress.cycle = root.getInt("cycle", 0)
 
         // パーティ情報の復元
         val partyNode = root.get("party")

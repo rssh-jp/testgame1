@@ -1,0 +1,134 @@
+{
+    "id": "chapter_7",
+    "name": "第7章 - 辺境伯の反乱",
+    "width": 18,
+    "height": 12,
+    "terrain": [
+        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0]
+    ],
+    "terrainKey": {
+        "0": "PLAIN",
+        "1": "FOREST",
+        "2": "MOUNTAIN",
+        "3": "FORT",
+        "4": "WATER",
+        "5": "WALL",
+        "6": "VILLAGE",
+        "7": "BRIDGE"
+    },
+    "playerSpawns": [
+        {"x": 0, "y": 3},
+        {"x": 0, "y": 5},
+        {"x": 0, "y": 7},
+        {"x": 1, "y": 4},
+        {"x": 1, "y": 6},
+        {"x": 1, "y": 8}
+    ],
+    "enemies": [
+        {
+            "id": "enemy_ch7_01",
+            "classId": "knight",
+            "name": "反乱騎兵A",
+            "level": 7,
+            "x": 10,
+            "y": 3,
+            "ai": "aggressive",
+            "weaponId": "ironSword",
+            "stats": {"hp": 32, "str": 14, "mag": 0, "skl": 13, "spd": 14, "lck": 0, "def": 11, "res": 2}
+        },
+        {
+            "id": "enemy_ch7_02",
+            "classId": "knight",
+            "name": "反乱騎兵B",
+            "level": 7,
+            "x": 10,
+            "y": 7,
+            "ai": "aggressive",
+            "weaponId": "ironLance",
+            "stats": {"hp": 32, "str": 14, "mag": 0, "skl": 13, "spd": 14, "lck": 0, "def": 11, "res": 2}
+        },
+        {
+            "id": "enemy_ch7_03",
+            "classId": "swordFighter",
+            "name": "辺境兵A",
+            "level": 7,
+            "x": 7,
+            "y": 4,
+            "ai": "aggressive",
+            "weaponId": "ironSword",
+            "stats": {"hp": 30, "str": 13, "mag": 0, "skl": 13, "spd": 14, "lck": 0, "def": 3, "res": 1}
+        },
+        {
+            "id": "enemy_ch7_04",
+            "classId": "swordFighter",
+            "name": "辺境兵B",
+            "level": 7,
+            "x": 7,
+            "y": 8,
+            "ai": "aggressive",
+            "weaponId": "ironSword",
+            "stats": {"hp": 30, "str": 13, "mag": 0, "skl": 13, "spd": 14, "lck": 0, "def": 3, "res": 1}
+        },
+        {
+            "id": "enemy_ch7_05",
+            "classId": "archer",
+            "name": "辺境弓兵",
+            "level": 8,
+            "x": 13,
+            "y": 5,
+            "ai": "guard",
+            "weaponId": "ironBow",
+            "stats": {"hp": 32, "str": 14, "mag": 0, "skl": 16, "spd": 14, "lck": 0, "def": 3, "res": 2}
+        },
+        {
+            "id": "enemy_ch7_06",
+            "classId": "lancer",
+            "name": "辺境伯グレイヴ",
+            "level": 8,
+            "x": 15,
+            "y": 5,
+            "ai": "guard",
+            "weaponId": "ironLance",
+            "stats": {"hp": 33, "str": 15, "mag": 0, "skl": 13, "spd": 6, "lck": 0, "def": 12, "res": 2}
+        }
+    ],
+    "victoryCondition": {
+        "type": "DEFEAT_ALL"
+    },
+    "defeatCondition": {
+        "type": "LORD_DEFEATED"
+    },
+    "dialogue": {
+        "opening": [
+            {
+                "speaker": "アレス",
+                "text": "辺境伯グレイヴが反旗を翻したと？"
+            },
+            {
+                "speaker": "リーナ",
+                "text": "丘陵地帯に布陣しているわ。騎兵に注意して。"
+            },
+            {
+                "speaker": "エリック",
+                "text": "砦を確保できれば、態勢を立て直せます。"
+            }
+        ],
+        "ending": [
+            {
+                "speaker": "アレス",
+                "text": "辺境伯を討ち取った…これで北部は安定するはずだ。"
+            }
+        ]
+    }
+}

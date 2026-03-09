@@ -146,7 +146,8 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         if (isCampaign) {
             // キャンペーンマップ読み込み
-            val result = mapLoader.loadCampaignMap(chapter.mapFileName)
+            val levelBonus = game.gameProgress.cycle * 10
+            val result = mapLoader.loadCampaignMap(chapter.mapFileName, levelBonus)
 
             if (result == null) {
                 Gdx.app.error(TAG, "キャンペーンマップ読み込み失敗: ${chapter.mapFileName}、ワールドマップに戻る")
@@ -193,7 +194,8 @@ class BattlePrepScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
                 1
             }
 
-            val result = mapLoader.loadMap(chapter.mapFileName, partyAverageLevel)
+            val levelBonus = game.gameProgress.cycle * 10
+            val result = mapLoader.loadMap(chapter.mapFileName, partyAverageLevel, levelBonus)
 
             if (result == null) {
                 Gdx.app.error(TAG, "マップ読み込み失敗: ${chapter.mapFileName}、ワールドマップに戻る")

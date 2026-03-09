@@ -41,12 +41,12 @@
 | Faction enum | ✅ | PLAYER/ENEMY/ALLY |
 | Stats data class | ✅ | HP/STR/MAG/SKL/SPD/LCK/DEF/RES — **内部Float・effectiveXxx(Int切捨)方式** |
 | CT プロパティ (GameUnit.ct) | ✅ | **新規追加** |
-| マップデータ JSON 読み込み | ✅ | MapLoader で chapter_1〜6.json を読み込み |
+| マップデータ JSON 読み込み | ✅ | MapLoader で chapter_1〜12.json を読み込み |
 | ユニットデータ JSON 読み込み | ✅ | units.json 内のテストデータ |
-| **チャプターマップ JSON (chapter_1〜6)** | **✅** | **6チャプター分のマップ・敵配置データ（スポーン位置拡張済み: ch1-2: 6, ch3-4: 7, ch5-6: 8）** |
+| **チャプターマップ JSON (chapter_1〜12)** | **✅** | **12チャプター分のマップ・敵配置データ（chapter_7〜12を追加）** |
 | **ChapterInfo データクラス** | **✅** | **新規追加: チャプター情報（ID・名前・マップファイル・ワールドマップ座標）** |
 | **PartyState クラス** | **✅** | **パーティ管理（ロスター・出撃メンバー選択・武器/防具在庫）** |
-| **GameProgress クラス** | **✅** | **新規追加: キャンペーン進行状態（チャプター開放・クリア管理）** |
+| **GameProgress クラス** | **✅** | **キャンペーン進行状態（チャプター開放・クリア管理）・**周回システム（cycle/startNewCycle）** |
 | **UnitTactic enum** | **✅** | **新規追加: ユニット作戦（CHARGE/CAUTIOUS/SUPPORT/HEAL/FLEE）— 部隊編成で設定** |
 | **BattleConfig データクラス** | **✅** | **新規追加: バトル設定（マップ・ユニット配置・勝利条件）** |
 | **MapLoader（JSONマップローダー）** | **✅** | **新規追加: JSON→BattleMap/敵/スポーン/勝利条件の一括読み込み** |
@@ -55,7 +55,7 @@
 | **BattleResultData データクラス** | **✅** | **新規追加: 戦闘結果（勝敗・ラウンド数・撃破数・生存ユニット）** |
 | **GrowthRate data class** | **✅** | **Float固定値加算方式に変更（旧: Int%確率成長）、SPD=0.20f一律** |
 | **ジョブベースステータスシステム** | **✅** | **stats = unitClass.baseStats + personalModifier + levelUpStats、転職HP差分調整** |
-| **セーブデータ v5** | **✅** | **personalModifier 対応（旧v4データの baseStats/stats フォールバック互換あり）** |
+| **セーブデータ v6** | **✅** | **周回(cycle)対応（旧v5データのcycle=0フォールバック互換あり）** |
 | **StatGrowth data class** | **✅** | **新規追加: レベルアップ時のInt実効値変化量（UI表示用）** |
 | **GrowthRate 読み込み仕様** | **✅** | **保存値を固定加算値としてそのまま復元（%としての自動変換なし）** |
 | **personalGrowthRate 二重加算バグ修正** | **✅** | **バグ修正: setupInitialParty()で personalGrowthRate に仕様10の「合計成長率」が設定されていたため、levelUp()の personalGrowthRate + classGrowthRate 合算で classGrowthRate が二重加算され成長速度が仕様の約1.7〜3.3倍に。全5キャラの personalGrowthRate を「仕様10合計 − classGrowthRate」の正しい値に修正** |
@@ -230,6 +230,7 @@
 | **VictoryCheckerTest** | **✅** | **14テストケース — 勝利/敗北/ロード不在許容・ボス撃破・ターン防衛** |
 | **ClassChangeTest** | **✅** | **新規追加: 転職テスト — stats変化・HP差分調整・転職制限** |
 | **UnitClassLoaderTest** | **✅** | **新規追加: 2テストケース — baseStats正常パース検証・baseStats欠如時のデフォルト値検証** |
+| **GameProgressTest** | **✅** | **新規追加: 周回システムテスト — ch12クリアでcycle+1・startNewCycle全チャプターリセット・ch1再解放・ランダム/キャンペーンマップ状態維持** |
 
 ## 11. サウンド / アセット
 
@@ -259,6 +260,21 @@
 | **BattleConfig isCampaignMode + waves** | **✅** | **BattleConfig に isCampaignMode フラグと waves リストを追加（CampaignConfig は不採用）** |
 | 中間セーブ（ウェーブ間のオートセーブ） | ❌ | ウェーブクリア後の自動保存は未実装 |
 | VictoryChecker.checkWaveOutcome() の統合 | ❌ | WaveManager と VictoryChecker で二重管理状態。統合が必要 |
+
+---
+
+## 13. 周回（NewGame+）システム
+
+| 項目 | 状況 | 備考 |
+|------|------|------|
+| **GameProgress.cycle プロパティ** | **✅** | **周回数管理（0=初回、1=2周目...）** |
+| **GameProgress.startNewCycle()** | **✅** | **chapter_12クリアで全チャプターリセット、chapter_1再開放、cycle+1** |
+| **パーティ引継ぎ** | **✅** | **ユニット・装備・レベルは周回で維持** |
+| **敵レベル補正（levelBonus）** | **✅** | **敵の実効レベル = JSONのlevel + (cycle × 10)** |
+| **MapLoader levelBonus パラメータ** | **✅** | **loadMap/loadCampaignMap/parseEnemies/parseEnemyUnit/generateRandomEnemies/parseWaveEnemies/createUnitFromWaveEnemy に対応** |
+| **SaveManager cycle 永続化** | **✅** | **SAVE_VERSION 6: cycle のシリアライズ/デシリアライズ** |
+| **BattlePrepScreen levelBonus 受け渡し** | **✅** | **cycle*10 を loadMap/loadCampaignMap に渡す** |
+| **WorldMapScreen 周回数表示** | **✅** | **ヘッダーに「2周目」等を表示** |
 
 ---
 
