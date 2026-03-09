@@ -86,9 +86,6 @@ class FormationScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
 
         /** スロット左端X座標 */
         private const val SLOT_X = 60f
-
-        /** パーティ上限（現在の出撃上限とは別。編成画面における表示制約） */
-        private const val MAX_DISPLAY = 12
     }
 
     /**
