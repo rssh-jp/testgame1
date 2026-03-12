@@ -366,4 +366,72 @@ class AITacticTest {
             "FLEEパターンは攻撃しない: ${act::class.simpleName}"
         )
     }
+
+    // ==================== AGGRESSIVE フォールバック接近テスト ====================
+
+    @Test
+    fun `AGGRESSIVE - 水に囲まれた敵に対して弓兵が射程内の位置へ接近する`() {
+        // 15x5マップ: x=9列が完全水壁で分断
+        //       0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
+        //   0   . . . . . . . . . W  .  .  .  .  .
+        //   1   . . . . . . . . . W  .  .  .  .  .
+        //   2   A . . . . . . . . W  P  .  .  .  .
+        //   3   . . . . . . . . . W  .  .  .  .  .
+        //   4   . . . . . . . . . W  .  .  .  .  .
+        //   A=弓兵(0,2) ENEMY, P=プレイヤー(10,2), W=水域(x=9全行)
+        //
+        // 弓兵(射程2, 移動力5)は水壁を越えられず、直接敵に到達不可。
+        // buildCostMapFrom(enemy) → 弓兵側に到達不可。
+        // getAttackPositionsFor → 敵から射程2の(8,2)が弓兵側の平地。
+        // buildCostMapFromMultiple → (8,2)からのコストマップで弓兵が接近先を選択。
+        // 弓兵mov=5なので最大(5,2)まで移動 → altCost最小の位置へMoveする。
+        val waterPositions = (0..4).map { y -> Position(9, y) }.toSet()
+        val tiles = Array(5) { y ->
+            Array(15) { x ->
+                val pos = Position(x, y)
+                val terrain = if (pos in waterPositions) TerrainType.WATER else TerrainType.PLAIN
+                Tile(pos, terrain)
+            }
+        }
+        val map = BattleMap(id = "wall_test", name = "水壁テスト", width = 15, height = 5, tiles = tiles)
+
+        // プレイヤーを水壁の右側(10,2)に配置
+        val player = createPlayerUnit()
+        map.placeUnit(player, Position(10, 2))
+
+        // 弓を装備した敵弓兵（射程2、移動力5）を左端(0,2)に配置
+        val ironBow = Weapon(
+            id = "iron_bow", name = "鉄の弓",
+            type = WeaponType.BOW, might = 6, hit = 85,
+            critical = 0, weight = 3, minRange = 2, maxRange = 2
+        )
+        val archer = GameUnit(
+            id = "enemy_archer",
+            name = "弓兵",
+            unitClass = UnitClass.ARCHER,
+            faction = Faction.ENEMY,
+            personalModifier = Stats(hp = 17f, str = 5f, mag = 0f, skl = 8f, spd = 7f, lck = 4f, def = 3f, res = 1f),
+            personalGrowthRate = GrowthRate()
+        )
+        archer.rightHand = ironBow
+        map.placeUnit(archer, Position(0, 2))
+
+        val action = aiSystem.decideAction(archer, map, AISystem.AIPattern.AGGRESSIVE)
+
+        val act = action.action
+        // 水壁で直接到達不可 → 射程2の攻撃可能位置(8,2)へのフォールバック接近
+        assertTrue(
+            act is AISystem.Action.Move,
+            "水壁で分断された敵に対して弓兵はMoveで接近すべき: ${act::class.simpleName}"
+        )
+        if (act is AISystem.Action.Move) {
+            // 移動先が初期位置(0,2)より敵に近い方向であること
+            val initialDist = Position(0, 2).manhattanDistance(Position(10, 2))
+            val movedDist = act.moveTo.manhattanDistance(Position(10, 2))
+            assertTrue(
+                movedDist < initialDist,
+                "弓兵が敵に接近する方向に移動: 距離 $initialDist -> $movedDist (移動先: ${act.moveTo})"
+            )
+        }
+    }
 }

@@ -634,13 +634,18 @@ class BattleScreen(private val game: TacticsFlameGame) : ScreenAdapter() {
             animationProgress = 0f
             battleState = BattleState.UNIT_MOVING
         } else {
-            // 経路が見つからない場合は直接移動（フォールバック）
-            battleMap.moveUnit(from, to)
-            Gdx.app.log(TAG, "AI移動完了（直接）: ${unit.name}")
+            // 経路が見つからない場合は移動をキャンセルして待機（テレポート防止）
+            Gdx.app.log(TAG, "警告: 経路が見つかりません: ${unit.name} ($from → $to) — 移動をキャンセルし待機します")
             val action = pendingAction?.action
             when (action) {
-                is AISystem.Action.MoveAndAttack -> startCombat(unit, action.target)
-                is AISystem.Action.MoveAndHeal -> startHealing(unit, action.target)
+                is AISystem.Action.MoveAndAttack -> {
+                    Gdx.app.log(TAG, "攻撃もキャンセル: 移動先に到達できないため")
+                    enterPostAction()
+                }
+                is AISystem.Action.MoveAndHeal -> {
+                    Gdx.app.log(TAG, "回復もキャンセル: 移動先に到達できないため")
+                    enterPostAction()
+                }
                 else -> enterPostAction()
             }
         }

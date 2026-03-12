@@ -105,12 +105,23 @@ class AISystem(
             }
         }
 
-        // 攻撃できない場合、最も近い敵に接近
+        // 攻撃できない場合、最も近い敵に接近（パスコスト基準）
         val nearestEnemy = findNearestEnemy(unitPos, unit.faction, battleMap)
         if (nearestEnemy != null) {
-            val bestMovePos = movablePositions.minByOrNull { it.manhattanDistance(nearestEnemy) }
-            if (bestMovePos != null) {
+            val costMap = pathFinder.buildCostMapFrom(unit, nearestEnemy, battleMap)
+            val bestMovePos = movablePositions.minByOrNull { costMap[it] ?: Int.MAX_VALUE }
+            if (bestMovePos != null && (costMap[bestMovePos] ?: Int.MAX_VALUE) < Int.MAX_VALUE) {
                 return AIAction(unit, Action.Move(bestMovePos))
+            }
+
+            // 敵に直接到達不可の場合、武器射程内の攻撃可能位置へ接近を試みる
+            val attackPositions = getAttackPositionsFor(nearestEnemy, unit, battleMap)
+            if (attackPositions.isNotEmpty()) {
+                val altCostMap = pathFinder.buildCostMapFromMultiple(unit, attackPositions, battleMap)
+                val altBestPos = movablePositions.minByOrNull { altCostMap[it] ?: Int.MAX_VALUE }
+                if (altBestPos != null && (altCostMap[altBestPos] ?: Int.MAX_VALUE) < Int.MAX_VALUE) {
+                    return AIAction(unit, Action.Move(altBestPos))
+                }
             }
         }
 
@@ -178,13 +189,24 @@ class AISystem(
             }
         }
 
-        // 安全に攻撃できない場合、安全圏で最も敵に近い位置へ移動
+        // 安全に攻撃できない場合、安全圏で最も敵に近い位置へ移動（パスコスト基準）
         if (safePositions.isNotEmpty()) {
             val nearestEnemy = findNearestEnemy(unitPos, unit.faction, battleMap)
             if (nearestEnemy != null) {
-                val bestSafePos = safePositions.minByOrNull { it.manhattanDistance(nearestEnemy) }
-                if (bestSafePos != null && bestSafePos != unitPos) {
+                val costMap = pathFinder.buildCostMapFrom(unit, nearestEnemy, battleMap)
+                val bestSafePos = safePositions.minByOrNull { costMap[it] ?: Int.MAX_VALUE }
+                if (bestSafePos != null && bestSafePos != unitPos && (costMap[bestSafePos] ?: Int.MAX_VALUE) < Int.MAX_VALUE) {
                     return AIAction(unit, Action.Move(bestSafePos))
+                }
+
+                // 敵に直接到達不可の場合、武器射程内の攻撃可能位置へ安全に接近
+                val attackPositions = getAttackPositionsFor(nearestEnemy, unit, battleMap)
+                if (attackPositions.isNotEmpty()) {
+                    val altCostMap = pathFinder.buildCostMapFromMultiple(unit, attackPositions, battleMap)
+                    val altBestPos = safePositions.minByOrNull { altCostMap[it] ?: Int.MAX_VALUE }
+                    if (altBestPos != null && altBestPos != unitPos && (altCostMap[altBestPos] ?: Int.MAX_VALUE) < Int.MAX_VALUE) {
+                        return AIAction(unit, Action.Move(altBestPos))
+                    }
                 }
             }
         }
@@ -235,14 +257,25 @@ class AISystem(
             }
         }
 
-        // 攻撃できない場合、味方で最も敵に近い仲間へ移動
+        // 攻撃できない場合、味方で最も敵に近い仲間へ移動（パスコスト基準）
         val nearestAllyToEnemy = findAllyNearestToEnemy(unit, battleMap)
         if (nearestAllyToEnemy != null) {
-            val bestMovePos = movablePositions.minByOrNull {
-                it.manhattanDistance(nearestAllyToEnemy)
-            }
-            if (bestMovePos != null) {
+            val costMap = pathFinder.buildCostMapFrom(unit, nearestAllyToEnemy, battleMap)
+            val bestMovePos = movablePositions.minByOrNull { costMap[it] ?: Int.MAX_VALUE }
+            if (bestMovePos != null && (costMap[bestMovePos] ?: Int.MAX_VALUE) < Int.MAX_VALUE) {
                 return AIAction(unit, Action.Move(bestMovePos))
+            }
+
+            // 味方に直接到達不可の場合、味方の隣接マスへ接近を試みる
+            val approachPositions = getPositionsAtRange(nearestAllyToEnemy, 1).filter { pos ->
+                battleMap.isInBounds(pos.x, pos.y) && pathFinder.isPassableFor(unit, pos, battleMap)
+            }
+            if (approachPositions.isNotEmpty()) {
+                val altCostMap = pathFinder.buildCostMapFromMultiple(unit, approachPositions, battleMap)
+                val altBestPos = movablePositions.minByOrNull { altCostMap[it] ?: Int.MAX_VALUE }
+                if (altBestPos != null && (altCostMap[altBestPos] ?: Int.MAX_VALUE) < Int.MAX_VALUE) {
+                    return AIAction(unit, Action.Move(altBestPos))
+                }
             }
         }
 
@@ -339,17 +372,40 @@ class AISystem(
             Gdx.app.log("HEAL_AI", "  負傷: ${ally.name} at $pos HP=${ally.currentHp}/${ally.maxHp}")
         }
 
-        // 移動先を「ターゲットに近い順、同距離なら安全優先」でソートするヘルパー
+        // 移動先を「ターゲットに近い順（パスコスト基準）、同距離なら安全優先」でソートするヘルパー
         // ※ 安全性よりターゲットへの近さを優先する（回復しに行けなくなるのを防ぐ）
-        fun candidatesToward(targetPos: Position): Sequence<Position> =
-            sequence {
-                yieldAll(
-                    allPositions.sortedWith(compareBy(
-                        { it.manhattanDistance(targetPos) },  // ターゲットに近い順（主軸）
-                        { it in threatZone }                   // 同距離なら安全マス優先
+        fun candidatesToward(targetPos: Position): Sequence<Position> {
+            val costMap = pathFinder.buildCostMapFrom(unit, targetPos, battleMap)
+            val reachable = allPositions.filter { (costMap[it] ?: Int.MAX_VALUE) < Int.MAX_VALUE }
+
+            if (reachable.isNotEmpty()) {
+                return reachable
+                    .sortedWith(compareBy(
+                        { costMap[it] ?: Int.MAX_VALUE },
+                        { it in threatZone }
                     ))
-                )
+                    .asSequence()
             }
+
+            // 対象に直接到達不可の場合、回復射程内の位置へ接近
+            val healPositions = (weapon.minRange..weapon.maxRange).flatMap { range ->
+                getPositionsAtRange(targetPos, range).filter { pos ->
+                    battleMap.isInBounds(pos.x, pos.y) && pathFinder.isPassableFor(unit, pos, battleMap)
+                }
+            }
+            if (healPositions.isNotEmpty()) {
+                val altCostMap = pathFinder.buildCostMapFromMultiple(unit, healPositions, battleMap)
+                return allPositions
+                    .filter { (altCostMap[it] ?: Int.MAX_VALUE) < Int.MAX_VALUE }
+                    .sortedWith(compareBy(
+                        { altCostMap[it] ?: Int.MAX_VALUE },
+                        { it in threatZone }
+                    ))
+                    .asSequence()
+            }
+
+            return emptySequence()
+        }
 
         // ──────────────────────────────────────────────────
         // ステップ1: どこかに移動して回復できるか探す
@@ -670,6 +726,36 @@ class AISystem(
             Faction.ENEMY -> to == Faction.PLAYER || to == Faction.ALLY
             Faction.ALLY -> to == Faction.ENEMY
         }
+    }
+
+    /**
+     * 指定敵座標に対して武器射程内の攻撃可能位置を算出する
+     *
+     * ユニットが立てる地形で、かつ敵の位置に対して武器射程内の座標を返す。
+     *
+     * @param enemyPos 敵の座標
+     * @param unit 攻撃ユニット
+     * @param battleMap バトルマップ
+     * @return 攻撃可能位置のリスト
+     */
+    private fun getAttackPositionsFor(
+        enemyPos: Position,
+        unit: GameUnit,
+        battleMap: BattleMap
+    ): List<Position> {
+        val minRange = unit.attackMinRange()
+        val maxRange = unit.attackMaxRange()
+        val positions = mutableListOf<Position>()
+
+        for (range in minRange..maxRange) {
+            for (pos in getPositionsAtRange(enemyPos, range)) {
+                if (!battleMap.isInBounds(pos.x, pos.y)) continue
+                if (!pathFinder.isPassableFor(unit, pos, battleMap)) continue
+                positions.add(pos)
+            }
+        }
+
+        return positions
     }
 
     /**
