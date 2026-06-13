@@ -1,6 +1,7 @@
 package com.tacticsflame.util
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
@@ -14,22 +15,23 @@ import com.badlogic.gdx.utils.Disposable
  * アプリケーション全体で共有されるシングルトン。
  *
  * パフォーマンス最適化:
- * - ゲーム内で実際に使用する漢字のみをホワイトリストで指定（約550字）
- * - CJK全範囲（約21,000字）を含まないことでフォント生成時間・VRAM消費を大幅削減
- * - テクスチャサイズを 1024x1024 に最適化
- *
- * 新しい漢字が必要になった場合は KANJI_WHITELIST に追加すること。
+ * - 基本はホワイトリストを使用し、起動時に assets/data から不足漢字を自動収集
+ * - incremental 生成で、初期セット外の文字も描画時に安全に追加
+ * - CJK全範囲（約21,000字）を固定で含めないことで初期生成コストを抑制
  */
 object FontManager : Disposable {
 
     /** フォントファイルのパス */
     private const val FONT_PATH = "fonts/NotoSansJP.ttf"
 
+    /** フォント文字収集対象のデータディレクトリ */
+    private const val DATA_DIR_PATH = "data"
+
     /**
      * ゲーム内で使用する漢字のホワイトリスト
      *
-     * JSONデータ・マップデータ・Kotlinソース内の全テキストから自動抽出した漢字（約550字）。
-     * 新しいテキストを追加した際は、使用する漢字をここに追記すること。
+    * 既存画面で頻出する漢字をベースとして保持する。
+    * 追加データ由来の漢字は assets/data から自動収集して補完される。
      */
     private const val KANJI_WHITELIST =
         "一三上下不与両中丸主乗乱了予事二互交人今介仕他付代令以仮仲件任伏伝位低体何余作使例依侵係保個倍倒候値停側備傭像優" +
@@ -50,7 +52,8 @@ object FontManager : Disposable {
      * CJK全範囲を含まないことで、フォント生成速度とVRAM消費を大幅に削減する。
      */
     private val JAPANESE_CHARS: String by lazy {
-        buildString {
+        val collectedDataKanji = collectKanjiFromDataAssets()
+        val baseChars = buildString {
             // ASCII（基本英数字・記号）
             append(FreeTypeFontGenerator.DEFAULT_CHARS)
             // ひらがな
@@ -64,9 +67,14 @@ object FontManager : Disposable {
             append("\uFF10\uFF11\uFF12\uFF13\uFF14\uFF15\uFF16\uFF17\uFF18\uFF19")
             // ゲーム内で使用する漢字のみ（ホワイトリスト）
             append(KANJI_WHITELIST)
+            // assets/data から収集した漢字を追加（新規データ増加時の欠字を防止）
+            append(collectedDataKanji)
             // 画面UIで使用する特殊記号
             append("\u2014\u2015\u2190\u2191\u2192\u2193\u25B6\u25B7\u25C0\u25C1\u25CF\u25CB\u25A0\u25A1\u25B2\u25B3\u25BC\u25BD\u2713\u2717\u2605\u2606")
         }
+        val uniqueChars = baseChars.toSortedSet().joinToString(separator = "")
+        Gdx.app.log(TAG, "フォント文字セット構築: base=${KANJI_WHITELIST.length}, data=${collectedDataKanji.length}, total=${uniqueChars.length}")
+        uniqueChars
     }
 
     private var generator: FreeTypeFontGenerator? = null
@@ -88,11 +96,18 @@ object FontManager : Disposable {
                 this.size = size
                 this.color = color
                 this.characters = JAPANESE_CHARS
+                // 初期セットにない文字も描画時に動的生成して欠字を防止
+                this.incremental = true
                 // アンチエイリアス有効
                 this.mono = false
-                // ホワイトリスト方式のため 1024x1024 で十分
+                // incremental=true のOOMリスクを下げるため、サイズに応じてパッカーを抑制する
+                val packerSize = resolvePackerSize(size)
                 this.packer = com.badlogic.gdx.graphics.g2d.PixmapPacker(
-                    1024, 1024, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888, 1, false
+                    packerSize,
+                    packerSize,
+                    com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888,
+                    1,
+                    false
                 )
                 // テクスチャフィルタリング（スケーリング品質向上）
                 this.minFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear
@@ -105,12 +120,71 @@ object FontManager : Disposable {
     }
 
     /**
+     * フォントサイズに応じて安全側の PixmapPacker サイズを返す
+     */
+    private fun resolvePackerSize(fontSize: Int): Int {
+        return if (fontSize <= 32) 1024 else 1536
+    }
+
+    /**
      * FreeTypeFontGenerator を初期化する（遅延初期化）
      */
     private fun ensureGenerator() {
         if (generator == null) {
             generator = FreeTypeFontGenerator(Gdx.files.internal(FONT_PATH))
             Gdx.app.log(TAG, "FreeTypeFontGenerator 初期化完了: $FONT_PATH")
+        }
+    }
+
+    /**
+     * assets/data 配下の JSON から漢字を収集する
+     *
+     * 収集に失敗した場合は空文字を返し、既存ホワイトリストのみで継続する。
+     */
+    private fun collectKanjiFromDataAssets(): String {
+        return runCatching {
+            val dataDir = Gdx.files.internal(DATA_DIR_PATH)
+            if (!dataDir.exists() || !dataDir.isDirectory) {
+                Gdx.app.log(TAG, "データ文字収集スキップ: $DATA_DIR_PATH が存在しません")
+                return ""
+            }
+
+            val kanji = buildString {
+                collectKanjiRecursive(dataDir, this)
+            }
+            kanji.toSortedSet().joinToString(separator = "")
+        }.getOrElse { error ->
+            Gdx.app.error(TAG, "データ文字収集に失敗したためホワイトリストへフォールバック", error)
+            ""
+        }
+    }
+
+    /**
+     * ファイルツリーを再帰走査し、対象JSONの漢字のみ抽出する
+     */
+    private fun collectKanjiRecursive(fileHandle: FileHandle, builder: StringBuilder) {
+        if (fileHandle.isDirectory) {
+            fileHandle.list().forEach { child ->
+                collectKanjiRecursive(child, builder)
+            }
+            return
+        }
+
+        if (fileHandle.extension().lowercase() != "json") {
+            return
+        }
+
+        val text = runCatching {
+            fileHandle.readString("UTF-8")
+        }.getOrElse { error ->
+            Gdx.app.error(TAG, "文字収集対象ファイルの読み込み失敗: ${fileHandle.path()}", error)
+            return
+        }
+
+        text.forEach { char ->
+            if (char in '\u4E00'..'\u9FFF') {
+                builder.append(char)
+            }
         }
     }
 
